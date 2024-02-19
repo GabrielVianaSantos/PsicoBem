@@ -45,24 +45,25 @@ const estilos = StyleSheet.create({
         height: 2693 / 2850 * width,
         alignItems: "center",
         resizeMode: "contain",
+        marginVertical: '7%',
     },
 
     botao:{
-        width: 340,
+        width: '100%',
         height: 48,
         backgroundColor: "#11B5A4",
         borderRadius: 6,
         textAlign: "center",
-        paddingTop: 13,
+        padding: 13,
         color: "white",
-        marginVertical: 20,
+        marginVertical: '10%',
     },
 
     textGrande:{
         color: "#11B5A4",
         fontSize: 22,
         fontWeight: "bold",
-        marginTop: 25,
+        marginTop: '8%',
     },
 
     textPeq:{
