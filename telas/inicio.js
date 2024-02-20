@@ -2,13 +2,13 @@ import React from "react";
 import { Image, View, Text, StyleSheet, Dimensions, TouchableOpacity} from "react-native";
 import arte_tela_inicio from '../src/arts/arte_tela_inicio.png';
 
+import Botao from "./components/botao";
+import Topo from "../telas/components/topo";
 const width = Dimensions.get('screen').width;
 
-export default function Inicio(){
+export default function Inicio({topo}){
     return<> 
-        <View style = {estilos.topo}>
-            <Text style = {estilos.logo}>PSICObem</Text>
-        </View>
+        <Topo {...topo}/>
         <View style = {estilos.centro}>
             <Image source={arte_tela_inicio} style = {estilos.imagem}/>
                 <View style = {estilos.textopadding}>
@@ -25,23 +25,8 @@ export default function Inicio(){
 }
 
 const estilos = StyleSheet.create({
-    topo: {
-        width: "100%",
-        height: 320 / 760 * width,
-        backgroundColor: "#11B5A4",
-        borderBottomLeftRadius: 20,
-        borderBottomRightRadius: 20,
-    },
-    
-    logo: {
-      textAlign: "center",
-      marginTop: 60,
-      color: "white",
-      fontSize: 45,
-    },
-
     centro: {
-        padding: '6%',
+        padding: '8%',
     },
 
     imagem: {
@@ -49,7 +34,6 @@ const estilos = StyleSheet.create({
         height: 2693 / 2850 * width,
         alignItems: "center",
         resizeMode: "contain",
-        marginVertical: '3%',
     },
 
     botao:{
