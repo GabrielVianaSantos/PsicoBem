@@ -11,11 +11,15 @@ export default function Inicio(){
         </View>
         <View style = {estilos.centro}>
             <Image source={arte_tela_inicio} style = {estilos.imagem}/>
-            <Text style = {estilos.textGrande}>Jornada para o seu Bem-Estar</Text>
-            <Text style ={estilos.textPeq}>Cuidando da sua Mente</Text>
-            <TouchableOpacity>
-                <Text style = {estilos.botao}>INICIAR</Text>
-            </TouchableOpacity>
+                <View style = {estilos.textopadding}>
+                    <Text style = {estilos.textGrande}>Jornada para o seu Bem-Estar</Text>
+                    <Text style ={estilos.textPeq}>Cuidando da sua Mente</Text>
+                </View>
+                <View>
+                    <TouchableOpacity style = {estilos.embaixo}>
+                        <Text style = {estilos.botao}>INICIAR</Text>
+                    </TouchableOpacity>
+                </View>
         </View>
     </>
 }
@@ -37,7 +41,7 @@ const estilos = StyleSheet.create({
     },
 
     centro: {
-        padding: 30,
+        padding: '6%',
     },
 
     imagem: {
@@ -45,7 +49,7 @@ const estilos = StyleSheet.create({
         height: 2693 / 2850 * width,
         alignItems: "center",
         resizeMode: "contain",
-        marginVertical: '7%',
+        marginVertical: '3%',
     },
 
     botao:{
@@ -63,7 +67,6 @@ const estilos = StyleSheet.create({
         color: "#11B5A4",
         fontSize: 22,
         fontWeight: "bold",
-        marginTop: '8%',
     },
 
     textPeq:{
@@ -71,6 +74,10 @@ const estilos = StyleSheet.create({
         fontSize: 18,
         fontWeight: "bold",
     },
+
+    embaixo: {
+        bottom: '-2%',
+    }
 
 })
 
