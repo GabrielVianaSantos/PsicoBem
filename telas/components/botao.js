@@ -1,3 +1,4 @@
+import { Raleway_400Regular } from "@expo-google-fonts/raleway";
 import { Text, StyleSheet, TouchableOpacity} from "react-native";
 
 export default function Botao({texto}){
@@ -21,6 +22,6 @@ const estilos = StyleSheet.create({
         padding: 13,
         color:  'white',
         fontSize: 16,
+        fontFamily: 'RalewayBold',
     }
-
 })
