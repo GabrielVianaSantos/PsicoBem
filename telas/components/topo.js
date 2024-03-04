@@ -1,9 +1,10 @@
-import { Text, View, StyleSheet, Dimensions } from "react-native";
+import { Text, View, StyleSheet, Dimensions, Image } from "react-native";
+import Logo from "../../src/logo/logo.png"
 const width = Dimensions.get('screen').width;
 
 export default function Topo(){
     return <View style = {estilos.topo}>
-        <Text style = {estilos.logo}>PSICObem</Text>
+        <Image source = {Logo} style = {estilos.logo}/>
     </View>
 }
 
@@ -14,13 +15,14 @@ const estilos = StyleSheet.create({
         backgroundColor: "#11B5A4",
         borderBottomLeftRadius: 20,
         borderBottomRightRadius: 20,
+        alignItems: "center",
     },
 
     logo: {
-        textAlign: "center",
-        marginTop: 95,
-        color: "white",
-        fontSize: 45,
+        marginTop: 90,
+        width: width * 0.55,
+        height: width * 0.3 * 0.5,
+        alignSelf: "center",
       },
 
 })

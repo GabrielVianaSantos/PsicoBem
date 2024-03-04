@@ -1,9 +1,13 @@
-import React from "react";
-import { View, StyleSheet, Text, TextInput, } from "react-native";
+import React, {useState} from "react";
+import { View, StyleSheet, Text, TextInput, ScrollView, } from "react-native";
 import Topo from "../telas/components/topo";
+import Botao from "../telas/components/botao";
+import Select from "./components/select";
 
-export default function CadastroPacientes (topo,){
-    return<>
+export default function CadastroPacientes (topo, botao){
+    const [sexo, setSexo] = useState(null); 
+
+    return<ScrollView>
         <Topo {...topo}/>
         <View style = {estilos.container}>
             <View style = {estilos.containerTitulo}>
@@ -22,9 +26,21 @@ export default function CadastroPacientes (topo,){
                 <TextInput style= {estilos.cadastro}/>
                 <Text style={estilos.texto}>Telefone</Text>
                 <TextInput style= {estilos.cadastro}/>
+               <View style={estilos.containerSelect}>
+               <Select
+                    isOpen={false} 
+                    selectedOption={sexo}
+                    onSelect={setSexo}
+                    title="Sexo"
+                    options={["Masculino", "Feminino"]}
+                />
+               </View>
+                <View style={estilos.containerBotao}>
+                    <Botao texto= "Continuar" {...botao}/>
+                </View>
             </View>  
         </View>
-    </>
+    </ScrollView>
 }
 
 const estilos = StyleSheet.create ({
@@ -33,34 +49,39 @@ const estilos = StyleSheet.create ({
         width: "100%",
         padding: "8%",
         flex: 1,
-        justifyContent: "space-around",
     },
 
     containerTitulo:{
         alignItems: "center",
-        marginVertical: "5%",
+        justifyContent: "flex-start",
     },
 
     titulo:{
         color: "#11B5A4",
         fontFamily: "RalewayBold",
         fontSize: 23,
+        marginBottom: 15,
     },
 
     cadastro: {
         flexDirection: "column",
         borderBottomWidth: 1,
         borderBottomColor: "#11B5A4",
-        paddingTop: 5,
-        paddingBottom: 5,
+        paddingBottom: 3,
     },
 
     texto:{
         color: "#11B5A4",
         fontFamily: "RalewayBold",
         fontSize: 15,
-        lineHeight: 15,
+        marginTop: 9,
+    },
+
+    containerBotao:{
         marginTop: 20,
     },
 
+    containerSelect: {
+        marginTop: 30,
+    },
 })
