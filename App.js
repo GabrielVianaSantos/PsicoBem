@@ -19,7 +19,7 @@ export default function App() {
   return (
     <SafeAreaView style = {{flex: 1}} onLayout={onLayoutRootView}>
     <StatusBar backgroundColor={"transparent"} translucent/>
-        <Menu/> 
+        <TipoCadastro/> 
     </SafeAreaView>
   );
 }
