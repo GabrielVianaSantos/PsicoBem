@@ -2,8 +2,12 @@ import React from "react";
 import Botao from "./components/botao";
 import { View, Text, StyleSheet } from "react-native";
 
+
+//adicionar botões dinamicos (confPagmto)
+//adicionar calendario para controle de sessoes (base_por_data)
+
 const Sessoes = (botao) => (
-    <>
+    <> 
     <View style={estilos.tela}>
         <Text style={estilos.titulo}>Sessões</Text>
         <View style={estilos.container}>

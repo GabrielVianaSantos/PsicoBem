@@ -8,6 +8,9 @@ import TipoCadastro from './telas/tipoCadastro';
 import CadastroPacientes from './telas/cadastroPacientes';
 import CadastroPsicologos from './telas/cadastroPsicologos';
 import Menu from './telas/menu';
+import RegistrosOdisseia from './telas/registrosOdisseia';
+import SementesCuidado from './telas/sementesCuidado';
+import GuiasApoio from './telas/guiasApoio';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -19,7 +22,7 @@ export default function App() {
   return (
     <SafeAreaView style = {{flex: 1}} onLayout={onLayoutRootView}>
     <StatusBar backgroundColor={"transparent"} translucent/>
-        <TipoCadastro/> 
+        <GuiasApoio/> 
     </SafeAreaView>
   );
 }

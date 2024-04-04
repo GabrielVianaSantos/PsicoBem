@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
 import SectionRelatorioFinanceiro from "../src/sections/money.png";
-import SectionFluxoPacientes from '../src/sections/improvement.png'
+import SectionFluxoPacientes from '../src/sections/improvement.png';
 
 const Relatorios = () => (
     <>
