@@ -11,6 +11,10 @@ import Menu from './telas/menu';
 import RegistrosOdisseia from './telas/registrosOdisseia';
 import SementesCuidado from './telas/sementesCuidado';
 import GuiasApoio from './telas/guiasApoio';
+import PerfilPaciente from './telas/pefilPaciente';
+import Prontuarios from './telas/prontuarios';
+import TipoSessao from './telas/tipoSessao';
+import RegistroCompleto from './telas/registroCompleto';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -22,7 +26,7 @@ export default function App() {
   return (
     <SafeAreaView style = {{flex: 1}} onLayout={onLayoutRootView}>
     <StatusBar backgroundColor={"transparent"} translucent/>
-        <GuiasApoio/> 
+        <RegistroCompleto/> 
     </SafeAreaView>
   );
 }
