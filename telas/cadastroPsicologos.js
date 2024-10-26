@@ -2,8 +2,16 @@ import React from "react";
 import { View, StyleSheet, Text, TextInput, ScrollView, } from "react-native";
 import Topo from "../telas/components/topo";
 import Botao from "../telas/components/botao";
+import { useNavigation } from "@react-navigation/native";
 
 export default function CadastroPsicologos (topo, botao){
+    
+    const navigation = useNavigation();
+    
+    function navigateToHome() {
+        navigation.navigate("Home");
+      }
+
     return<ScrollView>
         <Topo {...topo}/>
         <View style = {estilos.container}>
@@ -22,7 +30,7 @@ export default function CadastroPsicologos (topo, botao){
                 <Text style={estilos.texto}>Confirma Senha</Text>
                 <TextInput style= {estilos.cadastro}/>
                 <View style={estilos.containerBotao}>
-                    <Botao texto= "Continuar" {...botao}/>
+                    <Botao texto= "Continuar" onPress={navigateToHome} {...botao}/>
                 </View>
             </View>  
         </View>

@@ -15,6 +15,8 @@ import PerfilPaciente from './telas/pefilPaciente';
 import Prontuarios from './telas/prontuarios';
 import TipoSessao from './telas/tipoSessao';
 import RegistroCompleto from './telas/registroCompleto';
+import ConexaoTerapeutica from './telas/conexaoTerapeutica';
+import Routes from "./src/routes";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -26,7 +28,7 @@ export default function App() {
   return (
     <SafeAreaView style = {{flex: 1}} onLayout={onLayoutRootView}>
     <StatusBar backgroundColor={"transparent"} translucent/>
-        <RegistroCompleto/> 
+        <Routes/>  
     </SafeAreaView>
   );
 }

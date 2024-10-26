@@ -2,8 +2,16 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from "react-native";
 import Topo from "./components/topo";
 import Botao from "./components/botao";
+import { useNavigation } from "@react-navigation/native";
 
 export default function Login(topo, botao){
+
+    const navigation = useNavigation();
+    
+    function navigateToTipoCadastro() {
+        navigation.navigate("TipoCadastro");
+      }
+
     return<>
     <Topo {...topo}/>
         <View style = {estilos.container}>
@@ -26,7 +34,7 @@ export default function Login(topo, botao){
                 <Text style={estilos.texto}>Entre com o Google</Text>
             </TouchableOpacity>
                 <Botao texto="Entrar" {...botao}/>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={navigateToTipoCadastro}>
                 <Text style={estilos.texto}>Não tem uma Conta?</Text>
             </TouchableOpacity>
             </View> 

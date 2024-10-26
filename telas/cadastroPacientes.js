@@ -3,9 +3,16 @@ import { View, StyleSheet, Text, TextInput, ScrollView, } from "react-native";
 import Topo from "../telas/components/topo";
 import Botao from "../telas/components/botao";
 import Select from "./components/select";
+import { useNavigation } from "@react-navigation/native";
 
 export default function CadastroPacientes (topo, botao){
     const [sexo, setSexo] = useState(null); 
+
+    const navigation = useNavigation();
+    
+    function navigateToHome() {
+        navigation.navigate("Home");
+      }
 
     return<ScrollView>
         <Topo {...topo}/>
@@ -36,7 +43,7 @@ export default function CadastroPacientes (topo, botao){
                 />
                </View>
                 <View style={estilos.containerBotao}>
-                    <Botao texto= "Continuar" {...botao}/>
+                    <Botao texto= "Continuar" onPress={navigateToHome} {...botao}/>
                 </View>
             </View>  
         </View>

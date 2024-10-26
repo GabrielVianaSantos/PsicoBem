@@ -1,9 +1,9 @@
 import { Raleway_400Regular } from "@expo-google-fonts/raleway";
 import { Text, StyleSheet, TouchableOpacity} from "react-native";
 
-export default function Botao({texto}){
+export default function Botao({texto, customBotao, onPress}){
     return <>
-        <TouchableOpacity style = {estilos.botao}>
+        <TouchableOpacity style = {[estilos.botao, customBotao]} onPress={onPress}>
             <Text style = {estilos.texto}>{texto}</Text>
         </TouchableOpacity>
     </>

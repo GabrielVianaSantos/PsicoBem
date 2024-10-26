@@ -4,8 +4,16 @@ import Topo from "./components/topo";
 import arte_tela_inicio from '../src/arts/arte_tela_inicio.png';
 import Botao from "./components/botao";
 const width = Dimensions.get('screen').width;
+import { useNavigation } from "@react-navigation/native";
 
 export default function Inicio(topo, botao){
+    
+    const navigation = useNavigation();
+    
+    function navigateToLogin() {
+        navigation.navigate("Login");
+      }
+    
     return<>
         <Topo {...topo}/>
         <View style = {estilos.container}>
@@ -14,7 +22,7 @@ export default function Inicio(topo, botao){
                 <Text style= {estilos.texto1} >Jornada para o seu Bem-Estar</Text>
                 <Text style = {estilos.texto2}>Cuidando da sua Mente</Text>
             </View>
-            <Botao texto = "Iniciar" {...botao}/>
+            <Botao onPress={navigateToLogin} texto = "Iniciar" {...botao}/>
         </View>
     </>
 }

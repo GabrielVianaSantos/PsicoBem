@@ -8,12 +8,14 @@ import { Icon } from "react-native-elements";
 
 const Tab = createBottomTabNavigator();
 const CustomTabBarIcon = (iconName, color) => {
-  return <Icon type="ionicon" name={iconName} color={color}/>
+  // return <Icon type="ionicon" name={iconName} color={color}/>
+  <Icon type="ionicon" name={iconName} color={color}/>
 }
 
-const Navigation = () => {
+// const Navigation = () => {
+export default function Navigation() {
   return (
-    <NavigationContainer>
+    // <NavigationContainer>
       <Tab.Navigator
       screenOptions={({route}) => ({
         tabBarIcon: ({color}) => {
@@ -39,8 +41,9 @@ const Navigation = () => {
         <Tab.Screen name="Home" component={Home} options={{headerShown: false}}/>
         <Tab.Screen name="Sessões" component={Sessoes} options={{headerShown: false}}/>
       </Tab.Navigator>
-    </NavigationContainer>
+    // </NavigationContainer>
   );
 };
 
-export default Navigation;
+// export default Navigation;
+// export default Navigation;

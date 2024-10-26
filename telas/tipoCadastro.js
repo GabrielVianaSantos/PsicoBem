@@ -5,16 +5,30 @@ import saudeMental from "../src/arts/saude-mental.png"
 import { CheckBox } from "react-native-elements";
 import { useState } from "react";
 import { color } from "react-native-elements/dist/helpers";
+import { useNavigation } from "@react-navigation/native";
 
 export default function TipoCadastro (topo, botao){
 //Criando Check-Box em status zerados
 const [checked1, setChecked1] = useState(false);
 const [checked2, setChecked2] = useState(false);
+
+const navigation = useNavigation(); //variavel que recebe a função de navegação de telas
+    
+    function navigateToCadastro() {
+        if (checked1 === true) { //verifica se o checkbox 1 está selecionado
+            navigation.navigate("CadastroPacientes");  //navega para a tela CadastroPacientes
+        }else if (checked2 === true) { //verifica se o checkbox 2 está selecionado
+            navigation.navigate("CadastroPsicologos"); //navega para a tela CadastroPsicologos
+        }else //caso não estejam selecionados os checkbox, cairá no else 
+        console.log("selecionar checkbox") //else retorna uma mensagem no console
+      }
+
 //Verificação de status do Check-Box 1
 const handlePress1 = () => {
     setChecked1(true);
     setChecked2(false);
 }
+
 //Verificação de status do Check-Box 2
 const handlePress2 = () =>{
     setChecked1(false);
@@ -41,6 +55,7 @@ return<>
             checkedIcon= "dot-circle-o"
             uncheckedIcon="circle-o"
             uncheckedColor="#11B5A4"
+            onValueChange={handlePress1}
             />
             <CheckBox
             title="Sou Psicólogo"
@@ -52,8 +67,9 @@ return<>
             checkedIcon= "dot-circle-o"
             uncheckedIcon="circle-o"
             uncheckedColor="#11B5A4"
+            onValueChange={handlePress2}
             />
-            <Botao texto = "Continuar"{...botao}/>
+            <Botao texto = "Continuar" onPress={navigateToCadastro} {...botao}/>
         </View>
     </>
 }
