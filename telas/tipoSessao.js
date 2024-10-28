@@ -7,7 +7,12 @@ import { useState } from "react";
 export default function TipoSessao (topo) {
     const [text, setText] = useState('Nome da Sessão');
     const [text2, setText2] = useState('Valor');
-    
+    const navigation = topo.navigation;
+
+    const goBack = () => {
+        navigation.navigate('Sessoes');
+    };
+
     return<>
         <Topo {...topo}/>
         <View style={estilos.tela}>    
@@ -17,6 +22,7 @@ export default function TipoSessao (topo) {
                     name="chevron-back-outline"
                     color="#11B5A4"
                     size={30}
+                    onPress={() => navigation.goBack()}
                     />
                 </TouchableOpacity>
                 <Text style={estilos.titulo}>Tipos de Sessão</Text>

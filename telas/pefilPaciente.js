@@ -3,8 +3,16 @@ import { View, StyleSheet, Text,} from "react-native";
 import Botao from "./components/botao";
 import Topo from "./components/topo";
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from "@react-navigation/native";
 
 export default function PerfilPaciente (topo, botao) {
+    
+    const navigation = useNavigation();
+    
+    function navigateToProntuarios() {
+        navigation.navigate("Prontuarios");
+      }
+
     return<>
     <Topo {...topo}/>
         <View style={estilos.tela}>
@@ -35,7 +43,7 @@ export default function PerfilPaciente (topo, botao) {
                         </View>
                     </View>
             </View>
-            <Botao texto="Ver Prontuário" {...botao}/>
+            <Botao texto="Ver Prontuário" onPress={navigateToProntuarios} {...botao}/>
         </View>
     </>
 }

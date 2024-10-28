@@ -1,6 +1,6 @@
 import React from "react";
 import Topo from "./components/topo";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import Botao from "./components/botao"
 import {Ionicons} from '@expo/vector-icons';
 

@@ -1,9 +1,10 @@
 import React, {useState} from "react";
-import { View, StyleSheet, Text, TextInput, ScrollView, } from "react-native";
+import { View, StyleSheet, Text, TextInput } from "react-native";
 import Topo from "../telas/components/topo";
 import Botao from "../telas/components/botao";
 import Select from "./components/select";
 import { useNavigation } from "@react-navigation/native";
+import CustomScrollView from "./components/customScrollView";   
 
 export default function CadastroPacientes (topo, botao){
     const [sexo, setSexo] = useState(null); 
@@ -11,10 +12,10 @@ export default function CadastroPacientes (topo, botao){
     const navigation = useNavigation();
     
     function navigateToHome() {
-        navigation.navigate("Home");
+        navigation.navigate("HomeBarNavigation");
       }
 
-    return<ScrollView>
+    return<CustomScrollView>
         <Topo {...topo}/>
         <View style = {estilos.container}>
             <View style = {estilos.containerTitulo}>
@@ -39,7 +40,7 @@ export default function CadastroPacientes (topo, botao){
                     selectedOption={sexo}
                     onSelect={setSexo}
                     title="Sexo"
-                    options={["Masculino", "Feminino"]}
+                    options={["Masculino", "Feminino", "Outro"]}
                 />
                </View>
                 <View style={estilos.containerBotao}>
@@ -47,7 +48,7 @@ export default function CadastroPacientes (topo, botao){
                 </View>
             </View>  
         </View>
-    </ScrollView>
+    </CustomScrollView>
 }
 
 const estilos = StyleSheet.create ({

@@ -1,10 +1,11 @@
 import React from "react";
 import Topo from "./components/topo";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import Botao from "./components/botao"
+import CustomScrollView from "./components/customScrollView";
 
 export default function SementesCuidado (topo){
-    return<ScrollView>
+    return<CustomScrollView>
     <Topo {...topo}/>
     <View style={estilos.tela}>
         <View>
@@ -31,7 +32,7 @@ export default function SementesCuidado (topo){
         <Text style={estilos.textoShow}>Comece a escrever, é fácil, que tal deixar uma orientação para seus pacientes?</Text>    
         </View>
     </View>
-    </ScrollView>
+    </CustomScrollView>
 }
 
 const estilos = StyleSheet.create({

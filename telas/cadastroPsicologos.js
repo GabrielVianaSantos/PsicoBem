@@ -1,8 +1,9 @@
 import React from "react";
-import { View, StyleSheet, Text, TextInput, ScrollView, } from "react-native";
+import { View, StyleSheet, Text, TextInput } from "react-native";
 import Topo from "../telas/components/topo";
 import Botao from "../telas/components/botao";
 import { useNavigation } from "@react-navigation/native";
+import CustomScrollView from "./components/customScrollView";
 
 export default function CadastroPsicologos (topo, botao){
     
@@ -12,7 +13,7 @@ export default function CadastroPsicologos (topo, botao){
         navigation.navigate("Home");
       }
 
-    return<ScrollView>
+    return<CustomScrollView>
         <Topo {...topo}/>
         <View style = {estilos.container}>
             <View style = {estilos.containerTitulo}>
@@ -34,7 +35,7 @@ export default function CadastroPsicologos (topo, botao){
                 </View>
             </View>  
         </View>
-    </ScrollView>
+    </CustomScrollView>
 }
 
 const estilos = StyleSheet.create ({

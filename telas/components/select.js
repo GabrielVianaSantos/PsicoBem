@@ -33,6 +33,9 @@ const Select = () => {
           <TouchableOpacity onPress={() => selectOption('Feminino')} style={estilos.option}>
             <Text style = {estilos.optionText}>Feminino</Text>
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => selectOption('Outro')} style={estilos.option}>
+            <Text style = {estilos.optionText}>Outro</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -56,7 +59,7 @@ const estilos = StyleSheet.create({
   },
   options: {
     position: 'absolute',
-    top: 40,
+    top: 20,
     left: 0,
     right: 0,
     borderWidth: 1.5,

@@ -17,6 +17,7 @@ import TipoSessao from './telas/tipoSessao';
 import RegistroCompleto from './telas/registroCompleto';
 import ConexaoTerapeutica from './telas/conexaoTerapeutica';
 import Routes from "./src/routes";
+import Navigation from './telas/components/navigation-bar';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,8 +29,8 @@ export default function App() {
   return (
     <SafeAreaView style = {{flex: 1}} onLayout={onLayoutRootView}>
     <StatusBar backgroundColor={"transparent"} translucent/>
-        <Routes/>  
+        <Routes/>
     </SafeAreaView>
-  );
+  ); 
 }
 

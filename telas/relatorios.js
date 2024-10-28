@@ -2,9 +2,11 @@ import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
 import SectionRelatorioFinanceiro from "../src/sections/money.png";
 import SectionFluxoPacientes from '../src/sections/improvement.png';
+import Topo from "./components/topo";
 
-const Relatorios = () => (
+const Relatorios = (topo) => (
     <>
+    <Topo {...topo}/>
     <View style = {estilos.tela}>
         <Text style={estilos.titulo}>Relatórios</Text>
             <View style={estilos.container}>

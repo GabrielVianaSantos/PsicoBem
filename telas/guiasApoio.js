@@ -1,6 +1,7 @@
 import React , {useState} from "react";
-import { View, StyleSheet, Text, ScrollView, TextInput } from "react-native";
+import { View, StyleSheet, Text, TextInput } from "react-native";
 import Topo from "./components/topo";
+import CustomScrollView from "./components/customScrollView";
 
 //concluir pesquisa de pacientes
 //adicionar botoes dinamicos
@@ -25,7 +26,7 @@ const TextInputFunction = () => {
 }
 
 export default function GuiasApoio(topo){
-    return<ScrollView>
+    return<CustomScrollView>
         <Topo {...topo}/>
         <View style={estilos.tela}>
         <View>
@@ -58,7 +59,7 @@ export default function GuiasApoio(topo){
           <Text style={estilos.texto}>Tipo Sessão</Text>
         </View>
     </View>
-    </ScrollView>
+    </CustomScrollView>
 }
 
 const estilos = StyleSheet.create({
