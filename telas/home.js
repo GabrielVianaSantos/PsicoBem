@@ -5,8 +5,6 @@ import SectionSementes from '../src/sections/semente.png';
 import SectionGuias from '../src/sections/prancheta.png';
 import Topo from "./components/topo";
 import { Ionicons } from '@expo/vector-icons';
-import Navigation from "./components/navigation-bar";
-import Botao from "./components/botao";
 import CustomScrollView from "./components/customScrollView";   
 import { useNavigation } from '@react-navigation/native';
 import { TouchableOpacity } from "react-native-gesture-handler";

@@ -1,34 +1,9 @@
 {
+  "name": "psicoapp",
+  "slug": "psicoapp",
   "expo": {
-    "name": "psicoApp",
-    "slug": "psicoApp",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/temp/icon.png",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/temp/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/temp/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      }
-    },
-    "web": {
-      "favicon": "./assets/temp/favicon.png"
-    },
-    "plugins": [
-      "expo-font"
-    ],
+    "slug": "psicoapp",
+    "name": "psicoapp",
     "sdkVersion": "51.0.0"
   }
 }

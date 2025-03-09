@@ -1,23 +1,12 @@
+if (__DEV__) {
+  require("./config/ReactotronConfig");
+}
+
 import React from 'react';
 import {StatusBar, SafeAreaView } from 'react-native';
-import Inicio from './telas/inicio';
-import Login from './telas/login';
 import * as SplashScreen from 'expo-splash-screen';
 import useLoadFonts from './src/hooks/useLoadFonts';
-import TipoCadastro from './telas/tipoCadastro';
-import CadastroPacientes from './telas/cadastroPacientes';
-import CadastroPsicologos from './telas/cadastroPsicologos';
-import Menu from './telas/menu';
-import RegistrosOdisseia from './telas/registrosOdisseia';
-import SementesCuidado from './telas/sementesCuidado';
-import GuiasApoio from './telas/guiasApoio';
-import PerfilPaciente from './telas/pefilPaciente';
-import Prontuarios from './telas/prontuarios';
-import TipoSessao from './telas/tipoSessao';
-import RegistroCompleto from './telas/registroCompleto';
-import ConexaoTerapeutica from './telas/conexaoTerapeutica';
 import Routes from "./src/routes";
-import Navigation from './telas/components/navigation-bar';
 
 SplashScreen.preventAutoHideAsync();
 
