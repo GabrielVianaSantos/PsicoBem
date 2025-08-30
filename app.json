@@ -1,9 +1,12 @@
 {
-  "name": "psicoapp",
-  "slug": "psicoapp",
   "expo": {
     "slug": "psicoapp",
     "name": "psicoapp",
-    "sdkVersion": "51.0.0"
+    "newArchEnabled": true,
+    "plugins": [
+      "expo-asset",
+      "expo-font"
+    ],
+    "sdkVersion": "53.0.0"
   }
 }

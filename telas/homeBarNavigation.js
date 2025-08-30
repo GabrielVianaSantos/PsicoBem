@@ -4,7 +4,7 @@ import Navigation from "./components/navigation-bar";
 
 const HomeBarNavigation = () => (
     <>
-    <Navigation />
+        <Navigation />
     </>
 )
 

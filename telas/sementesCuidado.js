@@ -3,45 +3,44 @@ import Topo from "./components/topo";
 import { View, Text, StyleSheet } from "react-native";
 import Botao from "./components/botao"
 import CustomScrollView from "./components/customScrollView";
+import CardCustomInputText from "./components/cardCustomInputText";
 
 export default function SementesCuidado (topo){
+    
     return<CustomScrollView>
     <Topo {...topo}/>
-    <View style={estilos.tela}>
+    <View style={estilos.container}>
         <View>
             <Text style={estilos.titulo}>Sementes do Cuidado</Text>
         </View>
-        <View style={{marginTop: 10}}>
+        <View style={{marginTop:'5%'}}>
             <Text style={estilos.subtitulo}>Plante uma semente do cuidado e contribua com o crescimento</Text>
         </View>
-        <View style={estilos.container}>
-            <View style={estilos.containerConteudo}>
-                <Text style={estilos.texto}>Profissional</Text>
-                <Text style={estilos.texto}>29/jan</Text>
-            </View>
-        <Text style={estilos.textoShow}>Comece a escrever, é fácil, que tal deixar uma orientação para seus pacientes?</Text>    
+        <View style={{marginTop: '5%'}}>
+            <CardCustomInputText 
+                nome="Nome do Psicólogo" 
+                texto_placeholder="Escreva seu comentário..."
+                color_placeholder="#11B5A4"
+                color_text_input="#11B5A4" 
+                // handleScreenPress={() => navigation.navigate('DetalhesRegistro')} 
+            />
         </View>
+
+        <View style={estilos.divider} />
         <View style={estilos.containerSubTitulo}>
             <Text style={estilos.subtitulo}>Suas últimas sementes</Text>
-        </View>
-        <View style={estilos.container}>
-            <View style={estilos.containerConteudo}>
-                <Text style={estilos.texto}>Paciente</Text>
-                <Text style={estilos.texto}>29/jan</Text>
-            </View>
-        <Text style={estilos.textoShow}>Comece a escrever, é fácil, que tal deixar uma orientação para seus pacientes?</Text>    
         </View>
     </View>
     </CustomScrollView>
 }
 
 const estilos = StyleSheet.create({
-    tela: {
+    
+    container:{
+        backgroundColor: "transparent",
+        width: "100%",
+        padding: "8%",
         flex: 1,
-        alignItems: "flex-start",
-        justifyContent: 'flex-start',
-        backgroundColor: 'white',
-        padding: 25,
     },
 
     titulo:{
@@ -56,26 +55,7 @@ const estilos = StyleSheet.create({
         fontFamily: "RalewayBold",
         fontSize: 18,
         marginHorizontal: 10,
-    },
-
-    container:{
-        backgroundColor: '#DEF6F0',
-        borderRadius: 6,
-        width: '100%',
-        height: "32%",
-        paddingVertical: 15,
-        paddingHorizontal: 20,
-        marginTop: 20,
-        marginBottom: 10,
-        justifyContent: "space-evenly",
         flex: 1,
-    },
-
-    containerConteudo:{
-        flexDirection: "row",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
-        marginVertical: 5,
     },
 
     texto:{
@@ -84,18 +64,17 @@ const estilos = StyleSheet.create({
         fontSize: 19,
     },
 
-    textoShow:{
-        color: "#11B5A4",
-        fontFamily: "RalewayBold",
-        fontSize: 15,
+    containerSubTitulo:{
+        width: "100%",
+        alignItems: "center",
+        display: "flex",
     },
 
-    containerSubTitulo:{
-        borderTopWidth: 2,
-        borderColor: "#11B5A4",
-        width: "100%",
-        marginTop: 15,
-        marginVertical: -5,
-        alignItems: "center",
-    }
+    divider: {
+        height: 1,
+        backgroundColor: '#e0e0e0',
+        marginHorizontal: 20,
+        display: 'flex',
+        marginTop: '2%',
+    },
 })

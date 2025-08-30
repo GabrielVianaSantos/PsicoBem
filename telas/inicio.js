@@ -22,14 +22,14 @@ export default function Inicio(topo, botao){
                 <Text style= {estilos.texto1} >Jornada para o seu Bem-Estar</Text>
                 <Text style = {estilos.texto2}>Cuidando da sua Mente</Text>
             </View>
-            <Botao onPress={navigateToLogin} texto = "Iniciar" {...botao}/>
+            <Botao onPress={navigateToLogin} texto = "Iniciar" {...botao} backgroundColor="#11B5A4"/>
         </View>
     </>
 }
 
 const estilos = StyleSheet.create({
     container:{
-        backgroundColor: "white",
+        backgroundColor: "transparent",
         width: "100%",
         padding: "8%",
         flex: 1,

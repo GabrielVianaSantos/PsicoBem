@@ -2,119 +2,157 @@ import { View, StyleSheet, Image, Text } from "react-native";
 import Topo from "./components/topo";
 import Botao from "./components/botao";
 import saudeMental from "../src/arts/saude-mental.png"
-import { CheckBox } from "react-native-elements";
+import { CheckBox } from '@rneui/themed';
 import { useState } from "react";
-import { color } from "react-native-elements/dist/helpers";
 import { useNavigation } from "@react-navigation/native";
 
-export default function TipoCadastro (topo, botao){
-//Criando Check-Box em status zerados
-const [checked1, setChecked1] = useState(false);
-const [checked2, setChecked2] = useState(false);
+export default function TipoCadastro(topo, botao) {
+  // Criando Check-Box em status zerados
+  const [checked1, setChecked1] = useState(false);
+  const [checked2, setChecked2] = useState(false);
 
-const navigation = useNavigation(); //variavel que recebe a função de navegação de telas
+  const navigation = useNavigation();
     
-    function navigateToCadastro() {
-        if (checked1 === true) { //verifica se o checkbox 1 está selecionado
-            navigation.navigate("CadastroPacientes");  //navega para a tela CadastroPacientes
-        }else if (checked2 === true) { //verifica se o checkbox 2 está selecionado
-            navigation.navigate("CadastroPsicologos"); //navega para a tela CadastroPsicologos
-        }else //caso não estejam selecionados os checkbox, cairá no else 
-        console.log("selecionar checkbox") //else retorna uma mensagem no console
-      }
+  function navigateToCadastro() {
+    if (checked1 === true) {
+      navigation.navigate("CadastroPacientes");
+    } else if (checked2 === true) {
+      navigation.navigate("CadastroPsicologos");
+    } else {
+      console.log("selecionar checkbox");
+      // Seria bom mostrar um alerta para o usuário aqui em vez de apenas console.log
+    }
+  }
 
-//Verificação de status do Check-Box 1
-const handlePress1 = () => {
+  const handlePress1 = () => {
     setChecked1(true);
     setChecked2(false);
-}
+  }
 
-//Verificação de status do Check-Box 2
-const handlePress2 = () =>{
+  const handlePress2 = () => {
     setChecked1(false);
     setChecked2(true);
-}
+  }
 
-return<>
-    <Topo {...topo}/>
-        <View style = {estilos.container}>
-            <View style = {estilos.containerImagem}>
-            <Image source = {saudeMental}/>
-            <Text style = {estilos.texto}>Conecte seu coração e sua mente</Text>
+  return (
+    <>
+      <Topo {...topo} />
+      <View style={estilos.container}>
+        <View style={estilos.contentContainer}>
+          {/* Seção superior - Imagem e texto */}
+          <View style={estilos.containerImagem}>
+            <Image source={saudeMental} style={estilos.image} />
+            <Text style={estilos.texto}>Conecte seu coração e sua mente!</Text>
+          </View>
+          
+          {/* Seção de escolha do tipo de cadastro */}
+          <View style={estilos.selectionContainer}>
+            <View style={estilos.box}>
+              <Text style={estilos.texto2}>Escolha seu tipo de Cadastro:</Text>
             </View>
-        <View style = {estilos.box}>
-            <Text style = {estilos.texto2}>Escolha seu tipo de Cadastro:</Text>
+            
+            <View style={estilos.checkboxesContainer}>
+              <CheckBox
+                title="Sou Paciente"
+                textStyle={estilos.checkBoxText}
+                checked={checked1}
+                onPress={handlePress1}
+                containerStyle={estilos.checkboxContainer}
+                checkedColor="#11B5A4"
+                checkedIcon="dot-circle-o"
+                uncheckedIcon="circle-o"
+                uncheckedColor="#11B5A4"
+                
+              />
+              
+              <CheckBox
+                title="Sou Psicólogo"
+                textStyle={estilos.checkBoxText}
+                checked={checked2}
+                onPress={handlePress2}
+                containerStyle={estilos.checkboxContainer}
+                checkedColor="#11B5A4"
+                checkedIcon="dot-circle-o"
+                uncheckedIcon="circle-o"
+                uncheckedColor="#11B5A4"
+              />
+            </View>
+          </View>
+          
+          {/* Seção do botão */}
+          <View style={estilos.buttonContainer}>
+            <Botao texto="Continuar" onPress={navigateToCadastro} {...botao} backgroundColor="#11B5A4"/>
+          </View>
         </View>
-            <CheckBox
-            title="Sou Paciente"
-            textStyle = {estilos.checkBoxText}
-            checked={checked1}
-            onPress={handlePress1}
-            containerStyle={estilos.checkboxContainer}
-            checkedColor="#11B5A4"
-            checkedIcon= "dot-circle-o"
-            uncheckedIcon="circle-o"
-            uncheckedColor="#11B5A4"
-            onValueChange={handlePress1}
-            />
-            <CheckBox
-            title="Sou Psicólogo"
-            textStyle = {estilos.checkBoxText}
-            checked={checked2}
-            onPress={handlePress2}
-            containerStyle={estilos.checkboxContainer}
-            checkedColor="#11B5A4"
-            checkedIcon= "dot-circle-o"
-            uncheckedIcon="circle-o"
-            uncheckedColor="#11B5A4"
-            onValueChange={handlePress2}
-            />
-            <Botao texto = "Continuar" onPress={navigateToCadastro} {...botao}/>
-        </View>
+      </View>
     </>
+  );
 }
 
 const estilos = StyleSheet.create({
-    
-    container:{
-        flex: 1,
-        padding: "7%",
-        marginTop: 20,
-    },
-
-    containerImagem:{
-        alignItems: "center",
-    },
-
-    texto:{
-        fontFamily: "RalewayRegular",
-        fontSize: 19,
-        color: "#11B5A4",
-    },
-
-    texto2:{
-        fontFamily: "RalewayBold",
-        fontSize: 22,
-        color: "#11B5A4",
-    },
-
-    checkboxContainer: {
-        flex : 1,
-        backgroundColor: 'transparent',
-        borderWidth: 0,
-        padding: 0,
-        justifyContent: "space-around",
-    },
-
-    checkBoxText:{
-        color: "#11B5A4",
-        fontSize: 18,
-        fontFamily: "RalewayBold",
-    },
-
-    box:{
-        marginTop: 22,
-        alignItems: "center",
-    },
-
-})
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  
+  contentContainer: {
+    padding: "7%",
+    justifyContent: "space-between",
+  },
+  
+  containerImagem: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  
+  image: {
+    width: '100%',
+    height: undefined,
+    aspectRatio: 1,
+    maxHeight: 200,
+  },
+  
+  texto: {
+    fontFamily: "RalewayRegular",
+    fontSize: 19,
+    color: "#11B5A4",
+    marginTop: 10,
+  },
+  
+  selectionContainer: {
+    marginVertical: 5,
+  },
+  
+  box: {
+    marginBottom: 5,
+  },
+  
+  texto2: {
+    fontFamily: "RalewayBold",
+    fontSize: 19,
+    color: "#11B5A4",
+  },
+  
+  checkboxesContainer: {
+    marginVertical: 10,
+  },
+  
+  checkboxContainer: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    padding: 5,
+  },
+  
+  checkBoxText: {
+    color: "#11B5A4",
+    fontSize: 18,
+    fontFamily: "RalewayBold",
+  },
+  
+  buttonContainer: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+});

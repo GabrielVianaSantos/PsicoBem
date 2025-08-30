@@ -4,13 +4,14 @@ import Topo from "../telas/components/topo";
 import Botao from "../telas/components/botao";
 import { useNavigation } from "@react-navigation/native";
 import CustomScrollView from "./components/customScrollView";
+import TextInputCustom from "./components/textinputcustom";
 
-export default function CadastroPsicologos (topo, botao){
+export default function CadastroPsicologos (topo, botao, textinputcustom) {
     
     const navigation = useNavigation();
     
     function navigateToHome() {
-        navigation.navigate("Home");
+        navigation.navigate("HomeBarNavigation");
       }
 
     return<CustomScrollView>
@@ -20,18 +21,43 @@ export default function CadastroPsicologos (topo, botao){
                 <Text style={estilos.titulo}>Cadastro de Psicólogos</Text>
             </View> 
             <View>    
-                <Text style={estilos.texto}>Nome Completo</Text>
-                <TextInput style= {estilos.cadastro}/>
-                <Text style={estilos.texto}>Email</Text>
-                <TextInput style= {estilos.cadastro}/>
-                <Text style={estilos.texto}>CRP</Text>
-                <TextInput style= {estilos.cadastro}/>
-                <Text style={estilos.texto}>Senha</Text>
-                <TextInput style= {estilos.cadastro}/>
-                <Text style={estilos.texto}>Confirma Senha</Text>
-                <TextInput style= {estilos.cadastro}/>
+                <TextInputCustom                    
+                    texto="Nome Completo"
+                    iconName="person"
+                    iconColor="#11B5A4"
+                    iconSize={20}
+                    {...textinputcustom}
+                />
+                <TextInputCustom                    
+                    texto="E-mail"
+                    iconName="mail"
+                    iconColor="#11B5A4"
+                    iconSize={20}
+                    {...textinputcustom}
+                />
+                <TextInputCustom                    
+                    texto="CRP"
+                    iconName="id-card"
+                    iconColor="#11B5A4"
+                    iconSize={20}
+                    {...textinputcustom}
+                />
+                <TextInputCustom                    
+                    texto="Senha"
+                    iconName="lock-closed"
+                    iconColor="#11B5A4"
+                    iconSize={20}
+                    {...textinputcustom}
+                />
+                <TextInputCustom                    
+                    texto="Confirma Senha"
+                    iconName="lock-closed"
+                    iconColor="#11B5A4"
+                    iconSize={20}
+                    {...textinputcustom}
+                />
                 <View style={estilos.containerBotao}>
-                    <Botao texto= "Continuar" onPress={navigateToHome} {...botao}/>
+                    <Botao texto= "Continuar" onPress={navigateToHome} {...botao} backgroundColor="#11B5A4"/>
                 </View>
             </View>  
         </View>
@@ -40,7 +66,7 @@ export default function CadastroPsicologos (topo, botao){
 
 const estilos = StyleSheet.create ({
     container:{
-        backgroundColor: "white",
+        backgroundColor: "transparent",
         width: "100%",
         padding: "8%",
     },

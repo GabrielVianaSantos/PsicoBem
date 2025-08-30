@@ -10,32 +10,48 @@
   },
   "dependencies": {
     "@expo-google-fonts/raleway": "^0.2.3",
+<<<<<<< HEAD
+    "@expo/vector-icons": "^14.1.0",
+    "@react-native-masked-view/masked-view": "^0.3.2",
+=======
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/masked-view": "^0.1.11",
+>>>>>>> ff8892862fdb70ade2385f9806329d1b774d9bf3
     "@react-navigation/bottom-tabs": "^6.5.16",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/stack": "^6.4.1",
-    "@rneui/base": "^4.0.0-rc.7",
+    "@rneui/base": "^4.0.0-rc.8",
     "@rneui/themed": "^4.0.0-rc.8",
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.1",
     "eslint": "^9.21.0",
-    "expo": "^51.0.0",
-    "expo-font": "~12.0.5",
-    "expo-splash-screen": "~0.27.4",
-    "expo-status-bar": "~1.12.1",
+    "expo": "53.0.22",
+    "expo-asset": "~11.1.7",
+    "expo-font": "~13.3.2",
+    "expo-navigation-bar": "~4.2.8",
+    "expo-splash-screen": "~0.30.10",
+    "expo-status-bar": "~2.2.3",
+    "lucide-react-native": "^0.503.0",
     "open": "^10.1.0",
-    "react": "18.2.0",
-    "react-native": "^0.74.5",
-    "react-native-elements": "^3.4.3",
-    "react-native-gesture-handler": "~2.16.1",
-    "react-native-reanimated": "~3.10.1",
-    "react-native-safe-area-context": "4.10.1",
-    "react-native-screens": "3.31.1",
-    "react-native-vector-icons": "^10.0.3",
-    "xdl": "^60.0.12"
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "react-native": "0.79.5",
+    "react-native-gesture-handler": "~2.24.0",
+    "react-native-reanimated": "~3.17.4",
+    "react-native-safe-area-context": "^5.6.1",
+    "react-native-screens": "~4.11.1",
+    "react-native-svg": "15.11.2",
+    "react-native-web": "^0.20.0",
+    "stream-browserify": "^3.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
     "reactotron-react-native": "^5.1.12",
-    "typescript": "^5.7.3"
+    "typescript": "~5.8.3"
   },
-  "private": true
+  "private": true,
+  "resolutions": {
+    "@expo/config-plugins": "10.1.1",
+    "@expo/metro-config": "0.20.0"
+  }
 }

@@ -5,7 +5,7 @@ import Topo from "./components/topo";
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from "@react-navigation/native";
 
-export default function PerfilPaciente (topo, botao) {
+export default function PerfilPaciente (topo, botao, paciente) {
     
     const navigation = useNavigation();
     
@@ -27,7 +27,7 @@ export default function PerfilPaciente (topo, botao) {
                 />
                     <View style={estilos.containerInfo}>
                         <View style={estilos.caixasInfo}>
-                            <Text style={estilos.texto}>Nome do Paciente</Text>
+                            <Text style={estilos.texto}>{paciente.nome}</Text>
                         </View>
                         <View style={estilos.caixasInfo}>
                             <Text style={estilos.texto}>Telefone</Text>

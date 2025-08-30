@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Relatorios from "../relatorios";
 import Sessoes from "../sessoes";
 import Home from "../home";
-import { Icon } from "react-native-elements";
+import { Icon } from '@rneui/themed';
 
 const Tab = createBottomTabNavigator();
 const CustomTabBarIcon = (iconName, color) => {
@@ -30,7 +30,7 @@ export default function Navigation() {
         tabBarActiveTintColor: 'white',
         tabBarInactiveTintColor: '#007269',
         tabBarLabelStyle: {fontSize: 14, fontFamily: "RalewayBold"},
-        tabBarStyle: {backgroundColor: '#11B5A4', paddingHorizontal: 30},
+        tabBarStyle: {backgroundColor: '#11B5A4', paddingHorizontal: 30 },
         tabBarLabel: () => null,
       })}
       >

@@ -16,6 +16,7 @@ const estilos = StyleSheet.create({
         borderBottomLeftRadius: 20,
         borderBottomRightRadius: 20,
         alignItems: "center",
+        elevation: 5,
     },
 
     logo: {

@@ -4,9 +4,12 @@ import { View, Text, StyleSheet } from "react-native";
 import Botao from "./components/botao"
 import CustomScrollView from "./components/customScrollView";
 import { useNavigation } from "@react-navigation/native";
-import { TouchableOpacity } from "react-native-gesture-handler";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ChevronRight, User } from "lucide-react-native";
+import CardPaciente from "./components/cardCustom";
+import RegistroCompleto from "./registroCompleto";
 
-export default function RegistrosOdisseia (topo, botao){
+export default function RegistrosOdisseia (topo, customBotao, nome, data, emoji) {
     
     // try:
     //     nomebanco
@@ -28,73 +31,30 @@ export default function RegistrosOdisseia (topo, botao){
     function navigateToPerfilPaciente() {
         navigation.navigate("PerfilPaciente");
     }
- 
-    function navigateToRegistroCompleto() {
+
+    function handleRegistroCompletoPress() {
+        // navigateToRegistroCompleto();
         navigation.navigate("RegistroCompleto");
     }
 
-    return<CustomScrollView>
+    return<>
     <Topo {...topo}/>
-    <View style={estilos.tela}>
-        <View>
-            <Text style={estilos.titulo}>Registros de Odisseia</Text>
-        </View>
-        <View style={estilos.container}>
-            <View style={estilos.containerConteudo}>
-            <TouchableOpacity onPress={navigateToPerfilPaciente}>
-                <Text style={estilos.texto}>Paciente</Text>
-            </TouchableOpacity>
-                <Text style={estilos.texto}>29/jan</Text>
-            </View>
-            <Botao texto="Ver Registro Completo" onPress={navigateToRegistroCompleto} {...botao} />
-        </View>
-        <View style={estilos.container}>
-            <View style={estilos.containerConteudo}>
-            <TouchableOpacity onPress={navigateToPerfilPaciente}>
-                <Text style={estilos.texto}>Paciente</Text>
-            </TouchableOpacity>
-                <Text style={estilos.texto}>29/jan</Text>
-            </View>
-            <Botao texto = "Ver Registro Completo" id="" {...botao}/>
-        </View>
-        <View style={estilos.container}>
-            <View style={estilos.containerConteudo}>
-            <TouchableOpacity onPress={navigateToPerfilPaciente}>
-                <Text style={estilos.texto}>Paciente</Text>
-            </TouchableOpacity> 
-                <Text style={estilos.texto}>29/jan</Text>
-            </View>
-            <Botao texto = "Ver Registro Completo"{...botao}/>
-        </View>
-        <View style={estilos.container}>
-            <View style={estilos.containerConteudo}>
-            <TouchableOpacity onPress={navigateToPerfilPaciente}>
-                <Text style={estilos.texto}>Paciente</Text>
-            </TouchableOpacity>
-                <Text style={estilos.texto}>29/jan</Text>
-            </View>
-            <Botao texto = "Ver Registro Completo"{...botao}/>
-        </View>
-        <View style={estilos.container}>
-            <View style={estilos.containerConteudo}>
-            <TouchableOpacity onPress={navigateToPerfilPaciente}>
-                <Text style={estilos.texto}>Paciente</Text>
-            </TouchableOpacity>
-                <Text style={estilos.texto}>29/jan</Text>
-            </View>
-            <Botao texto = "Ver Registro Completo"{...botao}/>
-        </View>
-    </View>
-    </CustomScrollView>
+        <SafeAreaView style={estilos.container}>
+            <CustomScrollView>
+                <View>
+                    <Text style={estilos.titulo}>Registros de Odisseia</Text>
+                </View>
+                <CardPaciente nome={nome || "Nome do Paciente"} data={data || "29-jan"} emoji={emoji || "feliz"} handleScreenPress={handleRegistroCompletoPress} />
+            </CustomScrollView>
+        </SafeAreaView>
+    </>
 }
 
 const estilos = StyleSheet.create({
-    tela: {
+    container: {
         flex: 1,
-        alignItems: "flex-start",
-        justifyContent: 'flex-start',
-        backgroundColor: 'white',
-        padding: 25,
+        backgroundColor: 'transparent',
+        paddingBottom: 0,
     },
 
     titulo:{
@@ -102,24 +62,8 @@ const estilos = StyleSheet.create({
         fontFamily: "RalewayBold",
         fontSize: 23,
         marginHorizontal: 10,
-    },
-
-    container:{
-        backgroundColor: '#DEF6F0',
-        borderRadius: 6,
-        width: '100%',
-        height: "20%",
-        paddingVertical: 2,
-        paddingHorizontal: 20,
-        marginTop: 20,
-        marginBottom: 5,
-        justifyContent: "space-evenly",
-    },
-
-    containerConteudo:{
-        flexDirection: "row",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
+        marginBottom: 20,
+        padding : 7,
     },
 
     texto:{

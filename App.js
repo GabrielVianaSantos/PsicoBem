@@ -7,6 +7,7 @@ import {StatusBar, SafeAreaView } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import useLoadFonts from './src/hooks/useLoadFonts';
 import Routes from "./src/routes";
+import AuthProvider from './src/providers/AuthProvider';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -16,10 +17,12 @@ export default function App() {
   return null;
 
   return (
-    <SafeAreaView style = {{flex: 1}} onLayout={onLayoutRootView}>
-    <StatusBar backgroundColor={"transparent"} translucent/>
-        <Routes/>
-    </SafeAreaView>
+    <AuthProvider>
+      <SafeAreaView style = {{flex: 1}} onLayout={onLayoutRootView}>
+      <StatusBar backgroundColor={"transparent"} translucent/>
+          <Routes/>
+      </SafeAreaView>
+    </AuthProvider>
   ); 
 }
 

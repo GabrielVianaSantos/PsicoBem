@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Icon } from 'react-native-elements';
+import { Icon } from '@rneui/themed';
 
 const Select = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,7 +18,7 @@ const Select = () => {
   return (
     <View style={estilos.container}>
       <TouchableOpacity onPress={toggleSelect} style={estilos.select}>
-        <Text style={estilos.title}>{selectedOption ? selectedOption : 'Sexo'}</Text>
+        <Text style={estilos.title}>{selectedOption ? selectedOption : 'Gênero'}</Text>
         <Icon
           name={isOpen ? 'keyboard-arrow-up': 'keyboard-arrow-down'}
           type='material-icons'
@@ -46,7 +46,7 @@ const estilos = StyleSheet.create({
   select: {
     padding: 10,
     borderWidth: 1.5,
-    borderColor: '#11B5A4',
+    borderColor: '#89D4CE',
     borderRadius: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -63,7 +63,7 @@ const estilos = StyleSheet.create({
     left: 0,
     right: 0,
     borderWidth: 1.5,
-    borderColor: '#11B5A4',
+    borderColor: '#89D4CE',
     borderRadius: 6,
     backgroundColor: 'white',
     zIndex: 1, 
