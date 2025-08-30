@@ -3,7 +3,20 @@ import { Text, StyleSheet, TouchableOpacity, View, TextInput} from "react-native
 import {Ionicons} from "@expo/vector-icons";
 import { color } from "@rneui/base";
 
-export default function TextInputCustom({texto, iconName, iconColor, iconSize,texto_placeholder, color_placeholder, color_text_input}) {
+export default function TextInputCustom({
+    texto, 
+    iconName, 
+    iconColor, 
+    iconSize,
+    texto_placeholder, 
+    color_placeholder, 
+    color_text_input,
+    value,
+    onChangeText,
+    secureTextEntry = false,
+    keyboardType = 'default',
+    error = false
+}) {
     return <>
         <View style= {estilos.conteudo}>
             {iconName && (
@@ -16,7 +29,20 @@ export default function TextInputCustom({texto, iconName, iconColor, iconSize,te
             )}
             <Text style={estilos.texto}>{texto}</Text>
         </View>
-        <TextInput style= {[estilos.cadastro, estilos.textInput]} placeholder={texto_placeholder} placeholderTextColor={color_placeholder} color={color_text_input}/>
+        <TextInput 
+            style={[
+                estilos.cadastro, 
+                estilos.textInput,
+                error && estilos.textInputError
+            ]} 
+            placeholder={texto_placeholder} 
+            placeholderTextColor={color_placeholder} 
+            color={color_text_input}
+            value={value}
+            onChangeText={onChangeText}
+            secureTextEntry={secureTextEntry}
+            keyboardType={keyboardType}
+        />
     </>
 }
 
@@ -54,5 +80,10 @@ const estilos = StyleSheet.create({
         width: "100%",
         placeholderTextColor: "#11B5A4",
         color: "#11B5A4",
+    },
+
+    textInputError: {
+        borderColor: "#FF6B6B",
+        borderWidth: 2,
     },
 })
