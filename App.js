@@ -1,4 +1,4 @@
-if (__DEV__) {
+if (__DEV__ && false) {
   require("./config/ReactotronConfig");
 }
 

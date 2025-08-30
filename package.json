@@ -38,11 +38,13 @@
     "react-native-screens": "~4.11.1",
     "react-native-svg": "15.11.2",
     "react-native-web": "^0.20.0",
+    "reactotron-react-native": "^5.1.15",
+    "reactotron-redux": "^3.2.0",
+    "reactotron-redux-saga": "^4.2.3",
     "stream-browserify": "^3.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
-    "reactotron-react-native": "^5.1.12",
     "typescript": "~5.8.3"
   },
   "private": true,
