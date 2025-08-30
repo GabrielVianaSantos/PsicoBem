@@ -10,13 +10,9 @@
   },
   "dependencies": {
     "@expo-google-fonts/raleway": "^0.2.3",
-<<<<<<< HEAD
     "@expo/vector-icons": "^14.1.0",
-    "@react-native-masked-view/masked-view": "^0.3.2",
-=======
     "@react-native-async-storage/async-storage": "^2.2.0",
-    "@react-native-community/masked-view": "^0.1.11",
->>>>>>> ff8892862fdb70ade2385f9806329d1b774d9bf3
+    "@react-native-masked-view/masked-view": "^0.3.2",
     "@react-navigation/bottom-tabs": "^6.5.16",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/stack": "^6.4.1",
