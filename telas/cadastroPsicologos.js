@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Text, TextInput, Alert } from "react-native";
+import { View, StyleSheet, Text, Alert } from "react-native";
 import Topo from "../telas/components/topo";
 import Botao from "../telas/components/botao";
 import { useNavigation } from "@react-navigation/native";
@@ -12,13 +12,14 @@ export default function CadastroPsicologos (topo, botao, textinputcustom) {
     const [nomeCompleto, setNomeCompleto] = useState('');
     const [email, setEmail] = useState('');
     const [crp, setCrp] = useState('');
+    const [especialidade, setEspecialidade] = useState('');
     const [senha, setSenha] = useState('');
     const [confirmaSenha, setConfirmaSenha] = useState('');
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
     
     const navigation = useNavigation();
-    const { login } = useAuth();
+    const { registerPsicologo } = useAuth();
 
     // Validation functions
     const validateEmail = (email) => {
@@ -30,6 +31,20 @@ export default function CadastroPsicologos (topo, botao, textinputcustom) {
         // Basic CRP validation (format: XX/XXXXX)
         const crpRegex = /^\d{2}\/\d{5}$/;
         return crpRegex.test(crp);
+    };
+
+    const formatCRP = (value) => {
+        // Remove all non-numeric characters
+        const numbers = value.replace(/\D/g, '');
+        
+        // Apply CRP mask
+        if (numbers.length <= 2) return numbers;
+        return `${numbers.slice(0, 2)}/${numbers.slice(2, 7)}`;
+    };
+
+    const handleCrpChange = (value) => {
+        const formatted = formatCRP(value);
+        setCrp(formatted);
     };
 
     const validateForm = () => {
@@ -76,26 +91,28 @@ export default function CadastroPsicologos (topo, botao, textinputcustom) {
 
         setLoading(true);
         try {
-            // Mock registration - in real implementation, this would be an API call
+            // ✅ CORRIGIDO: Usar API real em vez de mock
             const userData = {
-                id: Date.now(), // Mock ID
-                email: email,
-                name: nomeCompleto,
-                crp: crp,
-                userType: 'psicologo'
+                nomeCompleto,
+                email,
+                crp,
+                especialidade,
+                senha,
+                confirmaSenha
             };
             
-            const authToken = 'mock-token-' + Date.now(); // Mock token
-
-            // Use the login function from Auth context to authenticate after registration
-            await login(userData, authToken, 'psicologo');
+            const result = await registerPsicologo(userData);
             
-            Alert.alert('Sucesso', 'Cadastro realizado com sucesso!', [
-                { text: 'OK', onPress: () => navigation.navigate("HomeBarNavigation") }
-            ]);
+            if (result.success) {
+                Alert.alert('Sucesso', 'Cadastro realizado com sucesso!', [
+                    { text: 'OK', onPress: () => navigation.navigate("HomeBarNavigation") }
+                ]);
+            } else {
+                Alert.alert('Erro', result.message || 'Erro ao realizar cadastro');
+            }
         } catch (error) {
             console.error('Registration error:', error);
-            Alert.alert('Erro', 'Erro ao realizar cadastro. Tente novamente.');
+            Alert.alert('Erro', 'Erro inesperado. Tente novamente.');
         } finally {
             setLoading(false);
         }
@@ -130,6 +147,7 @@ export default function CadastroPsicologos (topo, botao, textinputcustom) {
                     onChangeText={setEmail}
                     texto_placeholder="Digite seu email"
                     keyboardType="email-address"
+                    autoCapitalize="none"
                     error={!!errors.email}
                     {...textinputcustom}
                 />
@@ -141,12 +159,24 @@ export default function CadastroPsicologos (topo, botao, textinputcustom) {
                     iconColor="#11B5A4"
                     iconSize={20}
                     value={crp}
-                    onChangeText={setCrp}
-                    texto_placeholder="Ex: 01/12345"
+                    onChangeText={handleCrpChange}
+                    texto_placeholder="XX/XXXXX"
+                    keyboardType="numeric"
                     error={!!errors.crp}
                     {...textinputcustom}
                 />
                 {errors.crp && <Text style={estilos.errorText}>{errors.crp}</Text>}
+                
+                <TextInputCustom                    
+                    texto="Especialidade (Opcional)"
+                    iconName="school"
+                    iconColor="#11B5A4"
+                    iconSize={20}
+                    value={especialidade}
+                    onChangeText={setEspecialidade}
+                    texto_placeholder="Ex: Psicologia Clínica"
+                    {...textinputcustom}
+                />
                 
                 <TextInputCustom                    
                     texto="Senha"
@@ -195,36 +225,23 @@ const estilos = StyleSheet.create ({
         backgroundColor: "transparent",
         width: "100%",
         padding: "8%",
+        flex: 1,
     },
 
     containerTitulo:{
         alignItems: "center",
-        marginTop: 20,
+        justifyContent: "flex-start",
     },
 
     titulo:{
         color: "#11B5A4",
         fontFamily: "RalewayBold",
         fontSize: 23,
-        marginBottom: 30,
-    },
-
-    cadastro: {
-        flexDirection: "column",
-        borderBottomWidth: 1,
-        borderBottomColor: "#11B5A4",
-        paddingBottom: 3,
-    },
-
-    texto:{
-        color: "#11B5A4",
-        fontFamily: "RalewayBold",
-        fontSize: 15,
-        marginTop: 9,
+        marginBottom: 15,
     },
 
     containerBotao:{
-        marginTop: "15%",
+        marginTop: 20,
     },
 
     errorText: {

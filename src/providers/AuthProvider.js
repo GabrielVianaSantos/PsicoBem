@@ -43,7 +43,7 @@ export default function AuthProvider({ children }) {
     }
   }
 
-  async function login(email, password) {
+async function login(email, password) {
     try {
       setLoading(true);
       
@@ -67,10 +67,13 @@ export default function AuthProvider({ children }) {
       
       return { success: true, user: userData };
     } catch (error) {
-      console.error('Erro no login:', error);
+      console.error('❌ Erro no AuthProvider login:', error);
+      
+      // ✅ MELHORADO: Agora error.message terá a mensagem correta
       return { 
         success: false, 
-        message: error.message || 'Erro ao fazer login' 
+        message: error.message || 'Erro ao fazer login',
+        status: error.status || -1
       };
     } finally {
       setLoading(false);

@@ -51,15 +51,16 @@ export default function Login(topo, botao, textinputcustom){
             const result = await login(email, senha);
             
             if (result.success) {
-                Alert.alert('Sucesso', 'Login realizado com sucesso!', [
+                Alert.alert('✅ Sucesso', 'Login realizado com sucesso!', [
                     { text: 'OK', onPress: () => navigation.navigate("HomeBarNavigation") }
                 ]);
             } else {
-                Alert.alert('Erro', result.message || 'Erro ao fazer login');
+                const errorTitle = result.status === 0 ? '🌐 Erro de Conexão' : '❌ Erro de Login';
+                Alert.alert(errorTitle, result.message);
             }
         } catch (error) {
-            console.error('Login error:', error);
-            Alert.alert('Erro', 'Erro inesperado. Tente novamente.');
+            console.error('❌ Erro inesperado na tela de Login:', error);
+            Alert.alert('❌ Erro', 'Erro inesperado. Tente novamente.');
         } finally {
             setLoading(false);
         }
