@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import Topo from "./components/topo";
 import Botao from "./components/botao";
 import { useNavigation } from "@react-navigation/native";
@@ -8,7 +8,7 @@ import { useAuth } from "../src/hooks/useAuth";
 
 export default function Login(topo, botao, textinputcustom){
     // Form states
-    const [usuario, setUsuario] = useState('');
+    const [email, setEmail] = useState('');
     const [senha, setSenha] = useState('');
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
@@ -25,10 +25,10 @@ export default function Login(topo, botao, textinputcustom){
     const validateForm = () => {
         const newErrors = {};
 
-        if (!usuario.trim()) {
-            newErrors.usuario = 'Email é obrigatório';
-        } else if (!validateEmail(usuario)) {
-            newErrors.usuario = 'Email deve ter um formato válido';
+        if (!email.trim()) {
+            newErrors.email = 'Email é obrigatório';
+        } else if (!validateEmail(email)) {
+            newErrors.email = 'Email deve ter um formato válido';
         }
 
         if (!senha.trim()) {
@@ -48,24 +48,18 @@ export default function Login(topo, botao, textinputcustom){
 
         setLoading(true);
         try {
-            // Mock authentication - in real implementation, this would be an API call
-            const userData = {
-                id: Date.now(), // Mock ID
-                email: usuario,
-                name: 'Usuario Teste', // In real implementation, this would come from the API response
-            };
+            const result = await login(email, senha);
             
-            const authToken = 'mock-token-' + Date.now(); // Mock token
-            const userType = 'paciente'; // Default to patient, in real implementation this would come from API
-
-            // Use the login function from Auth context
-            await login(userData, authToken, userType);
-            
-            // Navigate to home
-            navigation.navigate("HomeBarNavigation");
+            if (result.success) {
+                Alert.alert('Sucesso', 'Login realizado com sucesso!', [
+                    { text: 'OK', onPress: () => navigation.navigate("HomeBarNavigation") }
+                ]);
+            } else {
+                Alert.alert('Erro', result.message || 'Erro ao fazer login');
+            }
         } catch (error) {
             console.error('Login error:', error);
-            Alert.alert('Erro', 'Erro ao fazer login. Tente novamente.');
+            Alert.alert('Erro', 'Erro inesperado. Tente novamente.');
         } finally {
             setLoading(false);
         }
@@ -84,19 +78,20 @@ return <>
             <View style = {[{marginTop: 10}]}>
                 <TextInputCustom                    
                     texto="Email"
-                    iconName="person"
+                    iconName="mail"
                     iconColor="#11B5A4"
                     iconSize={20}
                     texto_placeholder="Digite seu email"
                     color_placeholder="#11B5A4"
                     color_text_input="#11B5A4"
-                    value={usuario}
-                    onChangeText={setUsuario}
+                    value={email}
+                    onChangeText={setEmail}
                     keyboardType="email-address"
-                    error={!!errors.usuario}
+                    autoCapitalize="none"
+                    error={!!errors.email}
                     {...textinputcustom}
                 />
-                {errors.usuario && <Text style={estilos.errorText}>{errors.usuario}</Text>}
+                {errors.email && <Text style={estilos.errorText}>{errors.email}</Text>}
                 
                 <TextInputCustom
                     texto="Senha"
@@ -132,7 +127,7 @@ return <>
                 <Botao 
                     texto="Entre com o Google" 
                     {...botao} 
-                    onPress={handleLogin} 
+                    onPress={() => Alert.alert('Info', 'Login com Google será implementado em breve!')} 
                     backgroundColor="#11B5A4" 
                     iconName="logo-google" 
                     iconColor="white" 
@@ -150,7 +145,6 @@ return <>
 }
 
 const estilos = StyleSheet.create({
-
     container:{
         backgroundColor: "transparent",
         width: "100%",

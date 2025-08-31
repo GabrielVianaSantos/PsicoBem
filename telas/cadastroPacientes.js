@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import { View, StyleSheet, Text, TextInput, Alert } from "react-native";
+import { View, StyleSheet, Text, Alert } from "react-native";
 import Topo from "../telas/components/topo";
 import Botao from "../telas/components/botao";
 import Select from "./components/select";
@@ -21,7 +21,7 @@ export default function CadastroPacientes (topo, botao, textinputcustom) {
     const [loading, setLoading] = useState(false);
 
     const navigation = useNavigation();
-    const { login } = useAuth();
+    const { registerPaciente } = useAuth();
 
     // Validation functions
     const validateEmail = (email) => {
@@ -127,28 +127,28 @@ export default function CadastroPacientes (topo, botao, textinputcustom) {
 
         setLoading(true);
         try {
-            // Mock registration - in real implementation, this would be an API call
             const userData = {
-                id: Date.now(), // Mock ID
-                email: email,
-                name: nomeCompleto,
-                cpf: cpf,
-                telefone: telefone,
-                sexo: sexo,
-                userType: 'paciente'
+                nomeCompleto,
+                email,
+                cpf,
+                telefone,
+                sexo,
+                senha,
+                confirmaSenha
             };
             
-            const authToken = 'mock-token-' + Date.now(); // Mock token
-
-            // Use the login function from Auth context to authenticate after registration
-            await login(userData, authToken, 'paciente');
+            const result = await registerPaciente(userData);
             
-            Alert.alert('Sucesso', 'Cadastro realizado com sucesso!', [
-                { text: 'OK', onPress: () => navigation.navigate("HomeBarNavigation") }
-            ]);
+            if (result.success) {
+                Alert.alert('Sucesso', 'Cadastro realizado com sucesso!', [
+                    { text: 'OK', onPress: () => navigation.navigate("HomeBarNavigation") }
+                ]);
+            } else {
+                Alert.alert('Erro', result.message || 'Erro ao realizar cadastro');
+            }
         } catch (error) {
             console.error('Registration error:', error);
-            Alert.alert('Erro', 'Erro ao realizar cadastro. Tente novamente.');
+            Alert.alert('Erro', 'Erro inesperado. Tente novamente.');
         } finally {
             setLoading(false);
         }
@@ -183,6 +183,7 @@ export default function CadastroPacientes (topo, botao, textinputcustom) {
                     onChangeText={setEmail}
                     texto_placeholder="Digite seu email"
                     keyboardType="email-address"
+                    autoCapitalize="none"
                     error={!!errors.email}
                     {...textinputcustom}
                 />
@@ -245,12 +246,14 @@ export default function CadastroPacientes (topo, botao, textinputcustom) {
                 {errors.confirmaSenha && <Text style={estilos.errorText}>{errors.confirmaSenha}</Text>}
                 
                <View style={estilos.containerSelect}>
-               <Select
+                <Text style={estilos.texto}>Gênero</Text>
+                <Select
                     isOpen={false} 
                     selectedOption={sexo}
                     onSelect={setSexo}
-                    title="Gênero"
+                    title="Selecione o gênero"
                     options={["Masculino", "Feminino", "Outro"]}
+                    error={!!errors.sexo}
                 />
                 {errors.sexo && <Text style={estilos.errorText}>{errors.sexo}</Text>}
                </View>
@@ -288,19 +291,12 @@ const estilos = StyleSheet.create ({
         marginBottom: 15,
     },
 
-    cadastro: {
-        flexDirection: "column",
-        borderWidth: 1.5,
-        borderRadius: 5,
-        borderColor: "#89D4CE",
-        paddingBottom: 3,
-    },
-
     texto:{
         color: "#11B5A4",
         fontFamily: "RalewayBold",
         fontSize: 15,
-        marginTop: 9,
+        marginTop: 15,
+        marginBottom: 5,
     },
 
     containerBotao:{
@@ -308,13 +304,7 @@ const estilos = StyleSheet.create ({
     },
 
     containerSelect: {
-        marginTop: 30,
-    },
-
-    textInput:{
-        padding: 5,
-        marginTop: 10,
-        width: "100%",
+        marginTop: 15,
     },
 
     errorText: {
