@@ -12,7 +12,7 @@ SECRET_KEY = 'django-insecure-psicoapp-dev-key-2025'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '192.168.15.85']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '192.168.15.85', '192.168.15.7', '192.168.15.9']
 
 
 # Application definition
@@ -152,6 +152,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:19006",  # Expo default port
     "http://127.0.0.1:19006",
     "http://192.168.15.85",
+    "http://192.168.15.7",
+    "http://192.168.15.9",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True  # Apenas para desenvolvimento

@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // URL base do seu backend Django
 // const BASE_URL = 'http://127.0.0.1:8000/api';
-const BASE_URL = 'http://192.168.15.85:8000/api';
+//const BASE_URL = 'http://192.168.15.85:8000/api';
+const BASE_URL = 'http://192.168.15.9:8000/api';
 
 // Criar instância do axios
 const api = axios.create({

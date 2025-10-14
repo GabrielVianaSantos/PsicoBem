@@ -10,8 +10,8 @@ export default function TipoCadastro(topo, botao) {
   // Criando Check-Box em status zerados
   const [checked1, setChecked1] = useState(false);
   const [checked2, setChecked2] = useState(false);
-
   const navigation = useNavigation();
+  
     
   function navigateToCadastro() {
     if (checked1 === true) {
