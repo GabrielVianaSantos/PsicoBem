@@ -93,13 +93,14 @@ WSGI_APPLICATION = 'psicoapp_backend.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+ssl_require = os.getenv("DB_SSL", "false").lower() == "true"
 
 if DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.parse(
             DATABASE_URL,
             conn_max_age=600,
-            ssl_require=not DEBUG,
+            ssl_require=ssl_require,
         )
     }
 else:
