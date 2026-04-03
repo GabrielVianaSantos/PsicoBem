@@ -82,11 +82,91 @@ class UserLoginSerializer(serializers.Serializer):
         else:
             raise serializers.ValidationError('Email e senha são obrigatórios')
 
+class PsicologoVinculadoSerializer(serializers.ModelSerializer):
+    """Dados básicos do psicólogo vinculado — retornado no perfil do paciente"""
+    nome_completo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Psicologo
+        fields = ['id', 'crp', 'specialization', 'biography', 'nome_completo']
+
+    def get_nome_completo(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name}".strip()
+
+
 class UserSerializer(serializers.ModelSerializer):
     """
-    Serializer para dados do usuário autenticado
+    Serializer para dados do usuário autenticado.
+    Inclui paciente_id / psicologo_id e vínculo ativo (quando paciente).
     """
+    paciente_id = serializers.SerializerMethodField()
+    psicologo_id = serializers.SerializerMethodField()
+    vinculo_ativo = serializers.SerializerMethodField()
+    crp = serializers.CharField(source='psicologo_profile.crp', read_only=True)
+    specialization = serializers.CharField(
+        source='psicologo_profile.specialization',
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
+    biography = serializers.CharField(
+        source='psicologo_profile.biography',
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
+
     class Meta:
         model = CustomUser
-        fields = ('id', 'email', 'username', 'first_name', 'last_name', 'user_type', 'phone', 'created_at')
+        fields = (
+            'id', 'email', 'username', 'first_name', 'last_name',
+            'user_type', 'phone', 'created_at',
+            'paciente_id', 'psicologo_id', 'vinculo_ativo',
+            'crp', 'specialization', 'biography',
+        )
         read_only_fields = ('id', 'created_at')
+
+    def get_paciente_id(self, obj):
+        try:
+            return obj.paciente_profile.id
+        except Exception:
+            return None
+
+    def get_psicologo_id(self, obj):
+        try:
+            return obj.psicologo_profile.id
+        except Exception:
+            return None
+
+    def get_vinculo_ativo(self, obj):
+        """Retorna os dados do psicólogo vinculado ativo (apenas para pacientes)."""
+        try:
+            paciente = obj.paciente_profile
+        except Exception:
+            return None
+        # Import lazy para evitar circular dependency
+        from core.models import VinculoPacientePsicologo
+        vinculo = VinculoPacientePsicologo.objects.filter(
+            paciente=paciente,
+            status='ativo'
+        ).select_related('psicologo__user').first()
+        if vinculo:
+            return PsicologoVinculadoSerializer(vinculo.psicologo).data
+        return None
+
+    def update(self, instance, validated_data):
+        psicologo_data = validated_data.pop('psicologo_profile', {})
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if hasattr(instance, 'psicologo_profile'):
+            psicologo = instance.psicologo_profile
+            if 'specialization' in psicologo_data:
+                psicologo.specialization = psicologo_data.get('specialization')
+            if 'biography' in psicologo_data:
+                psicologo.biography = psicologo_data.get('biography')
+            psicologo.save()
+
+        return instance

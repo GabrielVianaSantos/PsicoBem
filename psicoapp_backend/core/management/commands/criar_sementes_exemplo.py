@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from authentication.models import Psicologo, Paciente
-from core.models import CategoriaMensagem, SementeCuidado, MensagemPaciente
+from engajamentos.models import CategoriaMensagem, SementeCuidado, MensagemPaciente
 from django.utils import timezone
 from datetime import timedelta
 

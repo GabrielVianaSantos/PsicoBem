@@ -1,0 +1,1173 @@
+
+> psicoapp@1.0.0 start
+> expo start
+
+Starting project at /Users/user/Documents/GitHub/PsicoBem
+Starting Metro Bundler
+The following packages should be updated for best compatibility with the installed expo version:
+  @react-native-async-storage/async-storage@2.2.0 - expected version: 2.1.2
+  expo@53.0.22 - expected version: ~53.0.27
+  react-native@0.79.5 - expected version: 0.79.6
+  react-native-safe-area-context@5.6.1 - expected version: 5.4.0
+Your project may not work correctly until you install the expected versions of the packages.
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+ ERROR  Project is incompatible with this version of Expo Go
+
+• The installed version of Expo Go is for SDK 54.
+• The project you opened uses SDK 53.
+
+How to fix this error:
+Either upgrade this project to SDK 54 or install an older version of Expo Go that is compatible with your project.
+
+<a href='https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/'>Learn how to upgrade to SDK 54.</a>
+
+<a href='https://expo.dev/go?sdkVersion=53&platform=android&device=true'>Learn how to install Expo Go for SDK 53</a>.
+ ERROR  Project is incompatible with this version of Expo Go
+
+• The installed version of Expo Go is for SDK 54.
+• The project you opened uses SDK 53.
+
+How to fix this error:
+Either upgrade this project to SDK 54 or install an older version of Expo Go that is compatible with your project.
+
+<a href='https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/'>Learn how to upgrade to SDK 54.</a>
+
+<a href='https://expo.dev/go?sdkVersion=53&platform=android&device=true'>Learn how to install Expo Go for SDK 53</a>.
+ ERROR  Project is incompatible with this version of Expo Go
+
+• The installed version of Expo Go is for SDK 54.
+• The project you opened uses SDK 53.
+
+How to fix this error:
+Either upgrade this project to SDK 54 or install an older version of Expo Go that is compatible with your project.
+
+<a href='https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/'>Learn how to upgrade to SDK 54.</a>
+
+<a href='https://expo.dev/go?sdkVersion=53&platform=android&device=true'>Learn how to install Expo Go for SDK 53</a>.
+Android node_modules/expo/AppEntry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android node_modules/expo/AppEntry.js ▓░░░░░░░░░░░░░░░  9.8% ( 50/196)
+Android node_modules/expo/AppEntry.js ▓▓▓▓▓▓░░░░░░░░░░ 43.6% (614/930)
+Android node_modules/expo/AppEntry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87.5% (1147/1229)
+Android node_modules/expo/AppEntry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1518/1518)
+Android Bundled 14244ms node_modules/expo/AppEntry.js (1518 modules)
+ LOG  🔍 Erro completo: [AxiosError: Request failed with status code 400]
+ LOG  📡 Erro da API: 400 {"non_field_errors": ["Credenciais inválidas"]}
+ ERROR  ❌ Erro no AuthProvider login: [Error: Credenciais inválidas]
+ ERROR  🔴 Erro ao buscar sessão: [AxiosError: Network Error]
+Android node_modules/expo/AppEntry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 420ms node_modules/expo/AppEntry.js (1 module)
+ LOG  🔍 Erro completo: [AxiosError: Request failed with status code 404]
+ LOG  📡 Erro da API: 404 <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <title>Page not found at /api/auth/token/refresh/</title>
+  <meta name="robots" content="NONE,NOARCHIVE">
+  <style>
+    html * { padding:0; margin:0; }
+    body * { padding:10px 20px; }
+    body * * { padding:0; }
+    body { font-family: sans-serif; background:#eee; color:#000; }
+    body > :where(header, main, footer) { border-bottom:1px solid #ddd; }
+    h1 { font-weight:normal; margin-bottom:.4em; }
+    h1 small { font-size:60%; color:#666; font-weight:normal; }
+    table { border:none; border-collapse: collapse; width:100%; }
+    td, th { vertical-align:top; padding:2px 3px; }
+    th { width:12em; text-align:right; color:#666; padding-right:.5em; }
+    #info { background:#f6f6f6; }
+    #info ol { margin: 0.5em 4em; }
+    #info ol li { font-family: monospace; }
+    #summary { background: #ffc; }
+    #explanation { background:#eee; border-bottom: 0px none; }
+    pre.exception_value { font-family: sans-serif; color: #575757; font-size: 1.5em; margin: 10px 0 10px 0; }
+  </style>
+</head>
+<body>
+  <header id="summary">
+    <h1>Page not found <small>(404)</small></h1>
+    
+    <table class="meta">
+      <tr>
+        <th scope="row">Request Method:</th>
+        <td>POST</td>
+      </tr>
+      <tr>
+        <th scope="row">Request URL:</th>
+        <td>http://192.168.15.9:8000/api/auth/token/refresh/</td>
+      </tr>
+      
+    </table>
+  </header>
+
+  <main id="info">
+    
+      <p>
+      Using the URLconf defined in <code>psicoapp_backend.urls</code>,
+      Django tried these URL patterns, in this order:
+      </p>
+      <ol>
+        
+          <li>
+            
+              <code>
+                admin/
+                
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/auth/
+                
+              </code>
+            
+              <code>
+                register/paciente/
+                [name='register-paciente']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/auth/
+                
+              </code>
+            
+              <code>
+                register/psicologo/
+                [name='register-psicologo']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/auth/
+                
+              </code>
+            
+              <code>
+                login/
+                [name='login']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/auth/
+                
+              </code>
+            
+              <code>
+                profile/
+                [name='user-profile']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/auth/
+                
+              </code>
+            
+              <code>
+                profile/update/
+                [name='user-update']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^tipos-sessao/$
+                [name='tipossessao-list']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^tipos-sessao\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='tipossessao-list']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^tipos-sessao/ativos/$
+                [name='tipossessao-ativos']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^tipos-sessao/ativos\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='tipossessao-ativos']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^tipos-sessao/(?P&lt;pk&gt;[^/.]+)/$
+                [name='tipossessao-detail']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^tipos-sessao/(?P&lt;pk&gt;[^/.]+)\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='tipossessao-detail']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/$
+                [name='sessoes-list']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='sessoes-list']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/estatisticas/$
+                [name='sessoes-estatisticas']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/estatisticas\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='sessoes-estatisticas']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/hoje/$
+                [name='sessoes-hoje']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/hoje\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='sessoes-hoje']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/mes/$
+                [name='sessoes-mes']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/mes\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='sessoes-mes']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/pacientes-vinculados/$
+                [name='sessoes-pacientes-vinculados']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/pacientes-vinculados\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='sessoes-pacientes-vinculados']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/pendentes-pagamento/$
+                [name='sessoes-pendentes-pagamento']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/pendentes-pagamento\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='sessoes-pendentes-pagamento']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/semana/$
+                [name='sessoes-semana']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/semana\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='sessoes-semana']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/(?P&lt;pk&gt;[^/.]+)/$
+                [name='sessoes-detail']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/(?P&lt;pk&gt;[^/.]+)\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='sessoes-detail']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/(?P&lt;pk&gt;[^/.]+)/cancelar/$
+                [name='sessoes-cancelar']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/(?P&lt;pk&gt;[^/.]+)/cancelar\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='sessoes-cancelar']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/(?P&lt;pk&gt;[^/.]+)/confirmar-pagamento/$
+                [name='sessoes-confirmar-pagamento']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sessoes/(?P&lt;pk&gt;[^/.]+)/confirmar-pagamento\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='sessoes-confirmar-pagamento']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^prontuarios/$
+                [name='prontuarios-list']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^prontuarios\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='prontuarios-list']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^prontuarios/(?P&lt;pk&gt;[^/.]+)/$
+                [name='prontuarios-detail']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^prontuarios/(?P&lt;pk&gt;[^/.]+)\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='prontuarios-detail']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sementes-cuidado/$
+                [name='sementescuidado-list']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sementes-cuidado\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='sementescuidado-list']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sementes-cuidado/(?P&lt;pk&gt;[^/.]+)/$
+                [name='sementescuidado-detail']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^sementes-cuidado/(?P&lt;pk&gt;[^/.]+)\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='sementescuidado-detail']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^registros-odisseia/$
+                [name='registrosodisseia-list']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^registros-odisseia\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='registrosodisseia-list']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^registros-odisseia/(?P&lt;pk&gt;[^/.]+)/$
+                [name='registrosodisseia-detail']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                ^registros-odisseia/(?P&lt;pk&gt;[^/.]+)\.(?P&lt;format&gt;[a-z0-9]+)/?$
+                [name='registrosodisseia-detail']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                
+                [name='api-root']
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+              <code>
+                
+                
+              </code>
+            
+              <code>
+                &lt;drf_format_suffix:format&gt;
+                [name='api-root']
+              </code>
+            
+          </li>
+        
+      </ol>
+      <p>
+        
+          The current path, <code>api/auth/token/refresh/</code>,
+        
+        didn’t match any of these.
+      </p>
+    
+  </main>
+
+  <footer id="explanation">
+    <p>
+      You’re seeing this error because you have <code>DEBUG = True</code> in
+      your Django settings file. Change that to <code>False</code>, and Django
+      will display a standard 404 page.
+    </p>
+  </footer>
+</body>
+</html>
+ LOG  🔍 Erro completo: [AxiosError: Request failed with status code 400]
+ LOG  📡 Erro da API: 400 {"non_field_errors": ["Credenciais inválidas"]}
+ ERROR  ❌ Erro no AuthProvider login: [Error: Credenciais inválidas]
+ ERROR  Warning: ReferenceError: Property 'botao' doesn't exist
+
+This error is located at:
+
+[0m [90m 19 |[39m
+ [90m 20 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mAgendarSessao[39m() {
+[31m[1m>[22m[39m[90m 21 |[39m     [36mconst[39m navigation [33m=[39m useNavigation()[33m;[39m
+ [90m    |[39m                                     [31m[1m^[22m[39m
+ [90m 22 |[39m     
+ [90m 23 |[39m     [90m// Estados[39m
+ [90m 24 |[39m     [36mconst[39m [loading[33m,[39m setLoading] [33m=[39m useState([36mfalse[39m)[33m;[39m[0m
+
+Call Stack
+  AgendarSessao (telas/agendarSessao.js:21:37)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RNSScreen (<anonymous>)
+  Suspense (<anonymous>)
+  RNSScreenContainer (<anonymous>)
+  RCTView (<anonymous>)
+  RNCSafeAreaProvider (<anonymous>)
+  RNGestureHandlerRootView (<anonymous>)
+  Routes (<anonymous>)
+  RCTView (<anonymous>)
+  AuthProvider (src/providers/AuthProvider.js:7:48)
+  App (App.js:15:57)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+Android node_modules/expo/AppEntry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 82ms node_modules/expo/AppEntry.js (1 module)
+ ERROR  Warning: ReferenceError: Property 'botao' doesn't exist
+
+This error is located at:
+
+[0m [90m 19 |[39m
+ [90m 20 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mAgendarSessao[39m() {
+[31m[1m>[22m[39m[90m 21 |[39m     [36mconst[39m navigation [33m=[39m useNavigation()[33m;[39m
+ [90m    |[39m                                     [31m[1m^[22m[39m
+ [90m 22 |[39m     
+ [90m 23 |[39m     [90m// Estados[39m
+ [90m 24 |[39m     [36mconst[39m [loading[33m,[39m setLoading] [33m=[39m useState([36mfalse[39m)[33m;[39m[0m
+
+Call Stack
+  AgendarSessao (telas/agendarSessao.js:21:37)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RNSScreen (<anonymous>)
+  Suspense (<anonymous>)
+  RNSScreenContainer (<anonymous>)
+  RCTView (<anonymous>)
+  RNCSafeAreaProvider (<anonymous>)
+  RNGestureHandlerRootView (<anonymous>)
+  Routes (<anonymous>)
+  RCTView (<anonymous>)
+  AuthProvider (src/providers/AuthProvider.js:7:48)
+  App (App.js:15:57)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+ ERROR  Warning: ReferenceError: Property 'topo' doesn't exist
+
+This error is located at:
+
+[0m [90m  9 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mInicio[39m(){
+ [90m 10 |[39m     
+[31m[1m>[22m[39m[90m 11 |[39m     [36mconst[39m navigation [33m=[39m useNavigation()[33m;[39m
+ [90m    |[39m                                     [31m[1m^[22m[39m
+ [90m 12 |[39m     
+ [90m 13 |[39m     [36mfunction[39m navigateToLogin() {
+ [90m 14 |[39m         navigation[33m.[39mnavigate([32m"Login"[39m)[33m;[39m[0m
+
+Call Stack
+  Inicio (telas/inicio.js:11:37)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RNSScreen (<anonymous>)
+  Suspense (<anonymous>)
+  RNSScreenContainer (<anonymous>)
+  RCTView (<anonymous>)
+  RNCSafeAreaProvider (<anonymous>)
+  RNGestureHandlerRootView (<anonymous>)
+  Routes (<anonymous>)
+  RCTView (<anonymous>)
+  AuthProvider (src/providers/AuthProvider.js:8:23)
+  App (App.js:15:57)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+ ERROR  Warning: ReferenceError: Property 'topo' doesn't exist
+
+This error is located at:
+
+[0m [90m  9 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mInicio[39m(){
+ [90m 10 |[39m     
+[31m[1m>[22m[39m[90m 11 |[39m     [36mconst[39m navigation [33m=[39m useNavigation()[33m;[39m
+ [90m    |[39m                                     [31m[1m^[22m[39m
+ [90m 12 |[39m     
+ [90m 13 |[39m     [36mfunction[39m navigateToLogin() {
+ [90m 14 |[39m         navigation[33m.[39mnavigate([32m"Login"[39m)[33m;[39m[0m
+
+Call Stack
+  Inicio (telas/inicio.js:11:37)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RNSScreen (<anonymous>)
+  Suspense (<anonymous>)
+  RNSScreenContainer (<anonymous>)
+  RCTView (<anonymous>)
+  RNCSafeAreaProvider (<anonymous>)
+  RNGestureHandlerRootView (<anonymous>)
+  Routes (<anonymous>)
+  RCTView (<anonymous>)
+  AuthProvider (src/providers/AuthProvider.js:8:23)
+  App (App.js:15:57)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+Android node_modules/expo/AppEntry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 82ms node_modules/expo/AppEntry.js (1 module)
+ ERROR  Warning: ReferenceError: Property 'topo' doesn't exist
+
+This error is located at:
+
+[0m [90m  9 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mInicio[39m(){
+ [90m 10 |[39m     
+[31m[1m>[22m[39m[90m 11 |[39m     [36mconst[39m navigation [33m=[39m useNavigation()[33m;[39m
+ [90m    |[39m                                     [31m[1m^[22m[39m
+ [90m 12 |[39m     
+ [90m 13 |[39m     [36mfunction[39m navigateToLogin() {
+ [90m 14 |[39m         navigation[33m.[39mnavigate([32m"Login"[39m)[33m;[39m[0m
+
+Call Stack
+  Inicio (telas/inicio.js:11:37)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RNSScreen (<anonymous>)
+  Suspense (<anonymous>)
+  RNSScreenContainer (<anonymous>)
+  RCTView (<anonymous>)
+  RNCSafeAreaProvider (<anonymous>)
+  RNGestureHandlerRootView (<anonymous>)
+  Routes (<anonymous>)
+  RCTView (<anonymous>)
+  AuthProvider (src/providers/AuthProvider.js:7:48)
+  App (App.js:15:57)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+ ERROR  Warning: ReferenceError: Property 'topo' doesn't exist
+
+This error is located at:
+
+[0m [90m  9 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mInicio[39m(){
+ [90m 10 |[39m     
+[31m[1m>[22m[39m[90m 11 |[39m     [36mconst[39m navigation [33m=[39m useNavigation()[33m;[39m
+ [90m    |[39m                                     [31m[1m^[22m[39m
+ [90m 12 |[39m     
+ [90m 13 |[39m     [36mfunction[39m navigateToLogin() {
+ [90m 14 |[39m         navigation[33m.[39mnavigate([32m"Login"[39m)[33m;[39m[0m
+
+Call Stack
+  Inicio (telas/inicio.js:11:37)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+  RNSScreen (<anonymous>)
+  Suspense (<anonymous>)
+  RNSScreenContainer (<anonymous>)
+  RCTView (<anonymous>)
+  RNCSafeAreaProvider (<anonymous>)
+  RNGestureHandlerRootView (<anonymous>)
+  Routes (<anonymous>)
+  RCTView (<anonymous>)
+  AuthProvider (src/providers/AuthProvider.js:7:48)
+  App (App.js:15:57)
+  RCTView (<anonymous>)
+  RCTView (<anonymous>)
+Android node_modules/expo/AppEntry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 142ms node_modules/expo/AppEntry.js (1 module)
+ LOG  🔍 Erro completo: [AxiosError: Request failed with status code 400]
+ LOG  📡 Erro da API: 400 {"non_field_errors": ["Credenciais inválidas"]}
+ ERROR  ❌ Erro no AuthProvider login: [Error: Credenciais inválidas]
+ ERROR  🔴 Erro ao deletar tipo de sessão: [AxiosError: Request failed with status code 500]

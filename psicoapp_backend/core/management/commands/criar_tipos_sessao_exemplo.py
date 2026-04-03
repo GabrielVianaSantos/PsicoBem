@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from authentication.models import Psicologo
-from core.models import TipoSessao
+from sessoes.models import TipoSessao
 
 class Command(BaseCommand):
     help = 'Cria tipos de sessão de exemplo para psicólogos cadastrados'

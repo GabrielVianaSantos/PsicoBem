@@ -5,8 +5,15 @@
     "newArchEnabled": true,
     "plugins": [
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      "expo-notifications"
     ],
+    "android": {
+      "useNextNotificationsApi": true
+    },
+    "ios": {
+      "supportsTablet": true
+    },
     "sdkVersion": "53.0.0"
   }
 }

@@ -4,6 +4,7 @@
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
+    "start:psicobem": "bash ./scripts/start-psicobem.sh",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"
@@ -12,7 +13,9 @@
     "@expo-google-fonts/raleway": "^0.2.3",
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-community/datetimepicker": "8.4.1",
     "@react-native-masked-view/masked-view": "^0.3.2",
+    "@react-native-picker/picker": "2.11.1",
     "@react-navigation/bottom-tabs": "^6.5.16",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/stack": "^6.4.1",
@@ -25,6 +28,9 @@
     "expo": "53.0.22",
     "expo-asset": "~11.1.7",
     "expo-font": "~13.3.2",
+    "expo-constants": "~17.1.6",
+    "expo-device": "~7.0.2",
+    "expo-notifications": "~0.31.4",
     "expo-navigation-bar": "~4.2.8",
     "expo-splash-screen": "~0.30.10",
     "expo-status-bar": "~2.2.3",

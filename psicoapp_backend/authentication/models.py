@@ -50,7 +50,7 @@ class Psicologo(models.Model):
     Modelo específico para dados dos Psicólogos
     """
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='psicologo_profile')
-    crp = models.CharField(max_length=8, unique=True)  # Format: XX/XXXXX
+    crp = models.CharField(max_length=15, unique=True)  # Format: XX/XXXXX+
     specialization = models.CharField(max_length=200, blank=True, null=True)
     license_date = models.DateField(null=True, blank=True)
     biography = models.TextField(blank=True, null=True)

@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from authentication.models import Paciente
-from core.models import CategoriaOdisseia, RegistroOdisseia, MetaOdisseia
+from engajamentos.models import CategoriaOdisseia, RegistroOdisseia, MetaOdisseia
 from django.utils import timezone
 from datetime import date, time, timedelta
 import random

@@ -2,18 +2,24 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.models import Q
 from datetime import datetime, date
-from .models import TipoSessao, Sessao, VinculoPacientePsicologo
+from sessoes.models import Sessao, TipoSessao
+from engajamentos.models import RegistroOdisseia
+from .models import (
+    VinculoPacientePsicologo, NotificacaoSistema, Prontuario,
+)
+from . import serializers
 from .serializers import (
-    TipoSessaoSerializer, TipoSessaoCreateSerializer,
-    SessaoListSerializer, SessaoDetailSerializer, 
-    SessaoCreateSerializer, SessaoUpdateSerializer,
-    EstatisticasSessaoSerializer, PacienteBasicSerializer
+    PacienteBasicSerializer,
+    ProntuarioSerializer, VinculoPacientePsicologoSerializer,
+    NotificacaoSerializer,
 )
 from authentication.models import Paciente
+
 
 # ==================== PERMISSIONS CUSTOMIZADAS ====================
 
@@ -24,19 +30,16 @@ class IsPsicologoOwner(permissions.BasePermission):
     """
     def has_permission(self, request, view):
         return (
-            request.user and 
-            request.user.is_authenticated and 
-            hasattr(request.user, 'psicologo')
+            request.user and
+            request.user.is_authenticated and
+            hasattr(request.user, 'psicologo_profile')
         )
-    
+
     def has_object_permission(self, request, view, obj):
-        # Para TipoSessao, verificar se pertence ao psicólogo
         if hasattr(obj, 'psicologo'):
-            return obj.psicologo == request.user.psicologo
-        # Para Sessao, verificar se o psicólogo é o responsável
-        elif hasattr(obj, 'psicologo'):
-            return obj.psicologo == request.user.psicologo
+            return obj.psicologo == request.user.psicologo_profile
         return False
+
 
 class IsPacienteOrPsicologoOwner(permissions.BasePermission):
     """
@@ -45,229 +48,252 @@ class IsPacienteOrPsicologoOwner(permissions.BasePermission):
     """
     def has_permission(self, request, view):
         return (
-            request.user and 
-            request.user.is_authenticated and 
-            (hasattr(request.user, 'psicologo') or hasattr(request.user, 'paciente'))
+            request.user and
+            request.user.is_authenticated and
+            (hasattr(request.user, 'psicologo_profile') or hasattr(request.user, 'paciente_profile'))
         )
-    
+
     def has_object_permission(self, request, view, obj):
-        # Se é psicólogo, pode ver sessões que ele conduz
-        if hasattr(request.user, 'psicologo'):
-            return obj.psicologo == request.user.psicologo
-        # Se é paciente, pode ver apenas suas próprias sessões
-        elif hasattr(request.user, 'paciente'):
-            return obj.paciente == request.user.paciente
+        if hasattr(request.user, 'psicologo_profile'):
+            return obj.psicologo == request.user.psicologo_profile
+        elif hasattr(request.user, 'paciente_profile'):
+            return obj.paciente == request.user.paciente_profile
         return False
+
 
 # ==================== VIEWSETS ====================
 
-class TipoSessaoViewSet(viewsets.ModelViewSet):
-    """ViewSet para gerenciar tipos de sessão"""
-    permission_classes = [IsPsicologoOwner]
-    
+#####################################################################################################################################
+# VÍNCULOS PACIENTE-PSICÓLOGO
+#####################################################################################################################################
+
+class VinculoViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar vínculos Paciente-Psicólogo.
+    - Psicólogo: lista seus pacientes, altera status, vê resumo.
+    - Paciente: vê seu psicólogo vinculado ativo.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = VinculoPacientePsicologoSerializer
+
     def get_queryset(self):
-        """Retorna apenas tipos de sessão do psicólogo logado"""
-        return TipoSessao.objects.filter(psicologo=self.request.user.psicologo)
-    
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return TipoSessaoCreateSerializer
-        return TipoSessaoSerializer
-    
-    def perform_create(self, serializer):
-        """Associa o tipo de sessão ao psicólogo logado"""
-        serializer.save(psicologo=self.request.user.psicologo)
-    
+        user = self.request.user
+        if hasattr(user, 'psicologo_profile'):
+            return VinculoPacientePsicologo.objects.filter(
+                psicologo=user.psicologo_profile
+            ).select_related('paciente__user')
+        elif hasattr(user, 'paciente_profile'):
+            return VinculoPacientePsicologo.objects.filter(
+                paciente=user.paciente_profile
+            ).select_related('psicologo__user')
+        return VinculoPacientePsicologo.objects.none()
+
     @action(detail=False, methods=['get'])
     def ativos(self, request):
-        """Retorna apenas tipos de sessão ativos"""
-        tipos_ativos = self.get_queryset().filter(ativo=True)
-        serializer = self.get_serializer(tipos_ativos, many=True)
+        """Psicólogo: lista apenas vínculos com pacientes ativos."""
+        if not hasattr(request.user, 'psicologo_profile'):
+            return Response(
+                {'error': 'Apenas psicólogos podem acessar esta lista.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        vinculos = self.get_queryset().filter(status='ativo')
+        serializer = self.get_serializer(vinculos, many=True)
         return Response(serializer.data)
 
-class SessaoViewSet(viewsets.ModelViewSet):
-    """ViewSet para gerenciar sessões"""
-    permission_classes = [IsPacienteOrPsicologoOwner]
-    
-    def get_queryset(self):
-        """Retorna sessões baseadas no tipo de usuário"""
-        if hasattr(self.request.user, 'psicologo'):
-            # Psicólogos veem todas as suas sessões
-            return Sessao.objects.filter(
-                psicologo=self.request.user.psicologo
-            ).select_related('paciente__user', 'tipo_sessao').order_by('-data_hora')
-        
-        elif hasattr(self.request.user, 'paciente'):
-            # Pacientes veem apenas suas próprias sessões
-            return Sessao.objects.filter(
-                paciente=self.request.user.paciente
-            ).select_related('psicologo__user', 'tipo_sessao').order_by('-data_hora')
-        
-        return Sessao.objects.none()
-    
-    def get_serializer_class(self):
-        if self.action == 'list':
-            return SessaoListSerializer
-        elif self.action == 'create':
-            return SessaoCreateSerializer
-        elif self.action in ['update', 'partial_update']:
-            return SessaoUpdateSerializer
-        return SessaoDetailSerializer
-    
-    def perform_create(self, serializer):
-        """Criar sessão associada ao psicólogo logado"""
-        if not hasattr(self.request.user, 'psicologo'):
-            raise PermissionError("Apenas psicólogos podem criar sessões.")
-        serializer.save()
-    
-    # ==================== ACTIONS CUSTOMIZADAS ====================
-    
-    @action(detail=False, methods=['get'])
-    def hoje(self, request):
-        """Retorna sessões de hoje"""
-        hoje = timezone.now().date()
-        sessoes_hoje = self.get_queryset().filter(data_hora__date=hoje)
-        serializer = self.get_serializer(sessoes_hoje, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'])
-    def semana(self, request):
-        """Retorna sessões da semana atual"""
-        hoje = timezone.now().date()
-        inicio_semana = hoje - timezone.timedelta(days=hoje.weekday())
-        fim_semana = inicio_semana + timezone.timedelta(days=6)
-        
-        sessoes_semana = self.get_queryset().filter(
-            data_hora__date__range=[inicio_semana, fim_semana]
-        )
-        serializer = self.get_serializer(sessoes_semana, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'])
-    def mes(self, request):
-        """Retorna sessões do mês especificado ou atual"""
-        ano = request.query_params.get('ano', timezone.now().year)
-        mes = request.query_params.get('mes', timezone.now().month)
-        
-        try:
-            ano = int(ano)
-            mes = int(mes)
-        except (ValueError, TypeError):
+    @action(detail=False, methods=['get'], url_path='meu-psicologo')
+    def meu_psicologo(self, request):
+        """Paciente: retorna os dados completos do psicólogo vinculado ativo."""
+        if not hasattr(request.user, 'paciente_profile'):
             return Response(
-                {'error': 'Ano e mês devem ser números inteiros.'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        sessoes_mes = self.get_queryset().filter(
-            data_hora__year=ano,
-            data_hora__month=mes
-        )
-        serializer = self.get_serializer(sessoes_mes, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'])
-    def pendentes_pagamento(self, request):
-        """Retorna sessões com pagamento pendente"""
-        if not hasattr(request.user, 'psicologo'):
-            return Response(
-                {'error': 'Apenas psicólogos podem acessar esta informação.'}, 
+                {'error': 'Apenas pacientes podem acessar este endpoint.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
-        sessoes_pendentes = self.get_queryset().filter(
-            status='realizada',
-            status_pagamento='pendente'
-        )
-        serializer = self.get_serializer(sessoes_pendentes, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=True, methods=['post'])
-    def cancelar(self, request, pk=None):
-        """Cancela uma sessão específica"""
-        sessao = self.get_object()
-        
-        if not sessao.pode_ser_cancelada():
-            return Response(
-                {'error': 'Esta sessão não pode ser cancelada.'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        sessao.status = 'cancelada'
-        sessao.save()
-        
-        serializer = self.get_serializer(sessao)
-        return Response({
-            'message': 'Sessão cancelada com sucesso.',
-            'sessao': serializer.data
-        })
-    
-    @action(detail=True, methods=['post'])
-    def confirmar_pagamento(self, request, pk=None):
-        """Confirma o pagamento de uma sessão"""
-        if not hasattr(request.user, 'psicologo'):
-            return Response(
-                {'error': 'Apenas psicólogos podem confirmar pagamentos.'}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        sessao = self.get_object()
-        
-        if sessao.status != 'realizada':
-            return Response(
-                {'error': 'Apenas sessões realizadas podem ter pagamento confirmado.'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        if sessao.status_pagamento == 'pago':
-            return Response(
-                {'error': 'Pagamento já foi confirmado.'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        sessao.confirmar_pagamento()
-        
-        serializer = self.get_serializer(sessao)
-        return Response({
-            'message': 'Pagamento confirmado com sucesso.',
-            'sessao': serializer.data
-        })
-    
-    @action(detail=False, methods=['get'])
-    def estatisticas(self, request):
-        """Retorna estatísticas das sessões do psicólogo"""
-        if not hasattr(request.user, 'psicologo'):
-            return Response(
-                {'error': 'Apenas psicólogos podem acessar estatísticas.'}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        # Parâmetros opcionais para filtrar por período
-        ano = request.query_params.get('ano')
-        mes = request.query_params.get('mes')
-        
-        stats = Sessao.estatisticas_psicologo(
-            self.request.user.psicologo, 
-            ano=int(ano) if ano else None,
-            mes=int(mes) if mes else None
-        )
-        
-        serializer = EstatisticasSessaoSerializer(stats)
-        return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'])
-    def pacientes_vinculados(self, request):
-        """Retorna pacientes vinculados ao psicólogo para agendamento"""
-        if not hasattr(request.user, 'psicologo'):
-            return Response(
-                {'error': 'Apenas psicólogos podem acessar esta informação.'}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        vinculos = VinculoPacientePsicologo.objects.filter(
-            psicologo=request.user.psicologo,
+
+        vinculo = VinculoPacientePsicologo.objects.filter(
+            paciente=request.user.paciente_profile,
             status='ativo'
-        ).select_related('paciente__user')
-        
-        pacientes = [vinculo.paciente for vinculo in vinculos]
-        serializer = PacienteBasicSerializer(pacientes, many=True)
-        return Response(serializer.data)
+        ).select_related('psicologo__user').first()
+
+        if not vinculo:
+            return Response({'detail': 'Nenhum psicólogo vinculado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        p = vinculo.psicologo
+        return Response({
+            'vinculo_id': vinculo.id,
+            'data_inicio': vinculo.data_inicio_tratamento,
+            'duracao_dias': vinculo.duracao_tratamento,
+            'status': vinculo.status,
+            'permite_visualizar_registros': vinculo.permite_visualizar_registros,
+            'permite_comentarios': vinculo.permite_comentarios,
+            'psicologo': {
+                'id': p.id,
+                'nome_completo': f"{p.user.first_name} {p.user.last_name}".strip(),
+                'crp': p.crp,
+                'specialization': p.specialization,
+                'biography': p.biography,
+                'email': p.user.email,
+            },
+        })
+
+    @action(detail=True, methods=['post'], url_path='alterar-status')
+    def alterar_status(self, request, pk=None):
+        """Psicólogo: altera o status de um vínculo (inativar, suspender, finalizar)."""
+        if not hasattr(request.user, 'psicologo_profile'):
+            return Response(
+                {'error': 'Apenas psicólogos podem alterar vínculos.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        vinculo = self.get_object()
+        novo_status = request.data.get('status')
+        status_validos = ['ativo', 'inativo', 'suspenso', 'finalizado']
+
+        if novo_status not in status_validos:
+            return Response(
+                {'error': f'Status inválido. Opções: {", ".join(status_validos)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        vinculo.status = novo_status
+        if novo_status == 'finalizado' and not vinculo.data_fim_tratamento:
+            vinculo.data_fim_tratamento = date.today()
+        vinculo.save()
+
+        serializer = self.get_serializer(vinculo)
+        return Response({
+            'message': f'Vínculo atualizado para "{novo_status}".',
+            'vinculo': serializer.data,
+        })
+
+    @action(detail=True, methods=['get'])
+    def resumo(self, request, pk=None):
+        """Psicólogo: resumo clínico completo de um paciente vinculado."""
+        if not hasattr(request.user, 'psicologo_profile'):
+            return Response(
+                {'error': 'Apenas psicólogos podem ver este resumo.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        vinculo = self.get_object()
+        paciente = vinculo.paciente
+        psicologo = request.user.psicologo_profile
+
+        sessoes = Sessao.objects.filter(paciente=paciente, psicologo=psicologo)
+        registros = RegistroOdisseia.objects.filter(
+            paciente=paciente, compartilhar_psicologo=True
+        ).order_by('-data_registro')
+
+        return Response({
+            'paciente': {
+                'id': paciente.id,
+                'nome_completo': f"{paciente.user.first_name} {paciente.user.last_name}".strip(),
+                'email': paciente.user.email,
+                'cpf': paciente.cpf,
+                'gender': paciente.gender,
+                'birth_date': paciente.birth_date,
+            },
+            'vinculo': {
+                'status': vinculo.status,
+                'data_inicio': vinculo.data_inicio_tratamento,
+                'duracao_dias': vinculo.duracao_tratamento,
+                'motivo': vinculo.motivo_vinculo,
+            },
+            'sessoes_resumo': {
+                'total': sessoes.count(),
+                'realizadas': sessoes.filter(status='realizada').count(),
+                'agendadas': sessoes.filter(status__in=['agendada', 'confirmada']).count(),
+                'canceladas': sessoes.filter(status='cancelada').count(),
+            },
+            'registros_odisseia_total': registros.count(),
+        })
+
+
+#####################################################################################################################################
+# PRONTUÁRIOS (GUIAS DE APOIO)
+#####################################################################################################################################
+
+class ProntuarioViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para Prontuários.
+    - Psicólogo: CRUD completo de seus prontuários.
+    - Paciente: apenas leitura dos prontuários escritos pelo seu psicólogo vinculado.
+    """
+    serializer_class = ProntuarioSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, 'psicologo_profile'):
+            paciente_id = self.request.query_params.get('paciente_id')
+            qs = Prontuario.objects.filter(psicologo=user.psicologo_profile)
+            if paciente_id:
+                qs = qs.filter(paciente_id=paciente_id)
+            return qs
+        elif hasattr(user, 'paciente_profile'):
+            # Paciente vê apenas prontuários do seu psicólogo com vínculo ativo
+            vinculo = VinculoPacientePsicologo.objects.filter(
+                paciente=user.paciente_profile, status='ativo'
+            ).first()
+            if vinculo:
+                return Prontuario.objects.filter(
+                    paciente=user.paciente_profile,
+                    psicologo=vinculo.psicologo
+                ).order_by('-created_at')
+        return Prontuario.objects.none()
+
+    def perform_create(self, serializer):
+        if not hasattr(self.request.user, 'psicologo_profile'):
+            raise PermissionDenied("Apenas psicólogos podem criar prontuários.")
+        serializer.save(psicologo=self.request.user.psicologo_profile)
+
+    def update(self, request, *args, **kwargs):
+        if not hasattr(request.user, 'psicologo_profile'):
+            raise PermissionDenied("Apenas psicólogos podem editar prontuários.")
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        if not hasattr(request.user, 'psicologo_profile'):
+            raise PermissionDenied("Apenas psicólogos podem excluir prontuários.")
+        return super().destroy(request, *args, **kwargs)
+
+
+#####################################################################################################################################
+# NOTIFICAÇÕES
+#####################################################################################################################################
+
+class NotificacaoViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet para notificações.
+    Retorna notificações do usuário logado (paciente ou psicólogo).
+    """
+    serializer_class = NotificacaoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, 'paciente_profile'):
+            return NotificacaoSistema.objects.filter(paciente=user.paciente_profile)
+        elif hasattr(user, 'psicologo_profile'):
+            return NotificacaoSistema.objects.filter(psicologo=user.psicologo_profile)
+        return NotificacaoSistema.objects.none()
+
+    @action(detail=False, methods=['get'], url_path='nao-lidas')
+    def nao_lidas(self, request):
+        """Retorna a contagem de notificações não lidas."""
+        count = self.get_queryset().filter(lida=False).count()
+        return Response({'nao_lidas': count})
+
+    @action(detail=True, methods=['post'])
+    def ler(self, request, pk=None):
+        """Marca uma notificação específica como lida."""
+        notificacao = self.get_object()
+        notificacao.marcar_como_lida()
+        return Response({'message': 'Notificação marcada como lida.'})
+
+    @action(detail=False, methods=['post'], url_path='ler-todas')
+    def ler_todas(self, request):
+        """Marca todas as notificações não lidas do usuário como lidas."""
+        qs = self.get_queryset().filter(lida=False)
+        count = qs.count()
+        qs.update(lida=True, data_leitura=timezone.now())
+        return Response({'message': f'{count} notificação(ões) marcada(s) como lida(s).'})

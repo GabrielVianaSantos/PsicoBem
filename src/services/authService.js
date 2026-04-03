@@ -1,6 +1,14 @@
 import api from './api';
 
 export const authService = {
+  normalizeUserProfile(profile) {
+    if (!profile) return null;
+    return {
+      ...profile,
+      nome_completo: [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim(),
+    };
+  },
+
   // Login de usuário
   async login(email, password) {
     try {
@@ -76,7 +84,10 @@ export const authService = {
   async getUserProfile() {
     try {
       const response = await api.get('/auth/profile/');
-      return response.data;
+      return {
+        success: true,
+        data: this.normalizeUserProfile(response.data),
+      };
     } catch (error) {
       const errorInfo = this.handleError(error);
       const errorToThrow = new Error(errorInfo.message);
@@ -90,12 +101,69 @@ export const authService = {
   async updateUserProfile(userData) {
     try {
       const response = await api.put('/auth/profile/update/', userData);
-      return response.data;
+      return {
+        success: true,
+        data: this.normalizeUserProfile(response.data.user),
+        message: response.data.message,
+      };
     } catch (error) {
       const errorInfo = this.handleError(error);
       const errorToThrow = new Error(errorInfo.message);
       errorToThrow.status = errorInfo.status;
       errorToThrow.data = errorInfo.data;
+      throw errorToThrow;
+    }
+  },
+
+  // Solicitar redefinição de senha
+  async requestPasswordReset(email) {
+    try {
+      const response = await api.post('/auth/password/reset/', { email });
+      return response.data;
+    } catch (error) {
+      const errorInfo = this.handleError(error);
+      throw new Error(errorInfo.message);
+    }
+  },
+
+  // Confirmar redefinição de senha
+  async confirmPasswordReset(uid, token, newPassword) {
+    try {
+      const response = await api.post('/auth/password/reset/confirm/', { 
+        uid, 
+        token, 
+        new_password: newPassword 
+      });
+      return response.data;
+    } catch (error) {
+      const errorInfo = this.handleError(error);
+      throw new Error(errorInfo.message);
+    }
+  },
+
+  // Alterar senha (conectado)
+  async changePassword(oldPassword, newPassword) {
+    try {
+      const response = await api.post('/auth/password/change/', { 
+        old_password: oldPassword, 
+        new_password: newPassword 
+      });
+      return response.data;
+    } catch (error) {
+      const errorInfo = this.handleError(error);
+      throw new Error(errorInfo.message);
+    }
+  },
+
+  // Conectar paciente a psicólogo via CRP
+  async conectarPsicologo(crp) {
+    try {
+      const response = await api.post('/auth/paciente/conecta-psicologo/', { crp });
+      return response.data;
+    } catch (error) {
+      const errorInfo = this.handleError(error);
+      const errorToThrow = new Error(errorInfo.message);
+      errorToThrow.status = errorInfo.status;
       throw errorToThrow;
     }
   },

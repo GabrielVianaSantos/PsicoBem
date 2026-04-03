@@ -1,391 +1,210 @@
 import api from './api';
 
 export const sessaoService = {
-  // ==================== TIPOS DE SESSÃO ====================
-  
-  // Listar tipos de sessão
+  normalizeSessao(sessao) {
+    if (!sessao) return null;
+
+    const pacienteNome =
+      sessao.paciente_nome ||
+      sessao.paciente?.nome_completo ||
+      [sessao.paciente?.user?.first_name, sessao.paciente?.user?.last_name].filter(Boolean).join(' ').trim();
+
+    const psicologoNome =
+      sessao.psicologo_nome ||
+      sessao.psicologo?.nome_completo ||
+      [sessao.psicologo?.user?.first_name, sessao.psicologo?.user?.last_name].filter(Boolean).join(' ').trim();
+
+    const tipoSessaoNome = sessao.tipo_sessao_nome || sessao.tipo_sessao?.nome || sessao.tipo || null;
+
+    return {
+      ...sessao,
+      paciente_nome: pacienteNome,
+      psicologo_nome: psicologoNome,
+      tipo_sessao_nome: tipoSessaoNome,
+    };
+  },
+
+  normalizeCollection(data) {
+    const items = Array.isArray(data) ? data : (data?.results || []);
+    return items.map((item) => this.normalizeSessao(item));
+  },
+
   async getTiposSessao() {
     try {
-      const response = await api.get('/api/tipos-sessao/');
-      return {
-        success: true,
-        data: response.data
-      };
+      const response = await api.get('/sessoes/tipos-sessao/');
+      return { success: true, data: response.data };
     } catch (error) {
-      console.error('🔴 Erro ao buscar tipos de sessão:', error);
-      return {
-        success: false,
-        message: error.response?.data?.detail || 'Erro ao buscar tipos de sessão',
-        status: error.response?.status || 0
-      };
+      return this.buildError(error, 'Erro ao buscar tipos de sessão');
     }
   },
 
-  // Listar apenas tipos ativos
   async getTiposSessaoAtivos() {
     try {
-      const response = await api.get('/api/tipos-sessao/ativos/');
-      return {
-        success: true,
-        data: response.data
-      };
+      const response = await api.get('/sessoes/tipos-sessao/ativos/');
+      return { success: true, data: response.data };
     } catch (error) {
-      console.error('🔴 Erro ao buscar tipos de sessão ativos:', error);
-      return {
-        success: false,
-        message: error.response?.data?.detail || 'Erro ao buscar tipos de sessão',
-        status: error.response?.status || 0
-      };
+      return this.buildError(error, 'Erro ao buscar tipos de sessão');
     }
   },
 
-  // Criar tipo de sessão
   async createTipoSessao(tipoData) {
     try {
-      const response = await api.post('/api/tipos-sessao/', tipoData);
-      return {
-        success: true,
-        data: response.data
-      };
+      const response = await api.post('/sessoes/tipos-sessao/', tipoData);
+      return { success: true, data: response.data };
     } catch (error) {
-      console.error('🔴 Erro ao criar tipo de sessão:', error);
-      return {
-        success: false,
-        message: this.handleErrorMessage(error),
-        status: error.response?.status || 0,
-        errors: error.response?.data
-      };
+      return this.buildError(error, 'Erro ao criar tipo de sessão');
     }
   },
 
-  // Atualizar tipo de sessão
   async updateTipoSessao(id, tipoData) {
     try {
-      const response = await api.put(`/api/tipos-sessao/${id}/`, tipoData);
-      return {
-        success: true,
-        data: response.data
-      };
+      const response = await api.put(`/sessoes/tipos-sessao/${id}/`, tipoData);
+      return { success: true, data: response.data };
     } catch (error) {
-      console.error('🔴 Erro ao atualizar tipo de sessão:', error);
-      return {
-        success: false,
-        message: this.handleErrorMessage(error),
-        status: error.response?.status || 0,
-        errors: error.response?.data
-      };
+      return this.buildError(error, 'Erro ao atualizar tipo de sessão');
     }
   },
 
-  // Deletar tipo de sessão
   async deleteTipoSessao(id) {
     try {
-      await api.delete(`/api/tipos-sessao/${id}/`);
-      return {
-        success: true,
-        message: 'Tipo de sessão deletado com sucesso'
-      };
+      await api.delete(`/sessoes/tipos-sessao/${id}/`);
+      return { success: true, message: 'Tipo de sessão deletado com sucesso' };
     } catch (error) {
-      console.error('🔴 Erro ao deletar tipo de sessão:', error);
-      return {
-        success: false,
-        message: error.response?.data?.detail || 'Erro ao deletar tipo de sessão',
-        status: error.response?.status || 0
-      };
+      return this.buildError(error, 'Erro ao deletar tipo de sessão');
     }
   },
 
-  // ==================== SESSÕES ====================
-
-  // Listar sessões
   async getSessoes() {
     try {
-      const response = await api.get('/api/sessoes/');
-      return {
-        success: true,
-        data: response.data
-      };
+      const response = await api.get('/sessoes/');
+      return { success: true, data: this.normalizeCollection(response.data) };
     } catch (error) {
-      console.error('🔴 Erro ao buscar sessões:', error);
-      return {
-        success: false,
-        message: error.response?.data?.detail || 'Erro ao buscar sessões',
-        status: error.response?.status || 0
-      };
+      return this.buildError(error, 'Erro ao buscar sessões');
     }
   },
 
-  // Buscar sessão específica
   async getSessao(id) {
     try {
-      const response = await api.get(`/api/sessoes/${id}/`);
-      return {
-        success: true,
-        data: response.data
-      };
+      const response = await api.get(`/sessoes/${id}/`);
+      return { success: true, data: this.normalizeSessao(response.data) };
     } catch (error) {
-      console.error('🔴 Erro ao buscar sessão:', error);
-      return {
-        success: false,
-        message: error.response?.data?.detail || 'Erro ao buscar sessão',
-        status: error.response?.status || 0
-      };
+      return this.buildError(error, 'Erro ao buscar sessão');
     }
   },
 
-  // Criar sessão
   async createSessao(sessaoData) {
     try {
-      const response = await api.post('/api/sessoes/', sessaoData);
-      return {
-        success: true,
-        data: response.data,
-        message: 'Sessão criada com sucesso!'
-      };
+      const response = await api.post('/sessoes/', sessaoData);
+      return { success: true, data: response.data, message: 'Sessão criada com sucesso!' };
     } catch (error) {
-      console.error('🔴 Erro ao criar sessão:', error);
-      return {
-        success: false,
-        message: this.handleErrorMessage(error),
-        status: error.response?.status || 0,
-        errors: error.response?.data
-      };
+      return this.buildError(error, 'Erro ao criar sessão');
     }
   },
 
-  // Atualizar sessão
   async updateSessao(id, sessaoData) {
     try {
-      const response = await api.put(`/api/sessoes/${id}/`, sessaoData);
-      return {
-        success: true,
-        data: response.data,
-        message: 'Sessão atualizada com sucesso!'
-      };
+      const response = await api.put(`/sessoes/${id}/`, sessaoData);
+      return { success: true, data: response.data, message: 'Sessão atualizada com sucesso!' };
     } catch (error) {
-      console.error('🔴 Erro ao atualizar sessão:', error);
-      return {
-        success: false,
-        message: this.handleErrorMessage(error),
-        status: error.response?.status || 0,
-        errors: error.response?.data
-      };
+      return this.buildError(error, 'Erro ao atualizar sessão');
     }
   },
 
-  // Cancelar sessão
   async cancelarSessao(id) {
     try {
-      const response = await api.post(`/api/sessoes/${id}/cancelar/`);
-      return {
-        success: true,
-        data: response.data,
-        message: response.data.message || 'Sessão cancelada com sucesso!'
-      };
+      const response = await api.post(`/sessoes/${id}/cancelar/`);
+      return { success: true, data: response.data, message: response.data.message || 'Sessão cancelada com sucesso!' };
     } catch (error) {
-      console.error('🔴 Erro ao cancelar sessão:', error);
-      return {
-        success: false,
-        message: error.response?.data?.error || 'Erro ao cancelar sessão',
-        status: error.response?.status || 0
-      };
+      return this.buildError(error, 'Erro ao cancelar sessão');
     }
   },
 
-  // Confirmar pagamento
+  async confirmarRealizacao(id) {
+    try {
+      const response = await api.post(`/sessoes/${id}/realizar/`);
+      return { success: true, data: response.data, message: response.data.message || 'Sessão marcada como realizada!' };
+    } catch (error) {
+      return this.buildError(error, 'Erro ao realizar sessão');
+    }
+  },
+
   async confirmarPagamento(id) {
     try {
-      const response = await api.post(`/api/sessoes/${id}/confirmar-pagamento/`);
-      return {
-        success: true,
-        data: response.data,
-        message: response.data.message || 'Pagamento confirmado com sucesso!'
-      };
+      const response = await api.post(`/sessoes/${id}/confirmar-pagamento/`);
+      return { success: true, data: response.data, message: response.data.message || 'Pagamento confirmado com sucesso!' };
     } catch (error) {
-      console.error('🔴 Erro ao confirmar pagamento:', error);
-      return {
-        success: false,
-        message: error.response?.data?.error || 'Erro ao confirmar pagamento',
-        status: error.response?.status || 0
-      };
+      return this.buildError(error, 'Erro ao confirmar pagamento');
     }
   },
 
-  // ==================== CONSULTAS ESPECÍFICAS ====================
-
-  // Sessões de hoje
   async getSessoesHoje() {
     try {
-      const response = await api.get('/api/sessoes/hoje/');
-      return {
-        success: true,
-        data: response.data
-      };
+      const response = await api.get('/sessoes/hoje/');
+      return { success: true, data: this.normalizeCollection(response.data) };
     } catch (error) {
-      console.error('🔴 Erro ao buscar sessões de hoje:', error);
-      return {
-        success: false,
-        message: error.response?.data?.detail || 'Erro ao buscar sessões de hoje',
-        status: error.response?.status || 0
-      };
+      return this.buildError(error, 'Erro ao buscar sessões de hoje');
     }
   },
 
-  // Sessões da semana
   async getSessoesSemana() {
     try {
-      const response = await api.get('/api/sessoes/semana/');
-      return {
-        success: true,
-        data: response.data
-      };
+      const response = await api.get('/sessoes/semana/');
+      return { success: true, data: this.normalizeCollection(response.data) };
     } catch (error) {
-      console.error('🔴 Erro ao buscar sessões da semana:', error);
-      return {
-        success: false,
-        message: error.response?.data?.detail || 'Erro ao buscar sessões da semana',
-        status: error.response?.status || 0
-      };
+      return this.buildError(error, 'Erro ao buscar sessões da semana');
     }
   },
 
-  // Sessões do mês
   async getSessoesMes(ano = null, mes = null) {
     try {
-      let url = '/api/sessoes/mes/';
+      let url = '/sessoes/mes/';
       const params = new URLSearchParams();
-      
       if (ano) params.append('ano', ano);
       if (mes) params.append('mes', mes);
-      
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-
+      if (params.toString()) url += `?${params.toString()}`;
       const response = await api.get(url);
-      return {
-        success: true,
-        data: response.data
-      };
+      return { success: true, data: this.normalizeCollection(response.data) };
     } catch (error) {
-      console.error('🔴 Erro ao buscar sessões do mês:', error);
-      return {
-        success: false,
-        message: error.response?.data?.detail || 'Erro ao buscar sessões do mês',
-        status: error.response?.status || 0
-      };
+      return this.buildError(error, 'Erro ao buscar sessões do mês');
     }
   },
 
-  // Sessões pendentes de pagamento
   async getSessoesPendentesPagamento() {
     try {
-      const response = await api.get('/api/sessoes/pendentes-pagamento/');
-      return {
-        success: true,
-        data: response.data
-      };
+      const response = await api.get('/sessoes/pendentes-pagamento/');
+      return { success: true, data: this.normalizeCollection(response.data) };
     } catch (error) {
-      console.error('🔴 Erro ao buscar sessões pendentes:', error);
-      return {
-        success: false,
-        message: error.response?.data?.detail || 'Erro ao buscar sessões pendentes',
-        status: error.response?.status || 0
-      };
+      return this.buildError(error, 'Erro ao buscar sessões pendentes');
     }
   },
 
-  // Estatísticas do psicólogo
   async getEstatisticas(ano = null, mes = null) {
     try {
-      let url = '/api/sessoes/estatisticas/';
+      let url = '/sessoes/estatisticas/';
       const params = new URLSearchParams();
-      
       if (ano) params.append('ano', ano);
       if (mes) params.append('mes', mes);
-      
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-
+      if (params.toString()) url += `?${params.toString()}`;
       const response = await api.get(url);
-      return {
-        success: true,
-        data: response.data
-      };
+      return { success: true, data: response.data };
     } catch (error) {
-      console.error('🔴 Erro ao buscar estatísticas:', error);
-      return {
-        success: false,
-        message: error.response?.data?.detail || 'Erro ao buscar estatísticas',
-        status: error.response?.status || 0
-      };
+      return this.buildError(error, 'Erro ao buscar estatísticas');
     }
   },
 
-  // Pacientes vinculados
-  async getPacientesVinculados() {
-    try {
-      const response = await api.get('/api/sessoes/pacientes-vinculados/');
-      return {
-        success: true,
-        data: response.data
-      };
-    } catch (error) {
-      console.error('🔴 Erro ao buscar pacientes vinculados:', error);
-      return {
-        success: false,
-        message: error.response?.data?.detail || 'Erro ao buscar pacientes vinculados',
-        status: error.response?.status || 0
-      };
-    }
-  },
-
-  // ==================== UTILITÁRIOS ====================
-
-  // Tratar mensagens de erro
-  handleErrorMessage(error) {
-    if (error.response?.data) {
-      // Erros de validação do DRF
-      const data = error.response.data;
-      
-      // Se é um objeto com campos, pegar a primeira mensagem
-      if (typeof data === 'object' && !Array.isArray(data)) {
-        const firstField = Object.keys(data)[0];
-        if (firstField && Array.isArray(data[firstField])) {
-          return data[firstField][0];
-        } else if (firstField) {
-          return data[firstField];
-        }
-      }
-      
-      // Se é uma mensagem de erro simples
-      if (data.detail) return data.detail;
-      if (data.message) return data.message;
-      if (data.error) return data.error;
-      
-      // Se é um array, pegar primeiro item
-      if (Array.isArray(data) && data.length > 0) {
-        return data[0];
-      }
-    }
-    
-    // Fallback
-    return 'Erro inesperado. Tente novamente.';
-  },
-
-  // Formatar data para envio à API
   formatDateForAPI(date) {
     if (!date) return null;
-    
-    // Se já é string no formato correto, retornar
     if (typeof date === 'string') return date;
-    
-    // Se é objeto Date, converter para ISO string
-    if (date instanceof Date) {
-      return date.toISOString();
-    }
-    
+    if (date instanceof Date) return date.toISOString();
     return null;
-  }
+  },
+
+  buildError(error, fallbackMessage) {
+    return {
+      success: false,
+      message: error.response?.data?.detail || error.response?.data?.message || fallbackMessage,
+      status: error.response?.status || 0,
+      errors: error.response?.data,
+    };
+  },
 };

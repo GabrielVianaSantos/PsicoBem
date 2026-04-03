@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../services/authService';
+import { notificationService } from '../services/notificationService';
 
 export const AuthContext = createContext({});
 
@@ -30,7 +31,12 @@ export default function AuthProvider({ children }) {
         
         // Verificar se o token ainda é válido
         try {
-          await authService.getUserProfile();
+          const profileResponse = await authService.getUserProfile();
+          if (profileResponse.success) {
+            await AsyncStorage.setItem('@PsicoBem:user', JSON.stringify(profileResponse.data));
+            setUser(profileResponse.data);
+            setUserType(profileResponse.data.user_type);
+          }
         } catch (error) {
           // Token inválido, fazer logout
           await logout();
@@ -49,7 +55,7 @@ async function login(email, password) {
       
       const response = await authService.login(email, password);
       
-      const userData = response.user;
+      const userData = authService.normalizeUserProfile(response.user);
       const token = response.tokens.access;
       const refreshToken = response.tokens.refresh;
       
@@ -64,6 +70,12 @@ async function login(email, password) {
       setUser(userData);
       setUserType(userData.user_type);
       setIsAuthenticated(true);
+
+      try {
+        await notificationService.registerDevice();
+      } catch (pushError) {
+        console.error('Erro ao registrar dispositivo push:', pushError);
+      }
       
       return { success: true, user: userData };
     } catch (error) {
@@ -86,7 +98,7 @@ async function login(email, password) {
       
       const response = await authService.registerPaciente(userData);
       
-      const user = response.user;
+      const user = authService.normalizeUserProfile(response.user);
       const token = response.tokens.access;
       const refreshToken = response.tokens.refresh;
       
@@ -101,6 +113,12 @@ async function login(email, password) {
       setUser(user);
       setUserType('paciente');
       setIsAuthenticated(true);
+
+      try {
+        await notificationService.registerDevice();
+      } catch (pushError) {
+        console.error('Erro ao registrar dispositivo push:', pushError);
+      }
       
       return { success: true, user };
     } catch (error) {
@@ -120,7 +138,7 @@ async function login(email, password) {
       
       const response = await authService.registerPsicologo(userData);
       
-      const user = response.user;
+      const user = authService.normalizeUserProfile(response.user);
       const token = response.tokens.access;
       const refreshToken = response.tokens.refresh;
       
@@ -135,6 +153,12 @@ async function login(email, password) {
       setUser(user);
       setUserType('psicologo');
       setIsAuthenticated(true);
+
+      try {
+        await notificationService.registerDevice();
+      } catch (pushError) {
+        console.error('Erro ao registrar dispositivo push:', pushError);
+      }
       
       return { success: true, user };
     } catch (error) {
@@ -150,6 +174,12 @@ async function login(email, password) {
 
   async function logout() {
     try {
+      try {
+        await notificationService.deactivateDevice();
+      } catch (pushError) {
+        console.error('Erro ao desativar dispositivo push:', pushError);
+      }
+
       await AsyncStorage.multiRemove([
         '@PsicoBem:user',
         '@PsicoBem:token',
@@ -172,7 +202,7 @@ async function login(email, password) {
       const response = await authService.updateUserProfile(userData);
       
       // Atualizar dados locais
-      const updatedUser = { ...user, ...response.user };
+      const updatedUser = { ...user, ...response.data };
       await AsyncStorage.setItem('@PsicoBem:user', JSON.stringify(updatedUser));
       setUser(updatedUser);
       

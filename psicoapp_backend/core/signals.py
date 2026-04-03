@@ -1,10 +1,13 @@
 from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
+from django.core.exceptions import ValidationError
 from authentication.models import Psicologo, Paciente
+from sessoes.models import TipoSessao, Sessao
+from engajamentos.models import CategoriaMensagem, RegistroOdisseia
 from .models import (
-    TipoSessao, CategoriaMensagem, Sessao, RegistroOdisseia, 
     NotificacaoSistema, VinculoPacientePsicologo
 )
+from .services import NotificationDomainService
 
 @receiver(post_save, sender=Psicologo)
 def criar_tipos_sessao_padrao(sender, instance, created, **kwargs):
@@ -95,43 +98,13 @@ def notificacao_boas_vindas_paciente(sender, instance, created, **kwargs):
 def notificar_psicologo_novo_registro(sender, instance, created, **kwargs):
     """Notifica psicólogo sobre novo registro do paciente"""
     if created and instance.compartilhar_psicologo:
-        # Buscar psicólogo vinculado ativo
-        vinculo = VinculoPacientePsicologo.objects.filter(
-            paciente=instance.paciente,
-            status='ativo'
-        ).first()
-        
-        if vinculo:
-            NotificacaoSistema.objects.create(
-                psicologo=vinculo.psicologo,
-                tipo='novo_registro',
-                titulo='Novo Registro de Odisseia',
-                mensagem=f'{instance.paciente.user.first_name} fez um novo registro emocional.',
-                link_relacionado=f'/registros/{instance.pk}'
-            )
+        NotificationDomainService.emit_new_odisseia_record(instance)
 
 @receiver(post_save, sender=Sessao)
 def notificar_agendamento_sessao(sender, instance, created, **kwargs):
     """Notifica sobre agendamento/alterações de sessão"""
     if created:
-        # Notificar paciente
-        NotificacaoSistema.objects.create(
-            paciente=instance.paciente,
-            tipo='sessao_agendada',
-            titulo='Sessão Agendada',
-            mensagem=f'Sua sessão foi agendada para {instance.data_hora.strftime("%d/%m/%Y às %H:%M")}.',
-            link_relacionado=f'/sessoes/{instance.pk}'
-        )
-        
-        # Notificar psicólogo
-        NotificacaoSistema.objects.create(
-            psicologo=instance.psicologo,
-            tipo='sessao_agendada',
-            titulo='Nova Sessão Agendada',
-            mensagem=f'Sessão agendada com {instance.paciente.user.first_name} '
-                     f'para {instance.data_hora.strftime("%d/%m/%Y às %H:%M")}.',
-            link_relacionado=f'/sessoes/{instance.pk}'
-        )
+        NotificationDomainService.emit_session_created(instance)
 
 @receiver(pre_delete, sender=Sessao)
 def validar_delecao_sessao(sender, instance, **kwargs):
