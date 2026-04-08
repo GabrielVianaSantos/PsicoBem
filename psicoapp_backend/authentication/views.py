@@ -214,6 +214,20 @@ def conecta_psicologo_view(request):
         vinculo.data_fim_tratamento = None
         vinculo.save()
 
+    # Issue 06: Notificar psicólogo sobre novo vínculo
+    from core.services import NotificationDomainService
+    NotificationDomainService.emit(
+        target=psicologo.user,
+        tipo='sistema',
+        titulo='Novo Paciente Conectado 🤝',
+        mensagem=f'{request.user.first_name} se conectou ao seu perfil via CRP.',
+        link_relacionado='/pacientes',
+        dados_extras=NotificationDomainService._routing_payload(
+            screen='VinculosPacientes',
+            event='novo_vinculo',
+        ),
+    )
+
     return Response({
         'message': 'Conexão realizada com sucesso!',
         'psicologo': {

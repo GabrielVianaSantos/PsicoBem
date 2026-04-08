@@ -8,7 +8,6 @@ import * as SplashScreen from 'expo-splash-screen';
 import useLoadFonts from './src/hooks/useLoadFonts';
 import Routes from "./src/routes";
 import AuthProvider from './src/providers/AuthProvider';
-import { notificationService } from './src/services/notificationService';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -17,8 +16,6 @@ export default function App() {
   if(!fontsLoaded)
   return null;
 
-  notificationService.setupNotificationHandler();
-
   return (
     <AuthProvider>
       <SafeAreaView style = {{flex: 1}} onLayout={onLayoutRootView}>
@@ -26,5 +23,5 @@ export default function App() {
           <Routes/>
       </SafeAreaView>
     </AuthProvider>
-  ); 
+  );
 }

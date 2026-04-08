@@ -6,14 +6,31 @@
     "plugins": [
       "expo-asset",
       "expo-font",
-      "expo-notifications"
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#11B5A4"
+        }
+      ]
     ],
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#11B5A4",
+      "androidMode": "default"
+    },
     "android": {
-      "useNextNotificationsApi": true
+      "package": "com.devianatech.psicoapp",
+      "googleServicesFile": "./google-services.json"
     },
     "ios": {
       "supportsTablet": true
     },
-    "sdkVersion": "53.0.0"
+    "sdkVersion": "53.0.0",
+    "extra": {
+      "eas": {
+        "projectId": "b0572e5b-4eb0-46fc-a614-348ee5875933"
+      }
+    }
   }
 }

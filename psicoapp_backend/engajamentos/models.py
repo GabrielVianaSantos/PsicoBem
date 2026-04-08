@@ -6,6 +6,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.db.models import Sum, Count, Avg
 from core.models import VinculoPacientePsicologo, NotificacaoSistema
+from core.services import NotificationDomainService
 
 
 # CATEGORIA MENSAGEM SEMENTES DO CUIDADO
@@ -253,14 +254,18 @@ class SementeCuidado(models.Model):
             
             if created:
                 envios_criados.append(envio)
-                
-                # Criar notificação
-                NotificacaoSistema.objects.create(
-                    paciente=paciente,
+
+                # Notificar paciente via emit() para disparar push nativo
+                NotificationDomainService.emit(
+                    target=paciente.user,
                     tipo='nova_semente',
-                    titulo='Nova Semente do Cuidado',
+                    titulo='Nova Semente do Cuidado 🌱',
                     mensagem=f'Você recebeu uma nova mensagem: "{self.titulo}"',
-                    link_relacionado=f'/sementes/{self.pk}'
+                    link_relacionado=f'/sementes/{self.pk}',
+                    dados_extras=NotificationDomainService._routing_payload(
+                        screen='SementesPaciente',
+                        event='nova_semente',
+                    ),
                 )
         
         return envios_criados

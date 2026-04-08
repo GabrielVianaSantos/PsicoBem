@@ -160,6 +160,29 @@ class VinculoViewSet(viewsets.ModelViewSet):
         vinculo.save()
 
         serializer = self.get_serializer(vinculo)
+
+        # Issue 10: Notificar paciente sobre alteração no vínculo
+        from core.services import NotificationDomainService
+        status_display = {
+            'ativo': 'Ativado',
+            'inativo': 'Inativado',
+            'suspenso': 'Suspenso',
+            'finalizado': 'Finalizado'
+        }.get(novo_status, novo_status)
+
+        NotificationDomainService.emit(
+            target=vinculo.paciente.user,
+            tipo='sistema',
+            titulo='Vínculo Atualizado 🔄',
+            mensagem=f'O status do seu vínculo com {vinculo.psicologo.user.first_name} foi alterado para: {status_display}.',
+            link_relacionado='/meu-psicologo',
+            dados_extras=NotificationDomainService._routing_payload(
+                screen='MeuPsicologo',
+                event='vinculo_alterado',
+                status=novo_status,
+            ),
+        )
+
         return Response({
             'message': f'Vínculo atualizado para "{novo_status}".',
             'vinculo': serializer.data,
@@ -244,7 +267,22 @@ class ProntuarioViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         if not hasattr(self.request.user, 'psicologo_profile'):
             raise PermissionDenied("Apenas psicólogos podem criar prontuários.")
-        serializer.save(psicologo=self.request.user.psicologo_profile)
+        prontuario = serializer.save(psicologo=self.request.user.psicologo_profile)
+
+        # Issue 08: Notificar paciente sobre novo prontuário
+        from core.services import NotificationDomainService
+        NotificationDomainService.emit(
+            target=prontuario.paciente.user,
+            tipo='sistema',
+            titulo='Novo Prontuário Disponível 📝',
+            mensagem='Seu psicólogo disponibilizou uma nova guia ou prontuário para você.',
+            link_relacionado='/prontuarios',
+            dados_extras=NotificationDomainService._routing_payload(
+                screen='MeusProntuarios',
+                event='prontuario_criado',
+                prontuario_id=prontuario.pk,
+            ),
+        )
 
     def update(self, request, *args, **kwargs):
         if not hasattr(request.user, 'psicologo_profile'):

@@ -7,7 +7,9 @@ except ModuleNotFoundError:  # pragma: no cover - fallback para ambiente sem Cel
         return func
 
 import logging
-from django.db import IntegrityError
+from django.db import IntegrityError, models
+from django.db.models import Q
+
 from django.utils import timezone
 from datetime import timedelta
 
@@ -30,9 +32,21 @@ def _notification_target_user(notificacao):
 
 def _build_push_payload(notificacao):
     dados_extras = notificacao.dados_extras or {}
+    
+    # Issue 15: Badge counter logic
+    user = _notification_target_user(notificacao)
+    badge_count = 0
+    if user:
+        from core.models import NotificacaoSistema
+        badge_count = NotificacaoSistema.objects.filter(
+            models.Q(paciente__user=user) | models.Q(psicologo__user=user),
+            lida=False
+        ).count()
+
     return {
         "title": notificacao.titulo,
         "body": notificacao.mensagem,
+        "badge": badge_count,
         "data": {
             "notification_id": notificacao.id,
             "screen": dados_extras.get("screen", "Notificacoes"),
@@ -43,6 +57,10 @@ def _build_push_payload(notificacao):
             "registro_id": dados_extras.get("registro_id"),
         },
         "sound": "default",
+        "android": {
+            "channelId": "psicobem-notificacoes",
+            "icon": "notification_icon",
+        },
     }
 
 
@@ -99,6 +117,7 @@ def enqueue_push_for_notification(notification_id):
             "body": notificacao.mensagem,
             "data": payload_padrao["data"],
             "sound": "default",
+            "android": payload_padrao["android"],
         })
 
     resposta = provider.send(mensagens)
@@ -150,15 +169,89 @@ def enqueue_push_for_notification(notification_id):
 @shared_task
 def reconcile_push_receipts():
     """
-    Revisa entregas já enviadas. A implementação completa de receipts da Expo
-    será adicionada quando o worker de produção estiver com o fluxo estável.
+    Consulta a Expo Receipts API para entregas enviadas com ticket pendente.
+    Atualiza status e desativa tokens inválidos (DeviceNotRegistered).
     """
-    pendentes = EntregaPush.objects.filter(
-        status__in=[EntregaPush.Status.SENT, EntregaPush.Status.FAILED],
-        provider_receipt_id="",
-    ).count()
-    logger.info("push.receipts.reconcile", extra={"pending_receipts": pendentes})
-    return {"status": "noop", "pending_receipts": pendentes}
+    import json
+    from urllib import request as urllib_request
+
+    RECEIPTS_ENDPOINT = "https://exp.host/--/api/v2/push/getReceipts"
+    BATCH_SIZE = 300
+
+    pendentes = list(
+        EntregaPush.objects.filter(
+            status=EntregaPush.Status.SENT,
+            provider_ticket_id__gt="",
+            provider_receipt_id="",
+        ).select_related("dispositivo")[:BATCH_SIZE]
+    )
+
+    if not pendentes:
+        logger.info("push.receipts.reconcile", extra={"pending_receipts": 0})
+        return {"status": "ok", "pending_receipts": 0}
+
+    ticket_ids = [e.provider_ticket_id for e in pendentes]
+    ticket_map = {e.provider_ticket_id: e for e in pendentes}
+
+    body = json.dumps({"ids": ticket_ids}).encode("utf-8")
+    req = urllib_request.Request(
+        RECEIPTS_ENDPOINT,
+        data=body,
+        headers={"Accept": "application/json", "Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urllib_request.urlopen(req, timeout=20) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except Exception as exc:
+        logger.warning("push.receipts.fetch_error", extra={"error": str(exc)})
+        return {"status": "error", "detail": str(exc)}
+
+    receipts = payload.get("data", {})
+    ok_count = 0
+    error_count = 0
+    now = timezone.now()
+
+    for ticket_id, receipt in receipts.items():
+        entrega = ticket_map.get(ticket_id)
+        if not entrega:
+            continue
+
+        entrega.provider_receipt_id = ticket_id
+        entrega.receipt_checked_at = now
+        receipt_status = receipt.get("status")
+
+        if receipt_status == "ok":
+            entrega.status = EntregaPush.Status.RECEIPT_OK
+            ok_count += 1
+        else:
+            error_code = receipt.get("details", {}).get("error", "unknown")
+            entrega.provider_error_code = error_code
+            entrega.provider_error_detail = str(receipt)
+            error_count += 1
+
+            if error_code == "DeviceNotRegistered" and entrega.dispositivo:
+                entrega.dispositivo.ativo = False
+                entrega.dispositivo.save(update_fields=["ativo", "updated_at", "last_seen_at"])
+                entrega.status = EntregaPush.Status.DEVICE_UNREGISTERED
+                logger.info(
+                    "push.receipts.device_unregistered",
+                    extra={"device_id": entrega.dispositivo.device_id},
+                )
+            else:
+                entrega.status = EntregaPush.Status.RECEIPT_ERROR
+
+        entrega.save(update_fields=[
+            "status", "provider_receipt_id", "provider_error_code",
+            "provider_error_detail", "receipt_checked_at", "updated_at",
+        ])
+
+    logger.info(
+        "push.receipts.reconcile",
+        extra={"checked": len(receipts), "ok": ok_count, "errors": error_count},
+    )
+    return {"status": "ok", "checked": len(receipts), "ok": ok_count, "errors": error_count}
 
 
 def _reminder_minutes_to_types():

@@ -32,6 +32,11 @@
 4. Habilitar TLS.
 5. Expor a API pública em HTTPS.
 
+### Observação técnica importante
+
+- Como os containers do backend podem mudar de IP entre recriações, o `proxy_pass` do Nginx deve usar resolução dinâmica do Docker.
+- Isso evita o caso em que o proxy guarda um IP antigo do `web` e passa a devolver `502`.
+
 ## 4. Frontend Expo
 
 1. Configurar `EXPO_PUBLIC_API_URL` com a URL pública da API.

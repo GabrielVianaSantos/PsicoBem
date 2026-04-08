@@ -1,364 +1,287 @@
-# SPEC - Sistema de Notificacoes Push Nativas (Paciente + Psicologo)
+# SPEC — Notificações Push: Estado Atual e O Que Falta
 
-Data: 2026-04-02  
-Status: pronto para implementacao  
-Escopo: app mobile Expo + backend Django
+Data: 2026-04-07  
+Status: implementação parcial — faltam 5 passos para funcionar de ponta a ponta  
+Escopo: app Expo SDK 53 + backend Django no Docker (VPS)
 
-## 1. Objetivo
+---
 
-Implementar notificacoes push nativas (popups do iOS/Android) para pacientes e psicologos, cobrindo:
+## 1. Resposta direta à sua dúvida sobre "Android"
 
-- eventos transacionais do app (agendamento, cancelamento, novo registro, etc.)
-- lembretes proximos de sessoes ativas/agendadas
-- navegacao por toque na notificacao para a tela correta
+Você **não precisa criar uma pasta `android/` no projeto** nem gerar um app nativo manualmente.
 
-Sem reescrita futura: desenhar arquitetura com baixo acoplamento ao provedor de push, pronta para producao/loja.
+No Expo managed (que é o seu caso), o Android é gerado **na nuvem pelo EAS Build** automaticamente a partir do `app.json`. O `google-services.json` que você já colocou na raiz do projeto já está apontado corretamente no `app.json`:
 
-## 2. Diagnostico da base atual
+```json
+"android": {
+  "package": "com.devianatech.psicoapp",
+  "googleServicesFile": "./google-services.json"
+}
+```
 
-O projeto ja possui:
+O EAS lê esse arquivo e injeta as configurações do Firebase no APK durante o build. Você **não precisa editar Gradle manualmente**. A única coisa necessária é gerar uma **nova build** com essas configurações ativas.
 
-- inbox in-app via `NotificacaoSistema` no Django
-- endpoints de leitura (`/api/notificacoes/`, `nao-lidas`, `ler`, `ler-todas`)
-- gatilhos basicos em `signals.py` para criar notificacoes in-app
-- app Expo SDK 53 sem `expo-notifications` configurado
-- `app.json` ainda sem plugin `expo-notifications` e sem chaves Android/iOS para push
+---
 
-Conclusao: existe base de dominio de notificacao, mas falta a camada de entrega push nativa e a esteira de confiabilidade para producao.
+## 2. O que já está implementado
 
-## 3. Decisoes de arquitetura (padrao alvo)
+### Frontend (Expo)
 
-### 3.1 Padrao de notificacao unificada
+| Item | Status |
+|------|--------|
+| `expo-notifications` instalado (`~0.31.4`) | ✅ feito |
+| `expo-device` e `expo-constants` instalados | ✅ feito |
+| Plugin `expo-notifications` no `app.json` | ✅ feito |
+| `googleServicesFile` configurado no `app.json` | ✅ feito |
+| `projectId` do EAS no `app.json` | ✅ feito |
+| `notificationService.js` criado com `registerDevice` / `deactivateDevice` | ✅ feito |
+| Listener de toque na notificação (navega para tela correta) | ✅ feito |
+| Registro do dispositivo no login | ✅ feito (`AuthProvider.js`) |
+| Desativação do dispositivo no logout | ✅ feito (`AuthProvider.js`) |
+| Setup do handler no `routes.js` | ✅ feito |
 
-Adotar pipeline unico:
+### Backend (Django)
 
-1. Evento de dominio ocorre (ex.: sessao agendada).
-2. Backend grava notificacao in-app (`NotificacaoSistema`) para historico/inbox.
-3. Backend enfileira entrega push assincrona.
-4. Worker envia push para dispositivos do destinatario.
-5. Backend registra ticket/receipt e status de entrega.
+| Item | Status |
+|------|--------|
+| App `notificacoes_push` criado | ✅ feito |
+| Model `DispositivoPush` com migrações | ✅ feito |
+| Model `EntregaPush` com migrações | ✅ feito |
+| Model `ReminderDispatch` com migrações | ✅ feito |
+| Endpoint `POST /api/push/devices/register/` | ✅ feito |
+| Endpoint `POST /api/push/devices/deactivate/` | ✅ feito |
+| `ExpoPushProvider` (envio HTTP para Expo API) | ✅ feito |
+| Task Celery `enqueue_push_for_notification` | ✅ feito |
+| Task Celery `dispatch_session_reminders` (24h/2h/15m) | ✅ feito |
+| `NotificationDomainService.emit()` no `core/services.py` | ✅ feito |
+| Celery + Redis + Worker + Beat no `docker-compose.yml` | ✅ feito |
+| `celery`, `redis`, `django-celery-beat` no `requirements.txt` | ✅ feito |
 
-Esse padrao evita duplicidade de regras e garante auditoria.
+---
 
-### 3.2 Estrategia de provedor (sem lock-in)
+## 3. O que FALTA fazer (os 5 passos)
 
-Implementar interface de provedor:
+### Passo 1 — Gerar nova build development Android (CRÍTICO)
 
-- `PushProvider` (contrato)
-- `ExpoPushProvider` (fase 1)
-- `FcmApnsProvider` (fase futura, sem quebrar dominio)
+**Por que é necessário:** A build development que você gerou anteriormente no EAS foi criada antes de:
+- o plugin `expo-notifications` ser adicionado ao `app.json`
+- o `google-services.json` ser configurado
 
-Em producao inicial, usar Expo Push Service pela velocidade de entrega e setup com EAS.  
-Fase futura permite migracao gradual para FCM/APNs diretos mantendo os mesmos eventos e modelos internos.
+Push nativo não funciona na build antiga. Permissões e integração FCM são **compiladas** no APK, não carregadas em tempo de execução.
 
-### 3.3 Assincronia obrigatoria
+**O que fazer:**
 
-Nao enviar push dentro de request HTTP nem em signal sincrono.
+```bash
+eas build --profile development --platform android
+```
 
-- usar Celery + Redis para envio
-- usar scheduler (Celery Beat) para lembretes de sessoes
-- garantir idempotencia para nao disparar push duplicado
+Depois de concluir, instale o novo APK no celular físico (não funciona no emulador) e teste.
 
-## 4. Modelo de dados novo/ajustado (backend)
+> **Importante:** push nativo **não funciona no Expo Go**. Só na development build gerada pelo EAS.
 
-Criar app `notificacoes_push` (ou manter em `core` se quiser minimizar mudanca estrutural, mas com arquivos separados).
+---
 
-### 4.1 `DispositivoPush`
+### Passo 2 — Deploy do backend com os novos serviços (CRÍTICO)
 
-- `id`
-- `user` (FK `CustomUser`)
-- `provider` (`expo` | `fcm` | `apns`)
-- `push_token` (unique parcial por provider)
-- `platform` (`ios` | `android`)
-- `app_version`
-- `device_id` (id estavel do app no aparelho)
-- `timezone` (ex.: `America/Sao_Paulo`)
-- `ativo` (bool)
-- `permissao_status` (`granted` | `denied` | `undetermined`)
-- `last_seen_at`
-- `created_at`, `updated_at`
+**Por que é necessário:** O `docker-compose.yml` já tem `worker` (Celery) e `beat` (Celery Beat) configurados, mas eles precisam estar rodando na VPS. Sem o worker, as tasks de envio nunca executam — as notificações ficam presas na fila.
 
-Indices:
+**O que fazer na VPS:**
 
-- `(user, ativo)`
-- `(push_token, provider)`
-- `(last_seen_at)`
+```bash
+# 1. Enviar o código atualizado
+git pull
 
-### 4.2 `EntregaPush`
+# 2. Subir todos os serviços
+docker-compose up -d --build
 
-- `id`
-- `notificacao` (FK opcional para `NotificacaoSistema`)
-- `destinatario_user` (FK `CustomUser`)
-- `dispositivo` (FK `DispositivoPush`)
-- `provider`
-- `status` (`queued`, `sent`, `receipt_ok`, `receipt_error`, `failed`, `device_unregistered`)
-- `titulo`, `mensagem`, `payload_json`
-- `provider_ticket_id`
-- `provider_receipt_id`
-- `provider_error_code`, `provider_error_detail`
-- `tentativas`
-- `next_retry_at`
-- `sent_at`, `receipt_checked_at`
-- `created_at`, `updated_at`
+# 3. Verificar se todos estão rodando
+docker-compose ps
 
-Indices:
+# Você deve ver: web, db, redis, worker, beat — todos Up
+```
 
-- `(status, next_retry_at)`
-- `(destinatario_user, created_at)`
-- `(provider_ticket_id)`
+**Verificar que as migrações foram aplicadas:**
+```bash
+docker-compose exec web python manage.py showmigrations notificacoes_push
+```
+Deve mostrar `[X] 0001_initial` e `[X] 0002_reminderdispatch`.
 
-### 4.3 Idempotencia de lembrete de sessao
+---
 
-Para lembretes de sessao, criar controle por chave:
+### Passo 3 — Registrar o schedule do Celery Beat
 
-- `ReminderDispatch(session_id, reminder_type, destinatario_user, sent_at)`
-- `unique(session_id, reminder_type, destinatario_user)`
+**Por que é necessário:** As tasks periódicas (`dispatch_session_reminders`, `reconcile_push_receipts` e as 3 novas da `SPEC_NOVAS_NOTIFICACOES.md`) precisam ser agendadas. Sem isso, lembretes e verificações periódicas nunca disparam.
 
-Isso impede notificacao duplicada em reinicios do worker/scheduler.
+**O que fazer:** Adicionar o schedule completo no `settings.py` do backend:
 
-## 5. Contratos de API novos
+```python
+# psicoapp_backend/psicoapp_backend/settings.py
+from celery.schedules import crontab
 
-### 5.1 Registro/atualizacao de dispositivo
+CELERY_BEAT_SCHEDULE = {
+    # Infraestrutura base (já implementadas)
+    "dispatch-session-reminders": {
+        "task": "notificacoes_push.tasks.dispatch_session_reminders",
+        "schedule": 60.0,  # a cada 60 segundos
+    },
+    "reconcile-push-receipts": {
+        "task": "notificacoes_push.tasks.reconcile_push_receipts",
+        "schedule": 900.0,  # a cada 15 minutos
+    },
+    # Novas tasks (implementadas na Fase 3 da SPEC_NOVAS_NOTIFICACOES.md)
+    "check-metas-vencendo": {
+        "task": "notificacoes_push.tasks.check_metas_vencendo",
+        "schedule": crontab(hour=9, minute=0),  # 1x/dia às 9h
+    },
+    "check-pagamentos-atrasados": {
+        "task": "notificacoes_push.tasks.check_pagamentos_atrasados",
+        "schedule": crontab(hour=10, minute=0),  # 1x/dia às 10h
+    },
+    "check-pacientes-inativos": {
+        "task": "notificacoes_push.tasks.check_pacientes_inativos",
+        "schedule": crontab(hour=11, minute=0, day_of_week="1"),  # toda segunda às 11h
+    },
+}
+```
 
-`POST /api/push/devices/register/`
+> **Atenção:** As 3 últimas entradas (`check_metas_vencendo`, `check_pagamentos_atrasados`, `check_pacientes_inativos`) só podem ser ativadas **depois** que as tasks forem implementadas na Fase 3 da `SPEC_NOVAS_NOTIFICACOES.md`. Adicione as 2 primeiras agora e as 3 últimas junto com a Fase 3.
+
+Após adicionar, reiniciar o serviço `beat`:
+```bash
+docker-compose restart beat
+```
+
+---
+
+### Passo 4 — Corrigir duplicação do `setupNotificationHandler` no `App.js`
+
+**Por que é necessário:** Hoje o `setupNotificationHandler()` é chamado **duas vezes**:
+- uma em `App.js` (linha 20, fora do render)
+- outra em `routes.js` via `useEffect`
+
+Isso não quebra o app, mas pode causar comportamento inesperado. A chamada no `App.js` acontece a cada re-render porque está fora do `useEffect`.
+
+**O que fazer:** Remover a chamada avulsa em `App.js` (linha 20) e deixar apenas a do `routes.js`, que já está dentro de `useEffect` e tem cleanup correto.
+
+---
+
+### Passo 5 — Completar `reconcile_push_receipts` (necessário para produção)
+
+**Por que é necessário:** Atualmente a task só conta as entregas pendentes sem processar de fato os receipts da Expo API. Sem isso, tokens inválidos (dispositivos desinstalados, etc.) nunca são marcados como inativos e continuam recebendo tentativas de envio.
+
+**O que fazer:** Implementar a consulta à Expo Receipts API:
+
+Endpoint da Expo: `POST https://exp.host/--/api/v2/push/getReceipts`
 
 Request:
-
-- `push_token`
-- `provider` (inicial: `expo`)
-- `platform`
-- `device_id`
-- `timezone`
-- `app_version`
-- `permissao_status`
-
-Comportamento:
-
-- upsert por `(user, device_id, provider)`
-- se token mudou, invalida token antigo do mesmo device
-
-### 5.2 Desativacao no logout
-
-`POST /api/push/devices/deactivate/`
-
-Request:
-
-- `device_id`
-
-Comportamento:
-
-- marca `ativo=false` para aquele device do usuario
-
-### 5.3 Preferencias de notificacao (fase 2, recomendado)
-
-`GET/PUT /api/push/preferences/`
-
-Campos:
-
-- `receber_sessao_agendada`
-- `receber_sessao_cancelada`
-- `receber_lembrete_24h`
-- `receber_lembrete_2h`
-- `receber_lembrete_15m`
-- `quiet_hours_start`, `quiet_hours_end`
-
-## 6. Matriz de gatilhos (paciente + psicologo)
-
-### 6.1 Eventos imediatos
-
-- `sessao_agendada`
-  - paciente: "Sua sessao foi agendada..."
-  - psicologo: "Nova sessao agendada com ..."
-- `sessao_cancelada`
-  - notificar ambos
-- `sessao_remarcada`
-  - notificar ambos com data anterior/nova
-- `novo_registro_odisseia_compartilhado`
-  - psicologo
-- `novo_prontuario` (se aplicavel para paciente visualizar)
-  - paciente
-- `pagamento_confirmado`
-  - paciente
-
-### 6.2 Lembretes de sessao (scheduler)
-
-Para sessoes com status em `agendada`, `confirmada`, `remarcada`:
-
-- D-1 (24h antes)
-- D-0 (2h antes)
-- D-0 (15min antes)
-
-Regras:
-
-- se sessao for cancelada/finalizada antes da janela, nao envia
-- considerar timezone do destinatario (fallback: timezone da sessao/app)
-- nao enviar lembrete no passado
-
-## 7. Fluxo mobile Expo (implementacao)
-
-### 7.1 Dependencias
-
-- `expo-notifications`
-- `expo-device`
-- `expo-constants`
-
-### 7.2 Config do app
-
-`app.json`:
-
-- incluir plugin `expo-notifications`
-- Android: `googleServicesFile`
-- canais Android (`setNotificationChannelAsync`) no bootstrap do app
-
-### 7.3 Servico de notificacao no frontend
-
-Criar `src/services/notificationService.js`:
-
-- solicitar permissao (`requestPermissionsAsync`)
-- registrar token (`getExpoPushTokenAsync` com `projectId`)
-- enviar token para backend (`/push/devices/register`)
-- listeners:
-  - `addNotificationReceivedListener`
-  - `addNotificationResponseReceivedListener`
-- rotear deep link ao tocar push (ex.: `Notificacoes`, `DetalhesSessao`, `RegistroCompleto`)
-
-### 7.4 Pontos de integracao de ciclo de vida
-
-- apos login bem-sucedido: registrar/atualizar dispositivo
-- ao abrir app autenticado: refresh de permissao/token se necessario
-- no logout: desativar dispositivo no backend
-
-## 8. Fluxo backend de envio (implementacao)
-
-### 8.1 Geracao de evento
-
-Substituir `NotificacaoSistema.objects.create(...)` espalhado por:
-
-- `NotificationDomainService.emit(event_type, actor, target, context)`
-
-Responsabilidades:
-
-- persistir `NotificacaoSistema`
-- montar payload padrao de navegacao (`screen`, `params`, `event_id`)
-- enfileirar `send_push_for_notification(notificacao_id)`
-
-### 8.2 Worker de envio
-
-Task Celery:
-
-- busca dispositivos ativos do destinatario
-- envia em lote por provider
-- grava `EntregaPush` com ticket/status
-- agenda task de consulta de receipts (janela de ~15 min)
-- aplica retry com backoff exponencial em 429/5xx/rede
-
-### 8.3 Leitura de receipts
-
-Task Celery:
-
-- consulta receipts pelos `provider_ticket_id`
-- atualiza status final
-- se `DeviceNotRegistered`, marca dispositivo como inativo
-
-## 9. Observabilidade e operacao
-
-### 9.1 Logs estruturados
-
-Campos minimos:
-
-- `event_type`
-- `user_id`
-- `notification_id`
-- `device_id`
-- `provider`
-- `ticket_id`
-- `status`
-- `error_code`
-
-### 9.2 Metricas
-
-- taxa de envio (`sent/queued`)
-- taxa de receipt ok
-- taxa de erro por codigo
-- latencia evento -> popup
-- opt-in de permissao por plataforma
-
-### 9.3 Alertas
-
-- falha de envio > X% em 5 min
-- fila acumulada acima de limite
-- queda abrupta de tokens ativos
-
-## 10. Segurança e privacidade
-
-- nunca enviar dado clinico sensivel no texto push
-- payload push com identificadores tecnicos e roteamento minimo
-- conteudo detalhado fica no app apos autenticacao
-- rotacionar/remover tokens inativos
-- respeitar revogacao de permissao
-
-## 11. Rollout em fases (recomendado)
-
-### Fase A - Fundacao tecnica
-
-- models/migrations de `DispositivoPush` e `EntregaPush`
-- endpoint register/deactivate
-- `notificationService` no app
-- plugin/config Expo + build de dev
-
-### Fase B - Pipeline de envio
-
-- `PushProvider` + `ExpoPushProvider`
-- Celery/Redis + tasks de send/receipt
-- integracao com eventos principais (sessao agendada/cancelada/remarcada)
-
-### Fase C - Lembretes de sessao
-
-- scheduler + idempotencia de reminders
-- janelas 24h/2h/15m
-- validacoes de status/timezone
-
-### Fase D - Producao e loja
-
-- credenciais EAS (FCM v1 + APNs key)
-- monitoracao/alertas
-- hardening de retries e limpeza de tokens
-- testes reais iOS/Android (device fisico)
-
-## 12. Criterios de aceite
-
-- paciente e psicologo recebem push nativo nos eventos definidos
-- lembretes de sessao chegam nas janelas configuradas sem duplicidade
-- tocar na notificacao abre tela correta no app
-- logout desativa device e evita envio indevido
-- receipts processados e tokens invalidos removidos automaticamente
-- sem regressao da inbox in-app existente
-
-## 13. Impacto em arquivos (guia de implementacao)
-
-Backend:
-
-- `psicoapp_backend/requirements.txt` (celery, redis client, sdk push)
-- `psicoapp_backend/psicoapp_backend/settings.py` (broker/result backend, flags)
-- novo app `notificacoes_push/` (`models.py`, `views.py`, `services.py`, `tasks.py`, `urls.py`, `admin.py`)
-- `psicoapp_backend/core/signals.py` e pontos de criacao de notificacao (migrar para domain service)
-- `psicoapp_backend/psicoapp_backend/urls.py` (rotas push)
-- `psicoapp_backend/docker-compose.yml` (servicos `redis`, `worker`, `beat`)
-
-Frontend:
-
-- `package.json` (deps Expo notifications)
-- `app.json` (plugin/config push)
-- `src/services/notificationService.js` (novo)
-- `src/providers/AuthProvider.js` (hook login/logout para register/deactivate device)
-- `src/routes.js` ou container raiz (listeners de resposta e deep link)
-
-## 14. Referencias oficiais usadas
-
-- Expo setup push notifications: https://docs.expo.dev/push-notifications/push-notifications-setup  
-- Expo Notifications SDK: https://docs.expo.dev/versions/latest/sdk/notifications  
-- Expo Push Service (tickets, receipts, limites/retry): https://docs.expo.dev/push-notifications/sending-notifications/  
-- Expo FAQ (limite por projeto e opcao sem Expo service): https://docs.expo.dev/push-notifications/faq  
-- FCM v1 credentials no EAS: https://docs.expo.dev/push-notifications/fcm-credentials/  
-- Celery periodic tasks (scheduler em producao): https://docs.celeryq.dev/en/main/userguide/periodic-tasks.html
-
+```json
+{ "ids": ["ticket-id-1", "ticket-id-2", ...] }
+```
+
+Response:
+```json
+{
+  "data": {
+    "ticket-id-1": { "status": "ok" },
+    "ticket-id-2": { "status": "error", "details": { "error": "DeviceNotRegistered" } }
+  }
+}
+```
+
+A task deve:
+1. Buscar `EntregaPush` com status `sent` e `provider_ticket_id` preenchido
+2. Consultar receipts em lotes de até 300 IDs (limite da Expo)
+3. Atualizar `status` para `receipt_ok` ou `receipt_error`
+4. Se `DeviceNotRegistered`, marcar `DispositivoPush.ativo = False`
+
+---
+
+## 4. Fluxo completo após os 5 passos
+
+```
+Usuário faz login no app (nova build)
+   └─► notificationService.registerDevice()
+         ├─► solicita permissão ao usuário
+         ├─► obtém ExpoPushToken (ex: ExponentPushToken[abc123])
+         └─► POST /api/push/devices/register/ → salva no banco
+
+Evento ocorre no backend (ex: sessão agendada)
+   └─► NotificationDomainService.emit(...)
+         ├─► cria NotificacaoSistema (inbox in-app)
+         └─► on_commit → enqueue_push_for_notification.delay(id)
+
+Worker Celery executa a task
+   └─► busca dispositivos ativos do usuário
+         └─► ExpoPushProvider.send([...mensagens...])
+               └─► POST https://exp.host/--/api/v2/push/send
+                     └─► retorna ticket_id → salva em EntregaPush
+
+Celery Beat (a cada 60s)
+   └─► dispatch_session_reminders()
+         └─► para sessões nas janelas 24h/2h/15m
+               └─► emite notificação via NotificationDomainService
+
+Celery Beat (a cada 15min)
+   └─► reconcile_push_receipts()
+         └─► verifica status de entregas pendentes
+               └─► marca tokens inválidos como inativos
+
+Push chega no celular
+   └─► usuário toca na notificação
+         └─► addNotificationResponseReceivedListener
+               └─► navega para tela correta (DetalhesSessao, Notificacoes, etc.)
+```
+
+---
+
+## 5. Como testar após os passos 1 e 2
+
+1. Instale a nova build development no celular físico
+2. Faça login no app
+3. Aceite a permissão de notificação quando solicitada
+4. Verifique no backend se o token foi salvo:
+   ```bash
+   docker-compose exec web python manage.py shell -c "
+   from notificacoes_push.models import DispositivoPush
+   print(DispositivoPush.objects.all().values('user__email', 'push_token', 'ativo'))
+   "
+   ```
+5. Envie um push de teste manualmente:
+   ```bash
+   curl -H "Content-Type: application/json" -X POST https://exp.host/--/api/v2/push/send \
+   -d '{"to": "ExponentPushToken[SEU_TOKEN]", "title": "Teste", "body": "Push funcionando"}'
+   ```
+
+---
+
+## 6. Relação com SPEC_NOVAS_NOTIFICACOES.md
+
+Esta SPEC cobre apenas a **infraestrutura operacional** — o que precisa funcionar para qualquer push chegar ao celular. Ela é **pré-requisito** para tudo que está na `SPEC_NOVAS_NOTIFICACOES.md`.
+
+Sequência completa:
+
+```
+SPEC_NOTIFICACOES_PUSH.md (esta)
+  └─► 5 passos de infraestrutura (build + deploy + beat + fixes)
+        └─► SPEC_NOVAS_NOTIFICACOES.md
+              ├─► Fase 1: Fixes — migrar 3 notificações para emit() + 3 novas (issues 01–06)
+              ├─► Fase 2: Engajamento — 4 novas notificações de eventos (issues 07–10)
+              ├─► Fase 3: Tasks periódicas — 3 tasks Celery + expandir CELERY_BEAT_SCHEDULE (issues 11–13)
+              └─► Fase 4: Polish — ícone Android + badge counter (issues 14–15)
+```
+
+As Fases 1 e 2 da `SPEC_NOVAS_NOTIFICACOES.md` podem ser **implementadas em paralelo** com os passos desta SPEC — o código pode ser escrito e testado via inbox in-app mesmo sem a nova build ou o worker rodando. O push nativo só funciona após os passos 1 e 2 desta SPEC estarem concluídos.
+
+---
+
+## 7. Resumo de prioridade
+
+| # | Passo | Impacto | Onde fazer |
+|---|-------|---------|------------|
+| 1 | Nova build EAS development | Push não funciona sem ela | Terminal local |
+| 2 | Deploy docker-compose na VPS com worker+beat | Tasks nunca executam sem o worker | VPS via SSH |
+| 3 | CELERY_BEAT_SCHEDULE no settings.py (2 tasks agora + 3 após Fase 3 da SPEC_NOVAS) | Lembretes e checks periódicos nunca disparam | `settings.py` + deploy |
+| 4 | Remover duplicação no App.js | Boa prática, não é bloqueador | `App.js` |
+| 5 | Completar reconcile_push_receipts | Necessário para produção robusta | `tasks.py` |
+
+Após concluir estes 5 passos, siga a `SPEC_NOVAS_NOTIFICACOES.md` para implementar as 13 novas notificações e melhorias visuais (issues 01–15).

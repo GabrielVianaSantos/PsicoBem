@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { pacienteService } from '../services/pacienteService';
+import { notificationService } from '../services/notificationService';
 import Topo from './components/topo';
 
 const TIPO_ICONE = {
@@ -52,6 +53,8 @@ export default function Notificacoes() {
     useCallback(() => {
       setLoading(true);
       carregarNotificacoes();
+      // Zera o badge quando o usuário abre a tela de notificacoes
+      notificationService.updateBadge(0);
     }, [])
   );
 

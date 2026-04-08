@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "612818948583",
+    "project_id": "psicoapp-5d144",
+    "storage_bucket": "psicoapp-5d144.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:612818948583:android:229fe476b328b0daefed42",
+        "android_client_info": {
+          "package_name": "com.devianatech.psicoapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBR2_jIUtrVEgQpYqlQacFf-xAwuGjp7q0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

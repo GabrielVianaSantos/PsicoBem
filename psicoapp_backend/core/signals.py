@@ -3,9 +3,9 @@ from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from authentication.models import Psicologo, Paciente
 from sessoes.models import TipoSessao, Sessao
-from engajamentos.models import CategoriaMensagem, RegistroOdisseia
+from engajamentos.models import CategoriaMensagem, RegistroOdisseia, ComentarioPsicologo
 from .models import (
-    NotificacaoSistema, VinculoPacientePsicologo
+    NotificacaoSistema, VinculoPacientePsicologo, Prontuario
 )
 from .services import NotificationDomainService
 
@@ -83,15 +83,20 @@ def criar_categorias_mensagem_padrao(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Paciente)
 def notificacao_boas_vindas_paciente(sender, instance, created, **kwargs):
-    """Cria notificação de boas-vindas para novos pacientes"""
+    """Cria notificação de boas-vindas para novos pacientes (via emit para disparar push)"""
     if created:
-        NotificacaoSistema.objects.create(
-            paciente=instance,
+        NotificationDomainService.emit(
+            target=instance.user,
             tipo='sistema',
             titulo='Bem-vindo ao PsicoBem! 🌱',
-            mensagem='Seja bem-vindo! Estamos aqui para apoiar sua jornada de bem-estar. '
-                     'Explore as funcionalidades e conecte-se com seu psicólogo.',
-            dados_extras={'first_login': True}
+            mensagem=(
+                'Seja bem-vindo! Estamos aqui para apoiar sua jornada de bem-estar. '
+                'Explore as funcionalidades e conecte-se com seu psicólogo.'
+            ),
+            dados_extras=NotificationDomainService._routing_payload(
+                screen='HomePaciente',
+                event='boas_vindas',
+            ),
         )
 
 @receiver(post_save, sender=RegistroOdisseia)
@@ -99,6 +104,40 @@ def notificar_psicologo_novo_registro(sender, instance, created, **kwargs):
     """Notifica psicólogo sobre novo registro do paciente"""
     if created and instance.compartilhar_psicologo:
         NotificationDomainService.emit_new_odisseia_record(instance)
+
+@receiver(post_save, sender=ComentarioPsicologo)
+def notificar_paciente_comentario(sender, instance, created, **kwargs):
+    """Notifica paciente quando psicólogo comenta em registro de odisseia"""
+    if created:
+        NotificationDomainService.emit(
+            target=instance.registro.paciente.user,
+            tipo='comentario_psicologo',
+            titulo='Novo Comentário do Psicólogo 💬',
+            mensagem=f'Seu psicólogo comentou no seu registro de {instance.registro.data_registro.strftime("%d/%m/%Y")}.',
+            link_relacionado=f'/registros/{instance.registro.pk}',
+            dados_extras=NotificationDomainService._routing_payload(
+                screen='RegistroCompleto',
+                params={'id': instance.registro.pk},
+                event='comentario_psicologo',
+                registro_id=instance.registro.pk,
+            ),
+        )
+
+@receiver(post_save, sender=Prontuario)
+def notificar_paciente_prontuario(sender, instance, created, **kwargs):
+    """Notifica paciente quando psicólogo cria prontuário"""
+    if created:
+        NotificationDomainService.emit(
+            target=instance.paciente.user,
+            tipo='sistema',
+            titulo='Novo Prontuário Disponível 📋',
+            mensagem='Seu psicólogo adicionou um novo prontuário ao seu perfil.',
+            link_relacionado=f'/prontuarios/{instance.pk}',
+            dados_extras=NotificationDomainService._routing_payload(
+                screen='MeusProntuarios',
+                event='novo_prontuario',
+            ),
+        )
 
 @receiver(post_save, sender=Sessao)
 def notificar_agendamento_sessao(sender, instance, created, **kwargs):

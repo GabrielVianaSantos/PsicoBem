@@ -7,6 +7,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from core.models import VinculoPacientePsicologo, NotificacaoSistema
+from core.services import NotificationDomainService
 
 #####################################################################################################################################
 # MANAGERS
@@ -308,13 +309,21 @@ class Sessao(models.Model):
             self.status_pagamento = 'pago'
             self.data_pagamento = timezone.now()
             self.save()
-            
-            # Criar notificação
-            NotificacaoSistema.objects.create(
-                paciente=self.paciente,
+
+            # Notificar paciente via emit() para disparar push nativo
+            data = self.data_hora.strftime("%d/%m/%Y")
+            NotificationDomainService.emit(
+                target=self.paciente.user,
                 tipo='sistema',
-                titulo='Pagamento Confirmado',
-                mensagem=f'Pagamento da sessão de {self.data_hora.strftime("%d/%m/%Y")} foi confirmado.'
+                titulo='Pagamento Confirmado ✅',
+                mensagem=f'Pagamento da sessão de {data} foi confirmado.',
+                link_relacionado=f'/sessoes/{self.pk}',
+                dados_extras=NotificationDomainService._routing_payload(
+                    screen='DetalhesSessao',
+                    params={'id': self.pk},
+                    event='pagamento_confirmado',
+                    session_id=self.pk,
+                ),
             )
     
     @classmethod

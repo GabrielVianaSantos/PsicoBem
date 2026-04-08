@@ -40,9 +40,17 @@ export const notificationService = {
       handleNotification: async () => ({
         shouldShowAlert: true,
         shouldPlaySound: true,
-        shouldSetBadge: false,
+        shouldSetBadge: true,
       }),
     });
+  },
+
+  async updateBadge(count) {
+    try {
+      await Notifications.setBadgeCountAsync(count);
+    } catch (error) {
+      console.warn('Erro ao atualizar badge:', error);
+    }
   },
 
   setupNotificationListeners(navigationRef) {

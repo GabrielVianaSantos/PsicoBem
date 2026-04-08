@@ -174,6 +174,38 @@ class SessaoViewSet(viewsets.ModelViewSet):
         sessao.status = 'cancelada'
         sessao.save()
 
+        # Issue 04: Notificação de cancelamento bidirecional
+        from core.services import NotificationDomainService
+        
+        data_formatada = sessao.data_hora.strftime("%d/%m/%Y às %H:%M")
+        route = NotificationDomainService._routing_payload(
+            screen='DetalhesSessao',
+            params={'id': sessao.pk},
+            event='sessao_cancelada',
+            session_id=sessao.pk,
+        )
+
+        if hasattr(request.user, 'psicologo_profile'):
+            # Psicólogo cancelou → notifica paciente
+            NotificationDomainService.emit(
+                target=sessao.paciente.user,
+                tipo='sessao_cancelada',
+                titulo='Sessão Cancelada',
+                mensagem=f'Sua sessão de {data_formatada} foi cancelada pelo psicólogo.',
+                link_relacionado=f'/sessoes/{sessao.pk}',
+                dados_extras=route,
+            )
+        else:
+            # Paciente cancelou → notifica psicólogo
+            NotificationDomainService.emit(
+                target=sessao.psicologo.user,
+                tipo='sessao_cancelada',
+                titulo='Sessão Cancelada',
+                mensagem=f'{sessao.paciente.user.first_name} cancelou a sessão de {data_formatada}.',
+                link_relacionado=f'/sessoes/{sessao.pk}',
+                dados_extras=route,
+            )
+
         serializer = self.get_serializer(sessao)
         return Response({
             'message': 'Sessão cancelada com sucesso.',
@@ -193,6 +225,20 @@ class SessaoViewSet(viewsets.ModelViewSet):
 
         sessao.status = 'realizada'
         sessao.save()
+
+        # Issue 07: Notificar paciente sobre sessão realizada
+        from core.services import NotificationDomainService
+        NotificationDomainService.emit(
+            target=sessao.paciente.user,
+            tipo='sistema',
+            titulo='Sessão Finalizada ✨',
+            mensagem='Sua sessão foi concluída. Que tal registrar como você está se sentindo na Odisseia?',
+            link_relacionado='/odisseia/novo',
+            dados_extras=NotificationDomainService._routing_payload(
+                screen='RegistrosOdisseia',
+                event='sessao_realizada',
+            ),
+        )
 
         serializer = self.get_serializer(sessao)
         return Response({

@@ -201,6 +201,30 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_ENABLE_UTC = USE_TZ
 
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    "notificar_metas_vencendo_diario": {
+        "task": "engajamentos.tasks.notificar_metas_vencendo",
+        "schedule": crontab(hour=9, minute=0),
+    },
+    "notificar_pagamentos_atrasados_diario": {
+        "task": "sessoes.tasks.notificar_pagamentos_atrasados",
+        "schedule": crontab(hour=10, minute=0),
+    },
+    "notificar_pacientes_inativos_diario": {
+        "task": "core.tasks.notificar_pacientes_inativos",
+        "schedule": crontab(hour=11, minute=0),
+    },
+    "disparar_lembretes_sessao_periodico": {
+        "task": "notificacoes_push.tasks.dispatch_session_reminders",
+        "schedule": crontab(minute="*/5"),
+    },
+    "reconcile-push-receipts": {
+        "task": "notificacoes_push.tasks.reconcile_push_receipts",
+        "schedule": 900.0,  # a cada 15 minutos
+    },
+}
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

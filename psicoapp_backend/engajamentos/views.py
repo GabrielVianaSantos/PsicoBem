@@ -79,6 +79,22 @@ class SementeCuidadoViewSet(viewsets.ModelViewSet):
             defaults={'status': 'enviada'}
         )
         msg.marcar_como_curtida()
+
+        # Issue 09: Notificar psicólogo sobre curtida
+        from core.services import NotificationDomainService
+        NotificationDomainService.emit(
+            target=semente.psicologo.user,
+            tipo='engajamento',
+            titulo='Semente Curtida ❤️',
+            mensagem=f'{request.user.first_name} curtiu a semente "{semente.titulo}".',
+            link_relacionado=f'/sementes/{semente.pk}',
+            dados_extras=NotificationDomainService._routing_payload(
+                screen='SementesPsicologo',
+                event='semente_curtida',
+                semente_id=semente.pk,
+            ),
+        )
+
         return Response({'message': 'Semente curtida com sucesso!'})
 
 
