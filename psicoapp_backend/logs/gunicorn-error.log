@@ -10,3 +10,455 @@
 [2026-04-02 21:00:53 +0000] [9] [INFO] Booting worker with pid: 9
 [2026-04-02 21:00:53 +0000] [10] [INFO] Booting worker with pid: 10
 [2026-04-02 21:00:53 +0000] [11] [INFO] Booting worker with pid: 11
+[2026-04-03 02:22:59 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:10)
+[2026-04-02 23:23:00 -0300] [10] [INFO] Worker exiting (pid: 10)
+[2026-04-03 02:23:00 +0000] [8] [ERROR] Worker (pid:10) exited with code 1
+[2026-04-03 02:23:00 +0000] [8] [ERROR] Worker (pid:10) exited with code 1.
+[2026-04-03 02:23:00 +0000] [92] [INFO] Booting worker with pid: 92
+[2026-04-03 02:41:46 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:9)
+[2026-04-02 23:41:47 -0300] [9] [INFO] Worker exiting (pid: 9)
+[2026-04-03 02:41:48 +0000] [8] [ERROR] Worker (pid:9) exited with code 1
+[2026-04-03 02:41:48 +0000] [8] [ERROR] Worker (pid:9) exited with code 1.
+[2026-04-03 02:41:48 +0000] [93] [INFO] Booting worker with pid: 93
+[2026-04-03 03:02:15 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:11)
+[2026-04-03 00:02:16 -0300] [11] [INFO] Worker exiting (pid: 11)
+[2026-04-03 03:02:16 +0000] [8] [ERROR] Worker (pid:11) exited with code 1
+[2026-04-03 03:02:16 +0000] [8] [ERROR] Worker (pid:11) exited with code 1.
+[2026-04-03 03:02:16 +0000] [94] [INFO] Booting worker with pid: 94
+[2026-04-03 03:51:30 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:94)
+[2026-04-03 00:51:30 -0300] [94] [INFO] Worker exiting (pid: 94)
+[2026-04-03 03:51:30 +0000] [8] [ERROR] Worker (pid:94) exited with code 1
+[2026-04-03 03:51:30 +0000] [8] [ERROR] Worker (pid:94) exited with code 1.
+[2026-04-03 03:51:30 +0000] [95] [INFO] Booting worker with pid: 95
+[2026-04-03 04:47:16 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:92)
+[2026-04-03 01:47:17 -0300] [92] [INFO] Worker exiting (pid: 92)
+[2026-04-03 04:47:18 +0000] [8] [ERROR] Worker (pid:92) exited with code 1
+[2026-04-03 04:47:18 +0000] [8] [ERROR] Worker (pid:92) exited with code 1.
+[2026-04-03 04:47:18 +0000] [96] [INFO] Booting worker with pid: 96
+[2026-04-03 04:53:45 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:95)
+[2026-04-03 01:53:46 -0300] [95] [INFO] Worker exiting (pid: 95)
+[2026-04-03 04:53:46 +0000] [8] [ERROR] Worker (pid:95) exited with code 1
+[2026-04-03 04:53:46 +0000] [8] [ERROR] Worker (pid:95) exited with code 1.
+[2026-04-03 04:53:46 +0000] [97] [INFO] Booting worker with pid: 97
+[2026-04-03 05:53:18 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:93)
+[2026-04-03 02:53:19 -0300] [93] [INFO] Worker exiting (pid: 93)
+[2026-04-03 05:53:20 +0000] [8] [ERROR] Worker (pid:93) exited with code 1
+[2026-04-03 05:53:20 +0000] [8] [ERROR] Worker (pid:93) exited with code 1.
+[2026-04-03 05:53:20 +0000] [98] [INFO] Booting worker with pid: 98
+[2026-04-03 07:54:21 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:96)
+[2026-04-03 04:54:21 -0300] [96] [INFO] Worker exiting (pid: 96)
+[2026-04-03 07:54:21 +0000] [8] [ERROR] Worker (pid:96) exited with code 1
+[2026-04-03 07:54:22 +0000] [8] [ERROR] Worker (pid:96) exited with code 1.
+[2026-04-03 07:54:22 +0000] [99] [INFO] Booting worker with pid: 99
+[2026-04-03 09:01:01 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:97)
+[2026-04-03 06:01:01 -0300] [97] [INFO] Worker exiting (pid: 97)
+[2026-04-03 09:01:02 +0000] [8] [ERROR] Worker (pid:97) exited with code 1
+[2026-04-03 09:01:02 +0000] [8] [ERROR] Worker (pid:97) exited with code 1.
+[2026-04-03 09:01:02 +0000] [100] [INFO] Booting worker with pid: 100
+[2026-04-03 11:02:03 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:100)
+[2026-04-03 08:02:04 -0300] [100] [INFO] Worker exiting (pid: 100)
+[2026-04-03 11:02:04 +0000] [8] [ERROR] Worker (pid:100) exited with code 1
+[2026-04-03 11:02:04 +0000] [8] [ERROR] Worker (pid:100) exited with code 1.
+[2026-04-03 11:02:04 +0000] [101] [INFO] Booting worker with pid: 101
+[2026-04-03 14:03:05 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:98)
+[2026-04-03 11:03:06 -0300] [98] [INFO] Worker exiting (pid: 98)
+[2026-04-03 14:03:05 +0000] [8] [ERROR] Worker (pid:98) exited with code 1
+[2026-04-03 14:03:05 +0000] [8] [ERROR] Worker (pid:98) exited with code 1.
+[2026-04-03 14:03:05 +0000] [102] [INFO] Booting worker with pid: 102
+[2026-04-03 14:34:08 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:99)
+[2026-04-03 11:34:09 -0300] [99] [INFO] Worker exiting (pid: 99)
+[2026-04-03 14:34:10 +0000] [8] [ERROR] Worker (pid:99) exited with code 1
+[2026-04-03 14:34:10 +0000] [8] [ERROR] Worker (pid:99) exited with code 1.
+[2026-04-03 14:34:10 +0000] [103] [INFO] Booting worker with pid: 103
+[2026-04-03 14:36:13 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:101)
+[2026-04-03 11:36:14 -0300] [101] [INFO] Worker exiting (pid: 101)
+[2026-04-03 14:36:14 +0000] [8] [ERROR] Worker (pid:101) exited with code 1
+[2026-04-03 14:36:14 +0000] [8] [ERROR] Worker (pid:101) exited with code 1.
+[2026-04-03 14:36:14 +0000] [104] [INFO] Booting worker with pid: 104
+[2026-04-03 15:39:21 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:103)
+[2026-04-03 12:39:22 -0300] [103] [INFO] Worker exiting (pid: 103)
+[2026-04-03 15:39:22 +0000] [8] [ERROR] Worker (pid:103) exited with code 1
+[2026-04-03 15:39:22 +0000] [8] [ERROR] Worker (pid:103) exited with code 1.
+[2026-04-03 15:39:22 +0000] [105] [INFO] Booting worker with pid: 105
+[2026-04-03 16:13:17 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:102)
+[2026-04-03 13:13:17 -0300] [102] [INFO] Worker exiting (pid: 102)
+[2026-04-03 16:13:18 +0000] [8] [ERROR] Worker (pid:102) exited with code 1
+[2026-04-03 16:13:18 +0000] [8] [ERROR] Worker (pid:102) exited with code 1.
+[2026-04-03 16:13:18 +0000] [106] [INFO] Booting worker with pid: 106
+[2026-04-03 16:22:37 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:104)
+[2026-04-03 13:22:37 -0300] [104] [INFO] Worker exiting (pid: 104)
+[2026-04-03 16:22:38 +0000] [8] [ERROR] Worker (pid:104) exited with code 1
+[2026-04-03 16:22:38 +0000] [8] [ERROR] Worker (pid:104) exited with code 1.
+[2026-04-03 16:22:38 +0000] [107] [INFO] Booting worker with pid: 107
+[2026-04-03 17:11:37 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:105)
+[2026-04-03 14:11:37 -0300] [105] [INFO] Worker exiting (pid: 105)
+[2026-04-03 17:11:38 +0000] [8] [ERROR] Worker (pid:105) exited with code 1
+[2026-04-03 17:11:38 +0000] [8] [ERROR] Worker (pid:105) exited with code 1.
+[2026-04-03 17:11:38 +0000] [108] [INFO] Booting worker with pid: 108
+[2026-04-03 17:28:30 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:108)
+[2026-04-03 14:28:30 -0300] [108] [INFO] Worker exiting (pid: 108)
+[2026-04-03 17:28:31 +0000] [8] [ERROR] Worker (pid:108) exited with code 1
+[2026-04-03 17:28:31 +0000] [8] [ERROR] Worker (pid:108) exited with code 1.
+[2026-04-03 17:28:31 +0000] [109] [INFO] Booting worker with pid: 109
+[2026-04-03 19:17:59 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:106)
+[2026-04-03 16:17:59 -0300] [106] [INFO] Worker exiting (pid: 106)
+[2026-04-03 19:18:00 +0000] [8] [ERROR] Worker (pid:106) exited with code 1
+[2026-04-03 19:18:00 +0000] [8] [ERROR] Worker (pid:106) exited with code 1.
+[2026-04-03 19:18:00 +0000] [110] [INFO] Booting worker with pid: 110
+[2026-04-03 19:19:37 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:107)
+[2026-04-03 16:19:37 -0300] [107] [INFO] Worker exiting (pid: 107)
+[2026-04-03 19:19:37 +0000] [8] [ERROR] Worker (pid:107) exited with code 1
+[2026-04-03 19:19:37 +0000] [8] [ERROR] Worker (pid:107) exited with code 1.
+[2026-04-03 19:19:37 +0000] [111] [INFO] Booting worker with pid: 111
+[2026-04-03 19:28:06 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:109)
+[2026-04-03 16:28:06 -0300] [109] [INFO] Worker exiting (pid: 109)
+[2026-04-03 19:28:07 +0000] [8] [ERROR] Worker (pid:109) exited with code 1
+[2026-04-03 19:28:07 +0000] [8] [ERROR] Worker (pid:109) exited with code 1.
+[2026-04-03 19:28:07 +0000] [112] [INFO] Booting worker with pid: 112
+[2026-04-03 20:29:07 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:110)
+[2026-04-03 17:29:07 -0300] [110] [INFO] Worker exiting (pid: 110)
+[2026-04-03 20:29:07 +0000] [8] [ERROR] Worker (pid:110) exited with code 1
+[2026-04-03 20:29:07 +0000] [8] [ERROR] Worker (pid:110) exited with code 1.
+[2026-04-03 20:29:07 +0000] [113] [INFO] Booting worker with pid: 113
+[2026-04-03 21:13:19 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:112)
+[2026-04-03 18:13:19 -0300] [112] [INFO] Worker exiting (pid: 112)
+[2026-04-03 21:13:20 +0000] [8] [ERROR] Worker (pid:112) exited with code 1
+[2026-04-03 21:13:20 +0000] [8] [ERROR] Worker (pid:112) exited with code 1.
+[2026-04-03 21:13:20 +0000] [114] [INFO] Booting worker with pid: 114
+[2026-04-03 21:30:08 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:113)
+[2026-04-03 18:30:08 -0300] [113] [INFO] Worker exiting (pid: 113)
+[2026-04-03 21:30:08 +0000] [8] [ERROR] Worker (pid:113) exited with code 1
+[2026-04-03 21:30:08 +0000] [8] [ERROR] Worker (pid:113) exited with code 1.
+[2026-04-03 21:30:08 +0000] [115] [INFO] Booting worker with pid: 115
+[2026-04-03 22:31:08 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:115)
+[2026-04-03 19:31:09 -0300] [115] [INFO] Worker exiting (pid: 115)
+[2026-04-03 22:31:09 +0000] [8] [ERROR] Worker (pid:115) exited with code 1
+[2026-04-03 22:31:09 +0000] [8] [ERROR] Worker (pid:115) exited with code 1.
+[2026-04-03 22:31:09 +0000] [116] [INFO] Booting worker with pid: 116
+[2026-04-03 23:50:53 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:111)
+[2026-04-03 20:50:54 -0300] [111] [INFO] Worker exiting (pid: 111)
+[2026-04-03 23:50:55 +0000] [8] [ERROR] Worker (pid:111) exited with code 1
+[2026-04-03 23:50:55 +0000] [8] [ERROR] Worker (pid:111) exited with code 1.
+[2026-04-03 23:50:55 +0000] [117] [INFO] Booting worker with pid: 117
+[2026-04-04 00:33:11 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:114)
+[2026-04-03 21:33:11 -0300] [114] [INFO] Worker exiting (pid: 114)
+[2026-04-04 00:33:12 +0000] [8] [ERROR] Worker (pid:114) exited with code 1
+[2026-04-04 00:33:12 +0000] [8] [ERROR] Worker (pid:114) exited with code 1.
+[2026-04-04 00:33:12 +0000] [118] [INFO] Booting worker with pid: 118
+[2026-04-04 00:39:27 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:116)
+[2026-04-03 21:39:28 -0300] [116] [INFO] Worker exiting (pid: 116)
+[2026-04-04 00:39:29 +0000] [8] [ERROR] Worker (pid:116) exited with code 1
+[2026-04-04 00:39:29 +0000] [8] [ERROR] Worker (pid:116) exited with code 1.
+[2026-04-04 00:39:29 +0000] [119] [INFO] Booting worker with pid: 119
+[2026-04-04 02:17:44 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:117)
+[2026-04-03 23:17:44 -0300] [117] [INFO] Worker exiting (pid: 117)
+[2026-04-04 02:17:44 +0000] [8] [ERROR] Worker (pid:117) exited with code 1
+[2026-04-04 02:17:44 +0000] [8] [ERROR] Worker (pid:117) exited with code 1.
+[2026-04-04 02:17:44 +0000] [120] [INFO] Booting worker with pid: 120
+[2026-04-04 02:46:48 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:120)
+[2026-04-03 23:46:48 -0300] [120] [INFO] Worker exiting (pid: 120)
+[2026-04-04 02:46:49 +0000] [8] [ERROR] Worker (pid:120) exited with code 1
+[2026-04-04 02:46:49 +0000] [8] [ERROR] Worker (pid:120) exited with code 1.
+[2026-04-04 02:46:49 +0000] [121] [INFO] Booting worker with pid: 121
+[2026-04-04 03:17:41 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:119)
+[2026-04-04 00:17:41 -0300] [119] [INFO] Worker exiting (pid: 119)
+[2026-04-04 03:17:41 +0000] [8] [ERROR] Worker (pid:119) exited with code 1
+[2026-04-04 03:17:41 +0000] [8] [ERROR] Worker (pid:119) exited with code 1.
+[2026-04-04 03:17:41 +0000] [122] [INFO] Booting worker with pid: 122
+[2026-04-04 03:38:50 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:122)
+[2026-04-04 00:38:50 -0300] [122] [INFO] Worker exiting (pid: 122)
+[2026-04-04 03:38:50 +0000] [8] [ERROR] Worker (pid:122) exited with code 1
+[2026-04-04 03:38:50 +0000] [8] [ERROR] Worker (pid:122) exited with code 1.
+[2026-04-04 03:38:50 +0000] [123] [INFO] Booting worker with pid: 123
+[2026-04-04 04:17:17 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:118)
+[2026-04-04 01:17:18 -0300] [118] [INFO] Worker exiting (pid: 118)
+[2026-04-04 04:17:18 +0000] [8] [ERROR] Worker (pid:118) exited with code 1
+[2026-04-04 04:17:18 +0000] [8] [ERROR] Worker (pid:118) exited with code 1.
+[2026-04-04 04:17:18 +0000] [124] [INFO] Booting worker with pid: 124
+[2026-04-04 04:18:26 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:123)
+[2026-04-04 02:26:27 -0300] [123] [INFO] Worker exiting (pid: 123)
+[2026-04-04 05:26:27 +0000] [8] [ERROR] Worker (pid:123) was sent SIGKILL! Perhaps out of memory?
+[2026-04-04 05:26:27 +0000] [125] [INFO] Booting worker with pid: 125
+[2026-04-04 22:31:21 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:121)
+[2026-04-04 19:59:23 -0300] [121] [INFO] Worker exiting (pid: 121)
+[2026-04-04 22:59:24 +0000] [8] [ERROR] Worker (pid:121) exited with code 1
+[2026-04-04 22:59:24 +0000] [8] [ERROR] Worker (pid:121) exited with code 1.
+[2026-04-04 22:59:24 +0000] [126] [INFO] Booting worker with pid: 126
+[2026-04-04 23:55:21 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:126)
+[2026-04-04 20:55:21 -0300] [126] [INFO] Worker exiting (pid: 126)
+[2026-04-05 00:11:14 +0000] [8] [ERROR] Worker (pid:126) exited with code 1
+[2026-04-05 00:11:14 +0000] [8] [ERROR] Worker (pid:126) exited with code 1.
+[2026-04-05 00:11:14 +0000] [127] [INFO] Booting worker with pid: 127
+[2026-04-05 00:16:32 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:124)
+[2026-04-04 21:16:33 -0300] [124] [INFO] Worker exiting (pid: 124)
+[2026-04-05 00:16:34 +0000] [8] [ERROR] Worker (pid:124) exited with code 1
+[2026-04-05 00:16:34 +0000] [8] [ERROR] Worker (pid:124) exited with code 1.
+[2026-04-05 00:16:34 +0000] [128] [INFO] Booting worker with pid: 128
+[2026-04-05 01:17:34 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:125)
+[2026-04-04 22:17:34 -0300] [125] [INFO] Worker exiting (pid: 125)
+[2026-04-05 01:17:34 +0000] [8] [ERROR] Worker (pid:125) exited with code 1
+[2026-04-05 01:17:34 +0000] [8] [ERROR] Worker (pid:125) exited with code 1.
+[2026-04-05 01:17:34 +0000] [129] [INFO] Booting worker with pid: 129
+[2026-04-05 02:16:34 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:127)
+[2026-04-04 23:16:35 -0300] [127] [INFO] Worker exiting (pid: 127)
+[2026-04-05 02:16:35 +0000] [8] [ERROR] Worker (pid:127) exited with code 1
+[2026-04-05 02:16:35 +0000] [8] [ERROR] Worker (pid:127) exited with code 1.
+[2026-04-05 02:16:35 +0000] [130] [INFO] Booting worker with pid: 130
+[2026-04-05 02:41:25 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:128)
+[2026-04-04 23:41:25 -0300] [128] [INFO] Worker exiting (pid: 128)
+[2026-04-05 02:41:26 +0000] [8] [ERROR] Worker (pid:128) exited with code 1
+[2026-04-05 02:41:26 +0000] [8] [ERROR] Worker (pid:128) exited with code 1.
+[2026-04-05 02:41:26 +0000] [131] [INFO] Booting worker with pid: 131
+[2026-04-05 02:42:03 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:129)
+[2026-04-05 00:18:42 -0300] [129] [INFO] Worker exiting (pid: 129)
+[2026-04-05 03:18:43 +0000] [8] [ERROR] Worker (pid:129) exited with code 1
+[2026-04-05 03:18:43 +0000] [8] [ERROR] Worker (pid:129) exited with code 1.
+[2026-04-05 03:18:43 +0000] [132] [INFO] Booting worker with pid: 132
+[2026-04-06 20:09:50 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:130)
+[2026-04-06 17:09:50 -0300] [130] [INFO] Worker exiting (pid: 130)
+[2026-04-06 20:09:51 +0000] [8] [ERROR] Worker (pid:130) exited with code 1
+[2026-04-06 20:09:51 +0000] [8] [ERROR] Worker (pid:130) exited with code 1.
+[2026-04-06 20:09:51 +0000] [133] [INFO] Booting worker with pid: 133
+[2026-04-06 20:29:10 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:132)
+[2026-04-06 17:29:10 -0300] [132] [INFO] Worker exiting (pid: 132)
+[2026-04-06 20:29:11 +0000] [8] [ERROR] Worker (pid:132) exited with code 1
+[2026-04-06 20:29:11 +0000] [8] [ERROR] Worker (pid:132) exited with code 1.
+[2026-04-06 20:29:11 +0000] [134] [INFO] Booting worker with pid: 134
+[2026-04-06 20:47:01 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:133)
+[2026-04-06 17:47:01 -0300] [133] [INFO] Worker exiting (pid: 133)
+[2026-04-06 20:47:01 +0000] [8] [ERROR] Worker (pid:133) exited with code 1
+[2026-04-06 20:47:01 +0000] [8] [ERROR] Worker (pid:133) exited with code 1.
+[2026-04-06 20:47:01 +0000] [135] [INFO] Booting worker with pid: 135
+[2026-04-06 21:12:10 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:131)
+[2026-04-06 18:12:10 -0300] [131] [INFO] Worker exiting (pid: 131)
+[2026-04-06 21:12:11 +0000] [8] [ERROR] Worker (pid:131) exited with code 1
+[2026-04-06 21:12:11 +0000] [8] [ERROR] Worker (pid:131) exited with code 1.
+[2026-04-06 21:12:11 +0000] [136] [INFO] Booting worker with pid: 136
+[2026-04-06 22:13:10 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:134)
+[2026-04-06 19:13:11 -0300] [134] [INFO] Worker exiting (pid: 134)
+[2026-04-06 22:13:11 +0000] [8] [ERROR] Worker (pid:134) exited with code 1
+[2026-04-06 22:13:11 +0000] [8] [ERROR] Worker (pid:134) exited with code 1.
+[2026-04-06 22:13:11 +0000] [137] [INFO] Booting worker with pid: 137
+[2026-04-06 22:18:11 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:135)
+[2026-04-06 19:18:11 -0300] [135] [INFO] Worker exiting (pid: 135)
+[2026-04-06 22:18:11 +0000] [8] [ERROR] Worker (pid:135) exited with code 1
+[2026-04-06 22:18:11 +0000] [8] [ERROR] Worker (pid:135) exited with code 1.
+[2026-04-06 22:18:11 +0000] [138] [INFO] Booting worker with pid: 138
+[2026-04-06 23:11:23 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:136)
+[2026-04-06 20:11:24 -0300] [136] [INFO] Worker exiting (pid: 136)
+[2026-04-06 23:11:24 +0000] [8] [ERROR] Worker (pid:136) exited with code 1
+[2026-04-06 23:11:24 +0000] [8] [ERROR] Worker (pid:136) exited with code 1.
+[2026-04-06 23:11:24 +0000] [139] [INFO] Booting worker with pid: 139
+[2026-04-06 23:14:12 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:137)
+[2026-04-06 20:14:12 -0300] [137] [INFO] Worker exiting (pid: 137)
+[2026-04-06 23:14:12 +0000] [8] [ERROR] Worker (pid:137) exited with code 1
+[2026-04-06 23:14:12 +0000] [8] [ERROR] Worker (pid:137) exited with code 1.
+[2026-04-06 23:14:12 +0000] [140] [INFO] Booting worker with pid: 140
+[2026-04-06 23:52:18 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:138)
+[2026-04-06 20:52:18 -0300] [138] [INFO] Worker exiting (pid: 138)
+[2026-04-06 23:52:18 +0000] [8] [ERROR] Worker (pid:138) exited with code 1
+[2026-04-06 23:52:18 +0000] [8] [ERROR] Worker (pid:138) exited with code 1.
+[2026-04-06 23:52:18 +0000] [141] [INFO] Booting worker with pid: 141
+[2026-04-07 00:10:13 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:139)
+[2026-04-07 00:10:13 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:141)
+[2026-04-06 21:10:13 -0300] [141] [INFO] Worker exiting (pid: 141)
+[2026-04-06 21:10:13 -0300] [139] [INFO] Worker exiting (pid: 139)
+[2026-04-07 00:10:13 +0000] [8] [ERROR] Worker (pid:139) exited with code 1
+[2026-04-07 00:10:13 +0000] [8] [ERROR] Worker (pid:139) exited with code 1.
+[2026-04-07 00:10:13 +0000] [8] [ERROR] Worker (pid:141) exited with code 1
+[2026-04-07 00:10:13 +0000] [8] [ERROR] Worker (pid:141) exited with code 1.
+[2026-04-07 00:10:13 +0000] [142] [INFO] Booting worker with pid: 142
+[2026-04-07 00:10:13 +0000] [143] [INFO] Booting worker with pid: 143
+[2026-04-07 00:15:14 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:140)
+[2026-04-06 21:15:14 -0300] [140] [INFO] Worker exiting (pid: 140)
+[2026-04-07 00:15:14 +0000] [8] [ERROR] Worker (pid:140) exited with code 1
+[2026-04-07 00:15:14 +0000] [8] [ERROR] Worker (pid:140) exited with code 1.
+[2026-04-07 00:15:14 +0000] [144] [INFO] Booting worker with pid: 144
+[2026-04-07 00:34:10 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:142)
+[2026-04-06 21:34:11 -0300] [142] [INFO] Worker exiting (pid: 142)
+[2026-04-07 00:34:11 +0000] [8] [ERROR] Worker (pid:142) exited with code 1
+[2026-04-07 00:34:11 +0000] [8] [ERROR] Worker (pid:142) exited with code 1.
+[2026-04-07 00:34:11 +0000] [145] [INFO] Booting worker with pid: 145
+[2026-04-07 02:11:11 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:143)
+[2026-04-06 23:11:11 -0300] [143] [INFO] Worker exiting (pid: 143)
+[2026-04-07 02:11:12 +0000] [8] [ERROR] Worker (pid:143) exited with code 1
+[2026-04-07 02:11:12 +0000] [8] [ERROR] Worker (pid:143) exited with code 1.
+[2026-04-07 02:11:12 +0000] [146] [INFO] Booting worker with pid: 146
+[2026-04-07 02:20:17 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:145)
+[2026-04-06 23:20:17 -0300] [145] [INFO] Worker exiting (pid: 145)
+[2026-04-07 02:20:18 +0000] [8] [ERROR] Worker (pid:145) exited with code 1
+[2026-04-07 02:20:18 +0000] [8] [ERROR] Worker (pid:145) exited with code 1.
+[2026-04-07 02:20:18 +0000] [147] [INFO] Booting worker with pid: 147
+[2026-04-07 04:42:03 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:144)
+[2026-04-07 01:42:03 -0300] [144] [INFO] Worker exiting (pid: 144)
+[2026-04-07 04:42:04 +0000] [8] [ERROR] Worker (pid:144) exited with code 1
+[2026-04-07 04:42:04 +0000] [8] [ERROR] Worker (pid:144) exited with code 1.
+[2026-04-07 04:42:04 +0000] [148] [INFO] Booting worker with pid: 148
+[2026-04-07 05:29:42 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:146)
+[2026-04-07 02:29:42 -0300] [146] [INFO] Worker exiting (pid: 146)
+[2026-04-07 05:29:43 +0000] [8] [ERROR] Worker (pid:146) exited with code 1
+[2026-04-07 05:29:43 +0000] [8] [ERROR] Worker (pid:146) exited with code 1.
+[2026-04-07 05:29:43 +0000] [149] [INFO] Booting worker with pid: 149
+[2026-04-07 06:42:17 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:147)
+[2026-04-07 03:42:18 -0300] [147] [INFO] Worker exiting (pid: 147)
+[2026-04-07 06:42:18 +0000] [8] [ERROR] Worker (pid:147) exited with code 1
+[2026-04-07 06:42:18 +0000] [8] [ERROR] Worker (pid:147) exited with code 1.
+[2026-04-07 06:42:18 +0000] [150] [INFO] Booting worker with pid: 150
+[2026-04-07 07:24:25 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:148)
+[2026-04-07 04:24:26 -0300] [148] [INFO] Worker exiting (pid: 148)
+[2026-04-07 07:24:26 +0000] [8] [ERROR] Worker (pid:148) exited with code 1
+[2026-04-07 07:24:26 +0000] [8] [ERROR] Worker (pid:148) exited with code 1.
+[2026-04-07 07:24:26 +0000] [151] [INFO] Booting worker with pid: 151
+[2026-04-07 07:41:31 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:149)
+[2026-04-07 04:41:32 -0300] [149] [INFO] Worker exiting (pid: 149)
+[2026-04-07 07:41:32 +0000] [8] [ERROR] Worker (pid:149) exited with code 1
+[2026-04-07 07:41:32 +0000] [8] [ERROR] Worker (pid:149) exited with code 1.
+[2026-04-07 07:41:32 +0000] [152] [INFO] Booting worker with pid: 152
+[2026-04-07 07:58:50 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:151)
+[2026-04-07 04:58:51 -0300] [151] [INFO] Worker exiting (pid: 151)
+[2026-04-07 07:58:51 +0000] [8] [ERROR] Worker (pid:151) exited with code 1
+[2026-04-07 07:58:51 +0000] [8] [ERROR] Worker (pid:151) exited with code 1.
+[2026-04-07 07:58:51 +0000] [153] [INFO] Booting worker with pid: 153
+[2026-04-07 08:17:29 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:150)
+[2026-04-07 05:17:30 -0300] [150] [INFO] Worker exiting (pid: 150)
+[2026-04-07 08:17:30 +0000] [8] [ERROR] Worker (pid:150) exited with code 1
+[2026-04-07 08:17:30 +0000] [8] [ERROR] Worker (pid:150) exited with code 1.
+[2026-04-07 08:17:30 +0000] [154] [INFO] Booting worker with pid: 154
+[2026-04-07 08:35:10 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:152)
+[2026-04-07 05:35:10 -0300] [152] [INFO] Worker exiting (pid: 152)
+[2026-04-07 08:35:10 +0000] [8] [ERROR] Worker (pid:152) exited with code 1
+[2026-04-07 08:35:10 +0000] [8] [ERROR] Worker (pid:152) exited with code 1.
+[2026-04-07 08:35:10 +0000] [155] [INFO] Booting worker with pid: 155
+[2026-04-07 08:42:19 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:153)
+[2026-04-07 05:42:19 -0300] [153] [INFO] Worker exiting (pid: 153)
+[2026-04-07 08:42:20 +0000] [8] [ERROR] Worker (pid:153) exited with code 1
+[2026-04-07 08:42:20 +0000] [8] [ERROR] Worker (pid:153) exited with code 1.
+[2026-04-07 08:42:20 +0000] [156] [INFO] Booting worker with pid: 156
+[2026-04-07 09:00:43 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:155)
+[2026-04-07 06:00:43 -0300] [155] [INFO] Worker exiting (pid: 155)
+[2026-04-07 09:00:43 +0000] [8] [ERROR] Worker (pid:155) exited with code 1
+[2026-04-07 09:00:43 +0000] [8] [ERROR] Worker (pid:155) exited with code 1.
+[2026-04-07 09:00:43 +0000] [157] [INFO] Booting worker with pid: 157
+[2026-04-07 11:01:45 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:154)
+[2026-04-07 08:01:46 -0300] [154] [INFO] Worker exiting (pid: 154)
+[2026-04-07 11:01:46 +0000] [8] [ERROR] Worker (pid:154) exited with code 1
+[2026-04-07 11:01:46 +0000] [8] [ERROR] Worker (pid:154) exited with code 1.
+[2026-04-07 11:01:46 +0000] [158] [INFO] Booting worker with pid: 158
+[2026-04-07 13:03:49 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:158)
+[2026-04-07 10:03:50 -0300] [158] [INFO] Worker exiting (pid: 158)
+[2026-04-07 13:03:50 +0000] [8] [ERROR] Worker (pid:158) exited with code 1
+[2026-04-07 13:03:50 +0000] [8] [ERROR] Worker (pid:158) exited with code 1.
+[2026-04-07 13:03:50 +0000] [159] [INFO] Booting worker with pid: 159
+[2026-04-07 13:51:06 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:159)
+[2026-04-07 10:51:08 -0300] [159] [INFO] Worker exiting (pid: 159)
+[2026-04-07 13:51:08 +0000] [8] [ERROR] Worker (pid:159) exited with code 1
+[2026-04-07 13:51:08 +0000] [8] [ERROR] Worker (pid:159) exited with code 1.
+[2026-04-07 13:51:08 +0000] [160] [INFO] Booting worker with pid: 160
+[2026-04-07 13:52:08 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:156)
+[2026-04-07 10:52:08 -0300] [156] [INFO] Worker exiting (pid: 156)
+[2026-04-07 13:52:10 +0000] [8] [ERROR] Worker (pid:156) exited with code 1
+[2026-04-07 13:52:10 +0000] [8] [ERROR] Worker (pid:156) exited with code 1.
+[2026-04-07 13:52:10 +0000] [161] [INFO] Booting worker with pid: 161
+[2026-04-07 15:37:27 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:157)
+[2026-04-07 12:37:27 -0300] [157] [INFO] Worker exiting (pid: 157)
+[2026-04-07 15:37:27 +0000] [8] [ERROR] Worker (pid:157) was sent SIGKILL! Perhaps out of memory?
+[2026-04-07 15:37:27 +0000] [162] [INFO] Booting worker with pid: 162
+[2026-04-07 15:44:21 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:162)
+[2026-04-07 12:44:21 -0300] [162] [INFO] Worker exiting (pid: 162)
+[2026-04-07 15:44:22 +0000] [8] [ERROR] Worker (pid:162) exited with code 1
+[2026-04-07 15:44:22 +0000] [8] [ERROR] Worker (pid:162) exited with code 1.
+[2026-04-07 15:44:22 +0000] [163] [INFO] Booting worker with pid: 163
+[2026-04-07 17:48:43 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:161)
+[2026-04-07 14:48:44 -0300] [161] [INFO] Worker exiting (pid: 161)
+[2026-04-07 17:48:44 +0000] [8] [ERROR] Worker (pid:161) exited with code 1
+[2026-04-07 17:48:44 +0000] [8] [ERROR] Worker (pid:161) exited with code 1.
+[2026-04-07 17:48:44 +0000] [164] [INFO] Booting worker with pid: 164
+[2026-04-07 17:50:01 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:160)
+[2026-04-07 15:49:52 -0300] [160] [INFO] Worker exiting (pid: 160)
+[2026-04-07 18:49:54 +0000] [8] [ERROR] Worker (pid:160) exited with code 1
+[2026-04-07 18:49:54 +0000] [8] [ERROR] Worker (pid:160) exited with code 1.
+[2026-04-07 18:49:54 +0000] [165] [INFO] Booting worker with pid: 165
+[2026-04-07 21:36:24 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:165)
+[2026-04-07 18:36:24 -0300] [165] [INFO] Worker exiting (pid: 165)
+[2026-04-07 21:36:25 +0000] [8] [ERROR] Worker (pid:165) exited with code 1
+[2026-04-07 21:36:25 +0000] [8] [ERROR] Worker (pid:165) exited with code 1.
+[2026-04-07 21:36:25 +0000] [166] [INFO] Booting worker with pid: 166
+[2026-04-07 23:20:07 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:163)
+[2026-04-07 20:20:07 -0300] [163] [INFO] Worker exiting (pid: 163)
+[2026-04-07 23:20:08 +0000] [8] [ERROR] Worker (pid:163) was sent SIGKILL! Perhaps out of memory?
+[2026-04-07 23:20:08 +0000] [167] [INFO] Booting worker with pid: 167
+[2026-04-07 23:23:15 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:164)
+[2026-04-07 20:23:15 -0300] [164] [INFO] Worker exiting (pid: 164)
+[2026-04-07 23:23:16 +0000] [8] [ERROR] Worker (pid:164) exited with code 1
+[2026-04-07 23:23:16 +0000] [8] [ERROR] Worker (pid:164) exited with code 1.
+[2026-04-07 23:23:16 +0000] [168] [INFO] Booting worker with pid: 168
+[2026-04-08 05:55:59 +0000] [8] [CRITICAL] WORKER TIMEOUT (pid:166)
+[2026-04-08 02:56:00 -0300] [166] [INFO] Worker exiting (pid: 166)
+[2026-04-08 05:56:00 +0000] [8] [ERROR] Worker (pid:166) exited with code 1
+[2026-04-08 05:56:00 +0000] [8] [ERROR] Worker (pid:166) exited with code 1.
+[2026-04-08 05:56:00 +0000] [169] [INFO] Booting worker with pid: 169
+[2026-04-08 05:56:01 +0000] [169] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/opt/venv/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/venv/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/opt/venv/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/opt/venv/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/opt/venv/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/opt/venv/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/opt/venv/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/psicoapp_backend/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+  File "/opt/venv/lib/python3.13/site-packages/django/core/wsgi.py", line 12, in get_wsgi_application
+    django.setup(set_prefix=False)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/opt/venv/lib/python3.13/site-packages/django/__init__.py", line 19, in setup
+    configure_logging(settings.LOGGING_CONFIG, settings.LOGGING)
+                      ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/venv/lib/python3.13/site-packages/django/conf/__init__.py", line 81, in __getattr__
+    self._setup(name)
+    ~~~~~~~~~~~^^^^^^
+  File "/opt/venv/lib/python3.13/site-packages/django/conf/__init__.py", line 68, in _setup
+    self._wrapped = Settings(settings_module)
+                    ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/opt/venv/lib/python3.13/site-packages/django/conf/__init__.py", line 166, in __init__
+    mod = importlib.import_module(self.SETTINGS_MODULE)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/psicoapp_backend/settings.py", line 204, in <module>
+    from celery.schedules import crontab
+ModuleNotFoundError: No module named 'celery'
+[2026-04-08 05:56:01 +0000] [169] [INFO] Worker exiting (pid: 169)
+[2026-04-08 05:56:01 +0000] [8] [ERROR] Worker (pid:169) exited with code 3
+[2026-04-08 02:56:01 -0300] [168] [INFO] Worker exiting (pid: 168)
+[2026-04-08 02:56:01 -0300] [167] [INFO] Worker exiting (pid: 167)
+[2026-04-08 05:56:01 +0000] [8] [ERROR] Shutting down: Master
+[2026-04-08 05:56:01 +0000] [8] [ERROR] Reason: Worker failed to boot.
