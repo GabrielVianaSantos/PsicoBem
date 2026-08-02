@@ -29,18 +29,19 @@ export default function TipoSessao() {
     // Campos novo tipo
     const [nome, setNome] = useState("");
     const [valor, setValor] = useState("");
-    const [categoria, setCategoria] = useState("avulsa");
+    const [categoria, setCategoria] = useState("");
     const [duracao, setDuracao] = useState("50");
 
     const categoriasDisponiveis = [
-        { label: 'Avulsa', value: 'avulsa' },
-        { label: 'Primeira Sessão', value: 'primeira' },
-        { label: 'Urgência', value: 'urgencia' },
         { label: 'Presencial', value: 'presencial' },
-        { label: 'Pacote', value: 'pacote' },
         { label: 'Online', value: 'online' },
-        { label: 'Retorno', value: 'retorno' },
     ];
+
+    const formatarModalidade = (tipo) => {
+        if (tipo === 'presencial') return 'Presencial';
+        if (tipo === 'online') return 'Online';
+        return tipo ? tipo.charAt(0).toUpperCase() + tipo.slice(1) : '';
+    };
 
     const carregarTipos = async () => {
         setLoading(true);
@@ -142,27 +143,33 @@ export default function TipoSessao() {
                 <View style={estilos.boxNovo}>
                     <Text style={estilos.labelBox}>Cadastrar Novo Tipo</Text>
                     
+                    <Text style={estilos.inputLabel}>Nome do Tipo</Text>
                     <TextInput 
                         style={estilos.input}
-                        placeholder="Nome (Ex: Terapia de Casal)"
+                        placeholder="Ex: Terapia de Casal"
+                        placeholderTextColor="#999"
                         value={nome}
                         onChangeText={setNome}
                     />
 
                     <View style={estilos.rowForm}>
                         <View style={{ flex: 1, marginRight: 10 }}>
+                            <Text style={estilos.inputLabel}>Valor (R$)</Text>
                             <TextInput 
                                 style={estilos.input}
-                                placeholder="Valor (R$)"
+                                placeholder="Ex: 150.00"
+                                placeholderTextColor="#999"
                                 keyboardType="numeric"
                                 value={valor}
                                 onChangeText={setValor}
                             />
                         </View>
                         <View style={{ flex: 1 }}>
+                            <Text style={estilos.inputLabel}>Duração (min)</Text>
                             <TextInput 
                                 style={estilos.input}
-                                placeholder="Duração (min)"
+                                placeholder="Ex: 50"
+                                placeholderTextColor="#999"
                                 keyboardType="numeric"
                                 value={duracao}
                                 onChangeText={setDuracao}
@@ -170,12 +177,15 @@ export default function TipoSessao() {
                         </View>
                     </View>
 
+                    <Text style={estilos.inputLabel}>Modalidade</Text>
                     <View style={estilos.pickerContainer}>
                         <Picker
                             selectedValue={categoria}
                             onValueChange={(itemValue) => setCategoria(itemValue)}
                             style={estilos.picker}
                         >
+                            {/* Placeholder item to ensure label visibility when no selection */}
+                            <Picker.Item label="Selecione a modalidade" value="" />
                             {categoriasDisponiveis.map((cat) => (
                                 <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
                             ))}
@@ -214,7 +224,7 @@ export default function TipoSessao() {
                             <View style={estilos.cardInfo}>
                                 <Text style={estilos.cardNome}>{item.nome}</Text>
                                 <View style={estilos.badge}>
-                                    <Text style={estilos.badgeText}>{item.tipo.toUpperCase()}</Text>
+                                    <Text style={estilos.badgeText}>{formatarModalidade(item.tipo)}</Text>
                                 </View>
                                 <Text style={estilos.cardMeta}>{item.duracao_minutos} min</Text>
                             </View>
@@ -281,6 +291,13 @@ const estilos = StyleSheet.create({
         color: "#333",
         marginBottom: 15,
     },
+    inputLabel: {
+        fontSize: 14,
+        fontFamily: "RalewayBold",
+        color: "#000",
+        marginBottom: 6,
+        marginTop: 2,
+    },
     input: {
         backgroundColor: '#f9f9f9',
         borderWidth: 1,
@@ -301,6 +318,7 @@ const estilos = StyleSheet.create({
         marginBottom: 15,
     },
     picker: {
+        color: "#111",
         height: 50,
         width: '100%',
     },

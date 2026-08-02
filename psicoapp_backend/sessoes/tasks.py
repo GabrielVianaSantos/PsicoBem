@@ -33,9 +33,10 @@ def notificar_pagamentos_atrasados():
             link_relacionado=f'/sessoes/{sessao.pk}',
             dados_extras=NotificationDomainService._routing_payload(
                 screen='DetalhesSessao',
-                params={'id': sessao.pk},
+                params={'sessaoId': sessao.pk},
                 event='pagamento_atrasado',
-                session_id=sessao.pk
+                entity_type='sessao',
+                entity_id=sessao.pk,
             ),
         )
         count += 1

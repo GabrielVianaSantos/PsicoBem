@@ -37,31 +37,38 @@ def notificar_pacientes_inativos():
                 inativo = True
         
         if inativo:
-            # 1. Notificar Paciente (Incentivo)
+            # 1. Notificar Paciente (Incentivo) → abre fluxo de novo registro
             NotificationDomainService.emit(
                 target=paciente.user,
                 tipo='sistema',
                 titulo='Sentimos sua falta! 🌈',
                 mensagem='Faz tempo que você não registra como está se sentindo na Odisseia. Que tal um novo registro?',
                 link_relacionado='/odisseia/novo',
+                # Issue 02: inatividade_paciente → RegistrosOdisseia com modo='novo'
                 dados_extras=NotificationDomainService._routing_payload(
                     screen='RegistrosOdisseia',
+                    params={'modo': 'novo'},
                     event='inatividade_paciente',
+                    entity_type='paciente',
+                    entity_id=paciente.pk,
                 ),
             )
             count_pacientes += 1
             
-            # 2. Notificar Psicólogo (Alerta)
+            # 2. Notificar Psicólogo (Alerta) → abre VinculosPacientes localizado
             NotificationDomainService.emit(
                 target=vinculo.psicologo.user,
                 tipo='sistema',
                 titulo='Paciente Inativo ⚠️',
                 mensagem=f'O paciente {paciente.user.first_name} não realiza registros na Odisseia há mais de 7 dias.',
                 link_relacionado='/pacientes',
+                # Issue 02: alerta_inatividade_paciente → VinculosPacientes com pacienteId
                 dados_extras=NotificationDomainService._routing_payload(
                     screen='VinculosPacientes',
+                    params={'pacienteId': paciente.pk},
                     event='alerta_inatividade_paciente',
-                    paciente_id=paciente.id
+                    entity_type='paciente',
+                    entity_id=paciente.pk,
                 ),
             )
             count_psicologos += 1

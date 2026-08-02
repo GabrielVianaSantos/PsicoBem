@@ -214,7 +214,7 @@ def conecta_psicologo_view(request):
         vinculo.data_fim_tratamento = None
         vinculo.save()
 
-    # Issue 06: Notificar psicólogo sobre novo vínculo
+    # Issue 02: Notificar psicólogo sobre novo vínculo com pacienteId canônico
     from core.services import NotificationDomainService
     NotificationDomainService.emit(
         target=psicologo.user,
@@ -224,7 +224,10 @@ def conecta_psicologo_view(request):
         link_relacionado='/pacientes',
         dados_extras=NotificationDomainService._routing_payload(
             screen='VinculosPacientes',
+            params={'pacienteId': paciente.pk},
             event='novo_vinculo',
+            entity_type='paciente',
+            entity_id=paciente.pk,
         ),
     )
 

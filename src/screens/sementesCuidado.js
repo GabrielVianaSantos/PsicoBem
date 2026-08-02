@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View, StyleSheet, Text, TextInput, ScrollView, RefreshControl, ActivityIndicator, Alert } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useRoute } from "@react-navigation/native";
 import Topo from "./components/topo";
 import Botao from "../components/common/Button";
 import { odisseiaService } from "../services/odisseiaService";
 
 export default function SementesCuidado(topo) {
+    const route = useRoute();
+    const sementeId = route.params?.sementeId;
     const [sementes, setSementes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -106,7 +108,7 @@ export default function SementesCuidado(topo) {
                     <Text style={[estilos.textoStatus, {marginTop: 20}]}>Você ainda não plantou nenhuma semente.</Text>
                 ) : (
                     sementes.map((item, index) => (
-                        <View key={index} style={estilos.cardSemente}>
+                        <View key={index} style={[estilos.cardSemente, String(sementeId) === String(item.id) && estilos.cardDestacado]}>
                             <View style={estilos.cardHeader}>
                                 <Text style={estilos.cardTitulo}>{item.titulo}</Text>
                                 <Text style={estilos.cardData}>
@@ -182,6 +184,10 @@ const estilos = StyleSheet.create({
         borderRadius: 8,
         padding: 15,
         marginBottom: 10,
+    },
+    cardDestacado: {
+        borderWidth: 2,
+        borderColor: '#11B5A4',
     },
     cardHeader: {
         flexDirection: 'row',

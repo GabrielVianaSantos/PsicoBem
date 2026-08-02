@@ -1,21 +1,53 @@
-import { StyleSheet, View, Text, TouchableOpacity, Image } from "react-native"
+import { StyleSheet, View, Text, TouchableOpacity, Image, ActivityIndicator, ScrollView } from "react-native"
 import Topo from "./components/topo";
 import {Ionicons} from "@expo/vector-icons";
+import { useRoute } from '@react-navigation/native';
+import { useEffect, useState } from 'react';
+import { odisseiaService } from '../services/odisseiaService';
 import healthy from '../arts/healthy.png';
 import balance from '../arts/balance.png';
 import creativity from '../arts/creativity2.png';
 import mind from '../arts/mind.png';
 
 export default function RegistroCompleto(topo){
+  const route = useRoute();
+  const registroId = route.params?.registroId;
+  const [registro, setRegistro] = useState(null);
+  const [loading, setLoading] = useState(Boolean(registroId));
+
+  useEffect(() => {
+    let ativo = true;
+    if (!registroId) {
+      setLoading(false);
+      return undefined;
+    }
+    odisseiaService.getRegistroOdisseia(registroId).then((res) => {
+      if (!ativo) return;
+      if (res.success) setRegistro(res.data);
+      setLoading(false);
+    });
+    return () => { ativo = false; };
+  }, [registroId]);
+
+  if (loading) {
+    return <><Topo {...topo}/><View style={estilos.loading}><ActivityIndicator size="large" color="#11B5A4" /></View></>;
+  }
+
+  if (!registroId || !registro) {
+    return <><Topo {...topo}/><View style={estilos.loading}>
+      <Text style={estilos.titulo}>Registro indisponível</Text>
+      <Text style={estilos.texto}>Este registro não existe mais ou não está disponível para o seu perfil.</Text>
+    </View></>;
+  }
 
   return<>
     <Topo {...topo}/>
-    <View style={estilos.tela}>
+    <ScrollView contentContainerStyle={estilos.tela}>
       <View>
         <Text style={estilos.titulo}>Registros de Odisseia</Text>
       </View>
       <View style={estilos.containerTitulo}>
-        <Text style={estilos.titulo}>Nome do Paciente</Text>
+        <Text style={estilos.titulo}>{registro.paciente_nome || 'Registro emocional'}</Text>
       </View>
       <View style={estilos.containerDataHora}>
         <View style={estilos.boxData}>
@@ -28,7 +60,7 @@ export default function RegistroCompleto(topo){
               />
             </TouchableOpacity>
           </View>
-          <Text style={estilos.texto}>Data</Text>
+          <Text style={estilos.texto}>{registro.data_registro || 'Data'}</Text>
         </View>
         <View style={estilos.boxData}>
           <View style={estilos.separateContainerDataHora}> 
@@ -40,7 +72,7 @@ export default function RegistroCompleto(topo){
               />
             </TouchableOpacity>
           </View>
-          <Text style={estilos.texto}>Horário</Text>
+          <Text style={estilos.texto}>{registro.hora_registro || 'Horário'}</Text>
         </View>
       </View>
       <View style={estilos.containerTopicos}>
@@ -61,7 +93,10 @@ export default function RegistroCompleto(topo){
           <Text style={estilos.titulo}>Comportamento</Text>
         </View>
       </View>
-    </View>
+      {registro.situacao && <Text style={estilos.detalhe}><Text style={estilos.detalheLabel}>Situação: </Text>{registro.situacao}</Text>}
+      {registro.pensamentos && <Text style={estilos.detalhe}><Text style={estilos.detalheLabel}>Pensamentos: </Text>{registro.pensamentos}</Text>}
+      {registro.comportamento && <Text style={estilos.detalhe}><Text style={estilos.detalheLabel}>Comportamento: </Text>{registro.comportamento}</Text>}
+    </ScrollView>
     </>
 }
 
@@ -71,6 +106,7 @@ const estilos = StyleSheet.create({
         alignItems: "flex-start",
         padding: 25,
     },
+    loading: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
 
     titulo:{
       color: "#11B5A4",
@@ -122,6 +158,8 @@ const estilos = StyleSheet.create({
       fontFamily: "RalewayBold",
       fontSize: 19,
   },
+  detalhe: { width: '100%', color: '#444', fontSize: 15, lineHeight: 22, marginBottom: 12 },
+  detalheLabel: { color: '#0B7A6E', fontFamily: 'RalewayBold' },
 
   topicos:{
     borderBottomWidth: 2,

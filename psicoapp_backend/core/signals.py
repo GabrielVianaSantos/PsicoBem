@@ -16,21 +16,21 @@ def criar_tipos_sessao_padrao(sender, instance, created, **kwargs):
         tipos_padrao = [
             {
                 'nome': 'Primeira Sessão',
-                'tipo': 'primeira',
+                'tipo': 'online',
                 'valor': 150.00,
                 'duracao_minutos': 90,
                 'descricao': 'Sessão inicial de avaliação e acolhimento'
             },
             {
                 'nome': 'Sessão Regular',
-                'tipo': 'avulsa',
+                'tipo': 'online',
                 'valor': 120.00,
                 'duracao_minutos': 50,
                 'descricao': 'Sessão terapêutica regular'
             },
             {
                 'nome': 'Urgência',
-                'tipo': 'urgencia',
+                'tipo': 'online',
                 'valor': 180.00,
                 'duracao_minutos': 50,
                 'descricao': 'Sessão de urgência'
@@ -96,6 +96,8 @@ def notificacao_boas_vindas_paciente(sender, instance, created, **kwargs):
             dados_extras=NotificationDomainService._routing_payload(
                 screen='HomePaciente',
                 event='boas_vindas',
+                entity_type='paciente',
+                entity_id=instance.pk,
             ),
         )
 
@@ -117,9 +119,11 @@ def notificar_paciente_comentario(sender, instance, created, **kwargs):
             link_relacionado=f'/registros/{instance.registro.pk}',
             dados_extras=NotificationDomainService._routing_payload(
                 screen='RegistroCompleto',
-                params={'id': instance.registro.pk},
+                # Issue 02: parâmetro canônico registroId (não mais 'id')
+                params={'registroId': instance.registro.pk},
                 event='comentario_psicologo',
-                registro_id=instance.registro.pk,
+                entity_type='registro',
+                entity_id=instance.registro.pk,
             ),
         )
 
@@ -135,7 +139,11 @@ def notificar_paciente_prontuario(sender, instance, created, **kwargs):
             link_relacionado=f'/prontuarios/{instance.pk}',
             dados_extras=NotificationDomainService._routing_payload(
                 screen='MeusProntuarios',
+                # Issue 02: parâmetro canônico prontuarioId
+                params={'prontuarioId': instance.pk},
                 event='novo_prontuario',
+                entity_type='prontuario',
+                entity_id=instance.pk,
             ),
         )
 

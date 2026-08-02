@@ -25,9 +25,20 @@ export const odisseiaService = {
     try {
       const url = pacienteId ? `/registros-odisseia/?paciente_id=${pacienteId}` : '/registros-odisseia/';
       const response = await api.get(url);
-      return { success: true, data: response.data };
+      const data = response.data;
+      return { success: true, data: Array.isArray(data) ? data : (data.results || []) };
     } catch (error) {
       console.error('Erro getRegistrosOdisseia:', error);
+      return { success: false, message: this.extractErrorMessage(error) };
+    }
+  },
+
+  async getRegistroOdisseia(id) {
+    try {
+      const response = await api.get(`/registros-odisseia/${id}/`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Erro getRegistroOdisseia:', error);
       return { success: false, message: this.extractErrorMessage(error) };
     }
   },

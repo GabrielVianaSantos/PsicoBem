@@ -3,12 +3,14 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { pacienteService } from '../services/pacienteService';
 import Topo from './components/topo';
 
 export default function MeusProntuarios() {
+  const route = useRoute();
+  const prontuarioId = route.params?.prontuarioId;
   const [prontuarios, setProntuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -23,6 +25,9 @@ export default function MeusProntuarios() {
   };
 
   useFocusEffect(useCallback(() => { carregar(); }, []));
+  useFocusEffect(useCallback(() => {
+    if (prontuarioId != null) setExpandido(Number(prontuarioId));
+  }, [prontuarioId]));
   const onRefresh = () => { setRefreshing(true); carregar(); };
 
   const toggleExpandido = (id) => setExpandido(e => e === id ? null : id);
@@ -55,7 +60,7 @@ export default function MeusProntuarios() {
             return (
               <TouchableOpacity
                 key={i}
-                style={styles.card}
+                style={[styles.card, String(prontuarioId) === String(p.id) && styles.cardDestacado]}
                 onPress={() => toggleExpandido(p.id || i)}
                 activeOpacity={0.85}
               >
@@ -126,6 +131,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 4, elevation: 2,
     borderWidth: 1, borderColor: '#f0f0f0', overflow: 'hidden',
   },
+  cardDestacado: { borderColor: '#11B5A4', borderWidth: 2 },
   cardHeader: {
     flexDirection: 'row', alignItems: 'center', padding: 16,
   },

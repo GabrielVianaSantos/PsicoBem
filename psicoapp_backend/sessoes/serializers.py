@@ -23,6 +23,14 @@ class TipoSessaoSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['created_at', 'updated_at']
     
+    def validate_tipo(self, value):
+        valid_choices = [choice[0] for choice in TipoSessao.TIPO_CHOICES]
+        if value not in valid_choices:
+            raise serializers.ValidationError(
+                f"Modalidade '{value}' é inválida. Escolha entre 'presencial' ou 'online'."
+            )
+        return value
+
     def get_valor_formatado(self, obj):
         return f"R$ {obj.valor:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
     
@@ -48,6 +56,14 @@ class TipoSessaoCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Duração não pode exceder 8 horas.")
         return value
     
+    def validate_tipo(self, value):
+        valid_choices = [choice[0] for choice in TipoSessao.TIPO_CHOICES]
+        if value not in valid_choices:
+            raise serializers.ValidationError(
+                f"Modalidade '{value}' é inválida. Escolha entre 'presencial' ou 'online'."
+            )
+        return value
+
     def validate_nome(self, value):
         # Verificar se já existe um tipo com mesmo nome para o mesmo psicólogo
         psicologo = self.context['request'].user.psicologo_profile

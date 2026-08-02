@@ -12,6 +12,15 @@ from engajamentos.serializers import SementeCuidadoSerializer, RegistroOdisseiaS
 from core.models import VinculoPacientePsicologo
 from core.serializers import PacienteBasicSerializer
 
+
+class IsPacienteOdisseiaWritePermission(permissions.BasePermission):
+    """Permite alterações em registros de Odisseia apenas ao paciente."""
+
+    message = 'Apenas pacientes podem alterar Registros de Odisseia.'
+
+    def has_permission(self, request, view):
+        return hasattr(request.user, 'paciente_profile')
+
 #####################################################################################################################################
 # SEMENTES DO CUIDADO
 #####################################################################################################################################
@@ -80,7 +89,8 @@ class SementeCuidadoViewSet(viewsets.ModelViewSet):
         )
         msg.marcar_como_curtida()
 
-        # Issue 09: Notificar psicólogo sobre curtida
+        # Issue 02: corrigir rota SementesPsicologo (inexistente) → SementesCuidado
+        # e usar parâmetro canônico sementeId
         from core.services import NotificationDomainService
         NotificationDomainService.emit(
             target=semente.psicologo.user,
@@ -89,9 +99,11 @@ class SementeCuidadoViewSet(viewsets.ModelViewSet):
             mensagem=f'{request.user.first_name} curtiu a semente "{semente.titulo}".',
             link_relacionado=f'/sementes/{semente.pk}',
             dados_extras=NotificationDomainService._routing_payload(
-                screen='SementesPsicologo',
+                screen='SementesCuidado',
+                params={'sementeId': semente.pk},
                 event='semente_curtida',
-                semente_id=semente.pk,
+                entity_type='semente',
+                entity_id=semente.pk,
             ),
         )
 
@@ -110,6 +122,12 @@ class RegistroOdisseiaViewSet(viewsets.ModelViewSet):
     """
     serializer_class = RegistroOdisseiaSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Psicólogos têm acesso exclusivamente de leitura aos registros."""
+        if self.action in {'create', 'update', 'partial_update', 'destroy'}:
+            return [IsAuthenticated(), IsPacienteOdisseiaWritePermission()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         user = self.request.user
@@ -132,9 +150,9 @@ class RegistroOdisseiaViewSet(viewsets.ModelViewSet):
             else:
                 vinculos = VinculoPacientePsicologo.objects.filter(
                     psicologo=user.psicologo_profile, status='ativo'
-                )
+                ).values('paciente_id')
                 return RegistroOdisseia.objects.filter(
-                    paciente__in=[v.paciente for v in vinculos],
+                    paciente_id__in=vinculos,
                     compartilhar_psicologo=True
                 )
         return RegistroOdisseia.objects.none()
@@ -177,5 +195,4 @@ class RegistroOdisseiaViewSet(viewsets.ModelViewSet):
                 'emoji': ultimo.get_emoji_humor() if ultimo else None,
             },
         })
-
 

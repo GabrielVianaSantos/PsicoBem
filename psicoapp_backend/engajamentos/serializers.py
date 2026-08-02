@@ -24,5 +24,7 @@ class RegistroOdisseiaSerializer(serializers.ModelSerializer):
     class Meta:
         model = RegistroOdisseia
         fields = '__all__'
-        read_only_fields = ['id', 'paciente', 'created_at']
-
+        read_only_fields = [
+            'id', 'paciente', 'paciente_nome', 'paciente_humor',
+            'humor_display', 'created_at',
+        ]

@@ -17,21 +17,21 @@ class Command(BaseCommand):
         tipos_exemplo = [
             {
                 'nome': 'Primeira Sessão',
-                'tipo': 'primeira',
+                'tipo': 'online',
                 'valor': 150.00,
                 'duracao_minutos': 90,
                 'descricao': 'Sessão inicial de avaliação e acolhimento'
             },
             {
                 'nome': 'Sessão Regular',
-                'tipo': 'avulsa',
+                'tipo': 'presencial',
                 'valor': 120.00,
                 'duracao_minutos': 50,
                 'descricao': 'Sessão terapêutica regular'
             },
             {
                 'nome': 'Urgência',
-                'tipo': 'urgencia',
+                'tipo': 'online',
                 'valor': 180.00,
                 'duracao_minutos': 50,
                 'descricao': 'Sessão de urgência'
@@ -45,7 +45,7 @@ class Command(BaseCommand):
             },
             {
                 'nome': 'Pacote 4 Sessões',
-                'tipo': 'pacote',
+                'tipo': 'online',
                 'valor': 400.00,
                 'duracao_minutos': 50,
                 'descricao': 'Pacote com desconto para 4 sessões'

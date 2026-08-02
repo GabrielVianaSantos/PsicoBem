@@ -16,6 +16,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 20,
     marginRight: 6,
+    marginBottom: 6,
   },
   chipLabel: {
     fontSize: 10,

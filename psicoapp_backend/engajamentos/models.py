@@ -264,7 +264,10 @@ class SementeCuidado(models.Model):
                     link_relacionado=f'/sementes/{self.pk}',
                     dados_extras=NotificationDomainService._routing_payload(
                         screen='SementesPaciente',
+                        params={'sementeId': self.pk},
                         event='nova_semente',
+                        entity_type='semente',
+                        entity_id=self.pk,
                     ),
                 )
         

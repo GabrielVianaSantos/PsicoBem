@@ -178,11 +178,13 @@ class SessaoViewSet(viewsets.ModelViewSet):
         from core.services import NotificationDomainService
         
         data_formatada = sessao.data_hora.strftime("%d/%m/%Y às %H:%M")
+        # Issue 02: parâmetro canônico sessaoId (não mais 'id'), entity_type/entity_id
         route = NotificationDomainService._routing_payload(
             screen='DetalhesSessao',
-            params={'id': sessao.pk},
+            params={'sessaoId': sessao.pk},
             event='sessao_cancelada',
-            session_id=sessao.pk,
+            entity_type='sessao',
+            entity_id=sessao.pk,
         )
 
         if hasattr(request.user, 'psicologo_profile'):
@@ -226,7 +228,7 @@ class SessaoViewSet(viewsets.ModelViewSet):
         sessao.status = 'realizada'
         sessao.save()
 
-        # Issue 07: Notificar paciente sobre sessão realizada
+        # Notificar paciente sobre sessão realizada → abre fluxo de novo registro Odisseia
         from core.services import NotificationDomainService
         NotificationDomainService.emit(
             target=sessao.paciente.user,
@@ -234,9 +236,13 @@ class SessaoViewSet(viewsets.ModelViewSet):
             titulo='Sessão Finalizada ✨',
             mensagem='Sua sessão foi concluída. Que tal registrar como você está se sentindo na Odisseia?',
             link_relacionado='/odisseia/novo',
+            # Issue 02: sessao_realizada → RegistrosOdisseia com modo='novo'
             dados_extras=NotificationDomainService._routing_payload(
                 screen='RegistrosOdisseia',
+                params={'modo': 'novo'},
                 event='sessao_realizada',
+                entity_type='sessao',
+                entity_id=sessao.pk,
             ),
         )
 

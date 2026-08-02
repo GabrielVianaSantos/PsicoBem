@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Alert, TextInput,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { vinculoService } from '../services/vinculoService';
 import Topo from './components/topo';
@@ -19,6 +19,8 @@ const NOVOS_STATUS = ['ativo', 'inativo', 'suspenso', 'finalizado'];
 
 export default function VinculosPacientes() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const pacienteId = route.params?.pacienteId;
   const [vinculos, setVinculos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -124,7 +126,7 @@ export default function VinculosPacientes() {
             const paciente = v.paciente || {};
             const inicial = paciente.nome_completo?.[0]?.toUpperCase() || 'P';
             return (
-              <View key={i} style={styles.card}>
+              <View key={i} style={[styles.card, String(pacienteId) === String(paciente.id) && styles.cardDestacado]}>
                 {/* Header do paciente */}
                 <View style={styles.cardHeader}>
                   <View style={styles.avatar}>
@@ -226,6 +228,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 5, elevation: 3,
     borderWidth: 1, borderColor: '#f0f0f0', overflow: 'hidden',
   },
+  cardDestacado: { borderColor: '#11B5A4', borderWidth: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', padding: 16, paddingBottom: 12 },
   avatar: {
     width: 48, height: 48, borderRadius: 24, backgroundColor: '#11B5A4',

@@ -12,6 +12,8 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { pacienteService } from '../services/pacienteService';
+import { odisseiaService } from '../services/odisseiaService';
+import { useAuth } from '../hooks/useAuth';
 import Topo from './components/topo';
 import NivelChip from '../components/common/NivelChip';
 import NivelSlider from '../components/common/NivelSlider';
@@ -48,7 +50,9 @@ const SECOES_MENU = [
 // ──────────────────────────────────────────────────────────────
 export default function RegistrosOdisseia({ route }) {
   const navigation = useNavigation();
-  const modo = route?.params?.modo || 'lista'; // 'lista' | 'novo'
+  const { userType } = useAuth();
+  const isPsicologo = userType === 'psicologo';
+  const modo = isPsicologo ? 'lista' : (route?.params?.modo || 'lista'); // 'lista' | 'novo'
 
   const [aba, setAba] = useState(modo);
   const [registros, setRegistros] = useState([]);
@@ -72,17 +76,21 @@ export default function RegistrosOdisseia({ route }) {
 
   const carregarRegistros = async () => {
     setLoading(true);
-    const res = await pacienteService.getMeusRegistros();
+    const res = isPsicologo
+      ? await odisseiaService.getRegistrosOdisseia()
+      : await pacienteService.getMeusRegistros();
     if (res.success) setRegistros(res.data);
     setLoading(false);
     setRefreshing(false);
   };
 
-  useFocusEffect(useCallback(() => { carregarRegistros(); }, []));
+  useFocusEffect(useCallback(() => { carregarRegistros(); }, [isPsicologo]));
 
   const onRefresh = () => { setRefreshing(true); carregarRegistros(); };
 
   const salvarRegistro = async () => {
+    if (isPsicologo) return;
+
     if (!forma.humor_geral) {
       Alert.alert('Atenção', 'Por favor, selecione como você está se sentindo (Emoções).');
       setAba('novo');
@@ -142,15 +150,19 @@ export default function RegistrosOdisseia({ route }) {
           onPress={() => { setAba('lista'); setSecaoAtiva(null); }}
         >
           <Ionicons name="list-outline" size={18} color={aba === 'lista' ? '#11B5A4' : '#999'} />
-          <Text style={[styles.abaText, aba === 'lista' && styles.abaTextAtiva]}>Meus Registros</Text>
+          <Text style={[styles.abaText, aba === 'lista' && styles.abaTextAtiva]}>
+            {isPsicologo ? 'Registros compartilhados' : 'Meus Registros'}
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.aba, aba === 'novo' && styles.abaAtiva]}
-          onPress={() => { setAba('novo'); setSecaoAtiva(null); }}
-        >
-          <Ionicons name="add-circle-outline" size={18} color={aba === 'novo' ? '#11B5A4' : '#999'} />
-          <Text style={[styles.abaText, aba === 'novo' && styles.abaTextAtiva]}>Novo Registro</Text>
-        </TouchableOpacity>
+        {!isPsicologo && (
+          <TouchableOpacity
+            style={[styles.aba, aba === 'novo' && styles.abaAtiva]}
+            onPress={() => { setAba('novo'); setSecaoAtiva(null); }}
+          >
+            <Ionicons name="add-circle-outline" size={18} color={aba === 'novo' ? '#11B5A4' : '#999'} />
+            <Text style={[styles.abaText, aba === 'novo' && styles.abaTextAtiva]}>Novo Registro</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── ABA LISTA ── */}
@@ -159,19 +171,31 @@ export default function RegistrosOdisseia({ route }) {
           contentContainerStyle={styles.scrollContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#11B5A4" />}
         >
-          <Text style={styles.titulo}>Diário da Odisseia</Text>
-          <Text style={styles.subtitulo}>Seus registros emocionais diários.</Text>
+          <Text style={styles.titulo}>{isPsicologo ? 'Registros de Odisséia' : 'Diário da Odisseia'}</Text>
+          <Text style={styles.subtitulo}>
+            {isPsicologo
+              ? 'Registros emocionais compartilhados por seus pacientes vinculados.'
+              : 'Seus registros emocionais diários.'}
+          </Text>
 
           {loading && !refreshing ? (
             <ActivityIndicator size="large" color="#11B5A4" style={{ marginTop: 30 }} />
           ) : registros.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={{ fontSize: 60 }}>📓</Text>
-              <Text style={styles.emptyTitle}>Nenhum registro ainda</Text>
-              <Text style={styles.emptyDesc}>Comece registrando como você está se sentindo hoje.</Text>
-              <TouchableOpacity style={styles.btnNovoEmpty} onPress={() => { setAba('novo'); setSecaoAtiva(null); }}>
-                <Text style={styles.btnNovoEmptyText}>+ Criar primeiro registro</Text>
-              </TouchableOpacity>
+              <Text style={styles.emptyTitle}>
+                {isPsicologo ? 'Nenhum registro compartilhado' : 'Nenhum registro ainda'}
+              </Text>
+              <Text style={styles.emptyDesc}>
+                {isPsicologo
+                  ? 'Os registros compartilhados por pacientes vinculados aparecerão aqui.'
+                  : 'Comece registrando como você está se sentindo hoje.'}
+              </Text>
+              {!isPsicologo && (
+                <TouchableOpacity style={styles.btnNovoEmpty} onPress={() => { setAba('novo'); setSecaoAtiva(null); }}>
+                  <Text style={styles.btnNovoEmptyText}>+ Criar primeiro registro</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             registros.map((item, i) => {
@@ -188,13 +212,18 @@ export default function RegistrosOdisseia({ route }) {
                             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                           })}
                         </Text>
+                        {isPsicologo && (
+                          <Text style={styles.cardPaciente} numberOfLines={1}>
+                            Paciente: {item.paciente_nome || 'Não identificado'}
+                          </Text>
+                        )}
                       </View>
                     </View>
                   </View>
                   <View style={styles.niveisRow}>
-                    {item.nivel_ansiedade != null && <NivelChip label="Ans." valor={item.nivel_ansiedade} />}
-                    {item.nivel_estresse != null && <NivelChip label="Str." valor={item.nivel_estresse} />}
-                    {item.nivel_energia != null && <NivelChip label="Ene." valor={item.nivel_energia} cor="#A5D6A7" />}
+                    {item.nivel_ansiedade != null && <NivelChip label="Ansiedade" valor={item.nivel_ansiedade} />}
+                    {item.nivel_estresse != null && <NivelChip label="Estresse" valor={item.nivel_estresse} />}
+                    {item.nivel_energia != null && <NivelChip label="Energia" valor={item.nivel_energia} cor="#A5D6A7" />}
                   </View>
                   {item.situacao ? (
                     <View style={styles.secaoTexto}>
@@ -228,7 +257,7 @@ export default function RegistrosOdisseia({ route }) {
       )}
 
       {/* ── ABA NOVO REGISTRO ── */}
-      {aba === 'novo' && (
+      {!isPsicologo && aba === 'novo' && (
         <>
           {secaoAtiva === null ? (
             // MENU PRINCIPAL DO NOVO REGISTRO
@@ -456,7 +485,8 @@ const styles = StyleSheet.create({
   cardHumorRow: { flexDirection: 'row', alignItems: 'center' },
   cardHumorLabel: { fontFamily: 'RalewayBold', color: '#333', fontSize: 17 },
   cardData: { color: '#aaa', fontSize: 12, marginTop: 2, textTransform: 'capitalize' },
-  niveisRow: { flexDirection: 'row', marginBottom: 10 },
+  cardPaciente: { color: '#0B7A6E', fontSize: 12, marginTop: 4, fontFamily: 'RalewayBold' },
+  niveisRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 },
   secaoTexto: { backgroundColor: '#f9f9f9', borderRadius: 8, padding: 10, marginBottom: 8 },
   secaoLabel: { color: '#777', fontSize: 12, marginBottom: 3 },
   secaoValor: { color: '#333', fontSize: 14, lineHeight: 20 },

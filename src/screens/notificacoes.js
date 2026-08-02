@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { pacienteService } from '../services/pacienteService';
-import { notificationService } from '../services/notificationService';
+import { notificationService, dispatchNotification } from '../services/notificationService';
+import { navigationRef } from '../routes';
+import { useAuth } from '../hooks/useAuth';
 import Topo from './components/topo';
 
 const TIPO_ICONE = {
@@ -35,10 +37,13 @@ function formatarData(data) {
 
 export default function Notificacoes() {
   const navigation = useNavigation();
+  const { userType } = useAuth();
   const [notificacoes, setNotificacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
+  // Proteção anti-duplo toque na navegação
+  const navigatingRef = useRef(false);
 
   const carregarNotificacoes = async () => {
     const res = await pacienteService.getNotificacoes();
@@ -63,22 +68,34 @@ export default function Notificacoes() {
     carregarNotificacoes();
   };
 
-  const marcarComoLida = async (id, lida) => {
-    if (lida) return;
-    const res = await pacienteService.lerNotificacao(id);
-    if (!res.success) return;
+  // Issue 03: ao tocar, marca como lida E despacha para a tela correta
+  const handleCardPress = async (item) => {
+    if (navigatingRef.current) return;
+    navigatingRef.current = true;
 
-    setNotificacoes((atual) =>
-      atual.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              lida: true,
-              data_leitura: new Date().toISOString(),
-            }
-          : item
-      )
-    );
+    try {
+      // Marcar como lida no estado local imediatamente (UX otimista)
+      if (!item.lida) {
+        setNotificacoes((atual) =>
+          atual.map((n) =>
+            n.id === item.id
+              ? { ...n, lida: true, data_leitura: new Date().toISOString() }
+              : n
+          )
+        );
+      }
+
+      // Disparar dispatcher: marca como lida na API e navega
+      // alreadyRead=item.lida evita requisição dupla se já estava lida
+      await dispatchNotification(
+        item.dados_extras,
+        userType,
+        navigationRef,
+        { alreadyRead: item.lida, notification_id: item.id }
+      );
+    } finally {
+      setTimeout(() => { navigatingRef.current = false; }, 500);
+    }
   };
 
   const marcarTodasComoLidas = async () => {
@@ -102,7 +119,7 @@ export default function Notificacoes() {
     return (
       <TouchableOpacity
         style={[styles.card, !item.lida && styles.cardNaoLida]}
-        onPress={() => marcarComoLida(item.id, item.lida)}
+        onPress={() => handleCardPress(item)}
       >
         <View style={styles.iconWrap}>
           <Ionicons name={icone} size={22} color="#11B5A4" />

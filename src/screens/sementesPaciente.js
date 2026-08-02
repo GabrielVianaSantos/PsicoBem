@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Dimensions, Alert,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { pacienteService } from '../services/pacienteService';
 import Topo from './components/topo';
@@ -22,6 +22,8 @@ const TIPO_CONFIG = {
 };
 
 export default function SementesPaciente() {
+  const route = useRoute();
+  const sementeId = route.params?.sementeId;
   const [sementes, setSementes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -83,7 +85,7 @@ export default function SementesPaciente() {
             const cfg = TIPO_CONFIG[s.tipo] || TIPO_CONFIG.default;
             const curtida = curtidas.has(s.id);
             return (
-              <View key={i} style={[styles.card, { borderLeftColor: cfg.cor }]}>
+              <View key={i} style={[styles.card, { borderLeftColor: cfg.cor }, String(sementeId) === String(s.id) && styles.cardDestacado]}>
                 {/* Header */}
                 <View style={styles.cardHeader}>
                   <View style={[styles.tipoIconBox, { backgroundColor: cfg.fundo }]}>
@@ -158,6 +160,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 6, elevation: 3,
     overflow: 'hidden',
   },
+  cardDestacado: { borderWidth: 2, borderColor: '#11B5A4' },
   cardHeader: {
     flexDirection: 'row', alignItems: 'center', padding: 16, paddingBottom: 12,
   },

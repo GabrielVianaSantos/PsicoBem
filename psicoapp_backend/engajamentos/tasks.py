@@ -36,7 +36,8 @@ def notificar_metas_vencendo():
             dados_extras=NotificationDomainService._routing_payload(
                 screen='Notificacoes',
                 event='meta_vencendo',
-                meta_id=meta.id,
+                entity_type='meta',
+                entity_id=meta.id,
                 dedup_id=dedup_id
             ),
         )

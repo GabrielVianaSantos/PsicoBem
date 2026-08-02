@@ -58,13 +58,8 @@ class TipoSessao(models.Model):
     Ex: Primeira Sessão, Urgência, Avulsa, Presencial, Pacote 4 Sessões
     """
     TIPO_CHOICES = [
-        ('primeira', 'Primeira Sessão'),
-        ('urgencia', 'Urgência'),
-        ('avulsa', 'Avulsa'),
         ('presencial', 'Presencial'),
-        ('pacote', 'Pacote'),
         ('online', 'Online'),
-        ('retorno', 'Retorno'),
     ]
     
     psicologo = models.ForeignKey(
@@ -80,7 +75,7 @@ class TipoSessao(models.Model):
     tipo = models.CharField(
         max_length=20,
         choices=TIPO_CHOICES,
-        default='avulsa',
+        default='online',
         verbose_name='Categoria'
     )
     valor = models.DecimalField(

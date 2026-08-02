@@ -3,13 +3,15 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { pacienteService } from '../services/pacienteService';
 import Topo from './components/topo';
 
 export default function MeuPsicologo() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const statusNotificacao = route.params?.status;
   const [dados, setDados] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,6 +50,13 @@ export default function MeuPsicologo() {
           </View>
         ) : (
           <>
+            {statusNotificacao && (
+              <View style={styles.statusAviso}>
+                <Text style={styles.statusAvisoText}>
+                  Status do vínculo atualizado: {statusNotificacao}.
+                </Text>
+              </View>
+            )}
             {/* AVATAR + NOME */}
             <View style={styles.perfilTopo}>
               <View style={styles.avatarGrande}>
@@ -133,6 +142,8 @@ const rowStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   tela: { flex: 1, backgroundColor: '#fff' },
   scroll: { padding: 22, paddingBottom: 50 },
+  statusAviso: { backgroundColor: '#DEF6F0', borderRadius: 10, padding: 12, marginBottom: 16 },
+  statusAvisoText: { color: '#0B7A6E', fontFamily: 'RalewayBold' },
 
   // Sem vínculo
   semVinculo: { alignItems: 'center', paddingVertical: 60 },

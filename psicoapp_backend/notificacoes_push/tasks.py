@@ -32,30 +32,37 @@ def _notification_target_user(notificacao):
 
 def _build_push_payload(notificacao):
     dados_extras = notificacao.dados_extras or {}
-    
-    # Issue 15: Badge counter logic
+
+    # Contagem de badge para o destinatário
     user = _notification_target_user(notificacao)
     badge_count = 0
     if user:
         from core.models import NotificacaoSistema
         badge_count = NotificacaoSistema.objects.filter(
             models.Q(paciente__user=user) | models.Q(psicologo__user=user),
-            lida=False
+            lida=False,
         ).count()
+
+    # Issue 01: Copiar o contrato canônico completo de dados_extras para data do push.
+    # O frontend deve usar exatamente os mesmos campos que a inbox.
+    # Campos: notification_id, screen, params, event, entity_type, entity_id.
+    # Payloads sem rota válida usam fallback screen='Notificacoes'.
+    data = {
+        "notification_id": notificacao.id,
+        "screen": dados_extras.get("screen") or "Notificacoes",
+        "params": dados_extras.get("params") or {},
+        "event": dados_extras.get("event"),
+        "entity_type": dados_extras.get("entity_type"),
+        "entity_id": dados_extras.get("entity_id"),
+        # link_relacionado mantido como metadado; o app não deve interpretar como rota.
+        "link_relacionado": notificacao.link_relacionado,
+    }
 
     return {
         "title": notificacao.titulo,
         "body": notificacao.mensagem,
         "badge": badge_count,
-        "data": {
-            "notification_id": notificacao.id,
-            "screen": dados_extras.get("screen", "Notificacoes"),
-            "params": dados_extras.get("params", {}),
-            "link_relacionado": notificacao.link_relacionado,
-            "event": dados_extras.get("event"),
-            "session_id": dados_extras.get("session_id"),
-            "registro_id": dados_extras.get("registro_id"),
-        },
+        "data": data,
         "sound": "default",
         "android": {
             "channelId": "psicobem-notificacoes",
@@ -310,11 +317,13 @@ def dispatch_session_reminders():
                         titulo="Lembrete de Sessão",
                         mensagem=_build_reminder_message(sessao, reminder_type, minutes),
                         link_relacionado=f"/sessoes/{sessao.pk}",
+                        # Issue 02: parâmetro canônico sessaoId (não mais 'id')
                         dados_extras=NotificationDomainService._routing_payload(
                             screen="DetalhesSessao",
-                            params={"id": sessao.pk},
+                            params={"sessaoId": sessao.pk},
                             event=reminder_type,
-                            session_id=sessao.pk,
+                            entity_type="sessao",
+                            entity_id=sessao.pk,
                         ),
                     )
                     results["created"] += 1

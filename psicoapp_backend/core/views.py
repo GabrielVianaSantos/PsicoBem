@@ -161,7 +161,7 @@ class VinculoViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(vinculo)
 
-        # Issue 10: Notificar paciente sobre alteração no vínculo
+        # Notificar paciente sobre alteração no vínculo
         from core.services import NotificationDomainService
         status_display = {
             'ativo': 'Ativado',
@@ -176,10 +176,13 @@ class VinculoViewSet(viewsets.ModelViewSet):
             titulo='Vínculo Atualizado 🔄',
             mensagem=f'O status do seu vínculo com {vinculo.psicologo.user.first_name} foi alterado para: {status_display}.',
             link_relacionado='/meu-psicologo',
+            # Issue 02: event=vinculo_alterado → MeuPsicologo; params com status atual
             dados_extras=NotificationDomainService._routing_payload(
                 screen='MeuPsicologo',
+                params={'status': novo_status},
                 event='vinculo_alterado',
-                status=novo_status,
+                entity_type='vinculo',
+                entity_id=vinculo.id,
             ),
         )
 
@@ -269,7 +272,7 @@ class ProntuarioViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Apenas psicólogos podem criar prontuários.")
         prontuario = serializer.save(psicologo=self.request.user.psicologo_profile)
 
-        # Issue 08: Notificar paciente sobre novo prontuário
+        # Notificar paciente sobre novo prontuário
         from core.services import NotificationDomainService
         NotificationDomainService.emit(
             target=prontuario.paciente.user,
@@ -277,10 +280,13 @@ class ProntuarioViewSet(viewsets.ModelViewSet):
             titulo='Novo Prontuário Disponível 📝',
             mensagem='Seu psicólogo disponibilizou uma nova guia ou prontuário para você.',
             link_relacionado='/prontuarios',
+            # Issue 02: parâmetro canônico prontuarioId, entity_type/entity_id
             dados_extras=NotificationDomainService._routing_payload(
                 screen='MeusProntuarios',
+                params={'prontuarioId': prontuario.pk},
                 event='prontuario_criado',
-                prontuario_id=prontuario.pk,
+                entity_type='prontuario',
+                entity_id=prontuario.pk,
             ),
         )
 

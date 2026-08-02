@@ -58,12 +58,15 @@ export default function Routes() {
 
   useEffect(() => {
     notificationService.setupNotificationHandler();
-    cleanupRef.current = notificationService.setupNotificationListeners(navigationRef);
+    // Issue 03: passar getUserType para que o dispatcher valide a rota pelo perfil
+    cleanupRef.current = notificationService.setupNotificationListeners(navigationRef, {
+      getUserType: () => userType,
+    });
 
     return () => {
       if (cleanupRef.current) cleanupRef.current();
     };
-  }, []);
+  }, [userType]);
 
   if (loading) {
     return (
@@ -115,6 +118,8 @@ export default function Routes() {
             <AppStack.Screen name="RegistrosOdisseia" component={RegistrosOdisseia} />
             <AppStack.Screen name="PerfilPaciente" component={PerfilPaciente} />
             <AppStack.Screen name="RegistroCompleto" component={RegistroCompleto} />
+            {/* DetalhesSessao: disponível ao paciente via MinhasSessoes e notificações de sessão */}
+            <AppStack.Screen name="DetalhesSessao" component={DetalhesSessao} />
             <AppStack.Screen name="MinhasSessoes" component={MinhasSessoes} />
             <AppStack.Screen name="MeuPsicologo" component={MeuPsicologo} />
             <AppStack.Screen name="SementesPaciente" component={SementesPaciente} />
