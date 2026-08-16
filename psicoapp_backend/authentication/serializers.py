@@ -103,6 +103,7 @@ class UserSerializer(serializers.ModelSerializer):
     psicologo_id = serializers.SerializerMethodField()
     vinculo_ativo = serializers.SerializerMethodField()
     crp = serializers.CharField(source='psicologo_profile.crp', read_only=True)
+    cpf = serializers.CharField(source='paciente_profile.cpf', read_only=True)
     specialization = serializers.CharField(
         source='psicologo_profile.specialization',
         required=False,
@@ -122,9 +123,9 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'email', 'username', 'first_name', 'last_name',
             'user_type', 'phone', 'created_at',
             'paciente_id', 'psicologo_id', 'vinculo_ativo',
-            'crp', 'specialization', 'biography',
+            'crp', 'cpf', 'specialization', 'biography',
         )
-        read_only_fields = ('id', 'created_at')
+        read_only_fields = ('id', 'email', 'created_at')
 
     def get_paciente_id(self, obj):
         try:
