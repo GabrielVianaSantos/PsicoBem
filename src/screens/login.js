@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert, KeyboardAvoidingView, ScrollView, Platform } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import Topo from "./components/topo";
 import Botao from "../components/common/Button";
 import { useNavigation } from "@react-navigation/native";
@@ -12,9 +13,10 @@ export default function Login(){
     const [senha, setSenha] = useState('');
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
 
     const navigation = useNavigation();
-    const { login } = useAuth();
+    const { login, loginWithGoogle } = useAuth();
 
     // Validation functions
     const validateEmail = (email) => {
@@ -64,6 +66,44 @@ export default function Login(){
         }
     };
 
+    const handleGoogleLogin = async () => {
+        setGoogleLoading(true);
+        try {
+            const result = await loginWithGoogle();
+
+            if (!result.success) {
+                if (result.cancelled) {
+                    return;
+                }
+                Alert.alert('❌ Erro', result.message || 'Não foi possível entrar com o Google.');
+                return;
+            }
+
+            if (result.status === 'registration_required') {
+                navigation.navigate('CompletarCadastroGoogle', {
+                    registrationToken: result.registrationToken,
+                    prefill: result.prefill,
+                });
+                return;
+            }
+
+            if (result.status === 'link_confirmation_required') {
+                navigation.navigate('ConfirmarVinculoGoogle', {
+                    linkToken: result.linkToken,
+                    email: result.email,
+                });
+                return;
+            }
+
+            // status === 'authenticated' → routes.js troca a pilha sozinho
+        } catch (error) {
+            console.error('❌ Erro inesperado no login com Google:', error);
+            Alert.alert('❌ Erro', 'Erro inesperado. Tente novamente.');
+        } finally {
+            setGoogleLoading(false);
+        }
+    };
+
     function navigateToTipoCadastro() {
         navigation.navigate("TipoCadastro");
     }
@@ -83,9 +123,10 @@ return <View style={{ flex: 1, backgroundColor: 'white' }}>
             <View style={estilos.containerConteudo}>
                 <View style={estilos.containerTitulo}>
                     <Text style={estilos.titulo}>Login</Text>
-                </View>    
-                <View style={{ marginTop: 10 }}>
-                    <TextInputCustom                    
+                </View>
+
+                <View style={estilos.formCard}>
+                    <TextInputCustom
                         texto="Email"
                         iconName="mail"
                         iconColor="#11B5A4"
@@ -100,7 +141,7 @@ return <View style={{ flex: 1, backgroundColor: 'white' }}>
                         error={!!errors.email}
                     />
                     {errors.email && <Text style={estilos.errorText}>{errors.email}</Text>}
-                    
+
                     <TextInputCustom
                         texto="Senha"
                         iconName="lock-closed"
@@ -115,15 +156,15 @@ return <View style={{ flex: 1, backgroundColor: 'white' }}>
                         error={!!errors.senha}
                     />
                     {errors.senha && <Text style={estilos.errorText}>{errors.senha}</Text>}
-                </View>
 
-                {/* Link Esqueceu a senha */}
-                <TouchableOpacity 
-                    style={{ marginTop: 15, alignSelf: 'flex-end' }}
-                    onPress={() => navigation.navigate('RedefinirSenha')}
-                >
-                    <Text style={[estilos.texto, { marginTop: 0 }]}>Esqueceu a senha?</Text>
-                </TouchableOpacity>
+                    {/* Link Esqueceu a senha */}
+                    <TouchableOpacity
+                        style={{ marginTop: 15, alignSelf: 'flex-end' }}
+                        onPress={() => navigation.navigate('RedefinirSenha')}
+                    >
+                        <Text style={[estilos.texto, { marginTop: 0 }]}>Esqueceu a senha?</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {/* Container Inferior para botões */}
@@ -137,21 +178,27 @@ return <View style={{ flex: 1, backgroundColor: 'white' }}>
                     />
                 </View>
                 <View style={estilos.containerRodape}>
-                    <Botao 
-                        texto="Entre com o Google" 
-                        onPress={() => Alert.alert('Info', 'Login com Google será implementado em breve!')} 
-                        backgroundColor="#11B5A4" 
-                        iconName="logo-google" 
-                        iconColor="white" 
-                        iconSize={25}
-                        disabled={loading}
-                    />
-                </View>
-                <View style={estilos.criarConta}>
-                    <TouchableOpacity onPress={navigateToTipoCadastro}>
-                        <Text style={estilos.texto}>Não tem uma Conta? Crie uma!</Text>
+                    <TouchableOpacity
+                        style={[estilos.btnGoogle, googleLoading && estilos.btnGoogleDesabilitado]}
+                        onPress={handleGoogleLogin}
+                        disabled={googleLoading}
+                        activeOpacity={0.8}
+                    >
+                        <Ionicons name="logo-google" size={22} color="#11B5A4" style={{ marginRight: 8 }} />
+                        <Text style={estilos.btnGoogleText}>{googleLoading ? 'Conectando...' : 'Entre com o Google'}</Text>
                     </TouchableOpacity>
-                </View> 
+                </View>
+                <View style={estilos.footerDivider} />
+
+                <View style={estilos.criarConta}>
+                    <Text style={estilos.criarContaTexto}>Não tem uma conta?</Text>
+                    <TouchableOpacity
+                        onPress={navigateToTipoCadastro}
+                        hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+                    >
+                        <Text style={estilos.criarContaLink}> Criar conta</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         </View>
         </ScrollView>
@@ -191,6 +238,42 @@ const estilos = StyleSheet.create({
         fontSize: 30,
     },
 
+    formCard: {
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
+        borderRadius: 12,
+        padding: 20,
+        marginTop: 15,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+    },
+
+    btnGoogle: {
+        width: '100%',
+        minHeight: 48,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 6,
+        borderWidth: 1.5,
+        borderColor: '#11B5A4',
+        backgroundColor: 'white',
+    },
+
+    btnGoogleDesabilitado: {
+        opacity: 0.7,
+    },
+
+    btnGoogleText: {
+        color: '#11B5A4',
+        fontSize: 16,
+        fontFamily: 'RalewayBold',
+    },
+
     containerRodape:{
         alignItems: "center",
         marginTop: 15,
@@ -204,11 +287,31 @@ const estilos = StyleSheet.create({
         marginTop: 10,
     },
 
+    footerDivider: {
+        height: 1,
+        backgroundColor: '#eee',
+        marginTop: 25,
+        marginHorizontal: 10,
+    },
+
     criarConta:{
         display: "flex",
         flexDirection: "row",
         justifyContent: "center",
         alignItems: "center",
+        marginTop: 18,
+    },
+
+    criarContaTexto: {
+        color: "#777",
+        fontFamily: "RalewayRegular",
+        fontSize: 14,
+    },
+
+    criarContaLink: {
+        color: "#11B5A4",
+        fontFamily: "RalewayBold",
+        fontSize: 14,
     },
 
     errorText: {

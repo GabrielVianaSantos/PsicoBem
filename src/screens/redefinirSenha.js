@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import Topo from "./components/topo";
 import TextInputCustom from "../components/common/TextInputField";
 import Botao from "../components/common/Button";
@@ -9,7 +10,7 @@ import { authService } from "../services/authService";
 export default function RedefinirSenha() {
     const navigation = useNavigation();
     const [step, setStep] = useState(1); // 1: Email, 2: Token + Password
-    
+
     const [email, setEmail] = useState("");
     const [token, setToken] = useState("");
     const [uid, setUid] = useState("");
@@ -26,13 +27,13 @@ export default function RedefinirSenha() {
         setLoading(true);
         try {
             const result = await authService.requestPasswordReset(email);
-            
+
             // Simulação de e-mail: mostramos o token no alerta para o desenvolvedor
             if (result.token) {
                 setUid(result.uid);
                 // setToken(result.token); // Opcional: preencher automaticamente em dev
                 Alert.alert(
-                    "Solicitação Enviada", 
+                    "Solicitação Enviada",
                     "No futuro, um e-mail será enviado. \n\nPara fins de teste agora, use o código: " + result.token,
                     [{ text: "OK", onPress: () => setStep(2) }]
                 );
@@ -62,7 +63,7 @@ export default function RedefinirSenha() {
         try {
             await authService.confirmPasswordReset(uid, token, newPassword);
             Alert.alert(
-                "Sucesso", 
+                "Sucesso",
                 "Sua senha foi alterada com sucesso!",
                 [{ text: "Ir para Login", onPress: () => navigation.navigate("Login") }]
             );
@@ -76,24 +77,29 @@ export default function RedefinirSenha() {
     return (
         <View style={{ flex: 1, backgroundColor: 'white' }}>
             <Topo back={true} compact={true} />
-            
-            <KeyboardAvoidingView 
+
+            <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
             >
-                <ScrollView contentContainerStyle={estilos.container}>
-                    <View style={estilos.header}>
-                        <Text style={estilos.titulo}>Recuperar Senha</Text>
-                        <Text style={estilos.subtitulo}>
-                            {step === 1 
-                                ? "Informe seu e-mail para receber as instruções de recuperação." 
+                <ScrollView
+                    style={estilos.tela}
+                    contentContainerStyle={estilos.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={estilos.headerBlock}>
+                        <Text style={estilos.screenTitle}>Recuperar Senha</Text>
+                        <Text style={estilos.screenSubtitle}>
+                            {step === 1
+                                ? "Informe seu e-mail para receber as instruções de recuperação."
                                 : "Digite o código que você recebeu e a nova senha desejada."}
                         </Text>
                     </View>
+                    <View style={estilos.divider} />
 
                     {step === 1 ? (
-                        <View style={estilos.form}>
-                            <TextInputCustom 
+                        <View style={estilos.formCard}>
+                            <TextInputCustom
                                 texto="E-mail"
                                 value={email}
                                 onChangeText={setEmail}
@@ -102,18 +108,19 @@ export default function RedefinirSenha() {
                                 autoCapitalize="none"
                                 texto_placeholder="seuemail@exemplo.com"
                             />
-                            
-                            <View style={{ marginTop: 30 }}>
-                                <Botao 
+
+                            <View style={{ marginTop: 25 }}>
+                                <Botao
                                     texto={loading ? "Enviando..." : "Enviar Código"}
+                                    iconName="paper-plane-outline"
                                     onPress={handleRequestReset}
                                     disabled={loading}
                                 />
                             </View>
                         </View>
                     ) : (
-                        <View style={estilos.form}>
-                            <TextInputCustom 
+                        <View style={estilos.formCard}>
+                            <TextInputCustom
                                 texto="Código de Recuperação"
                                 value={token}
                                 onChangeText={setToken}
@@ -121,7 +128,7 @@ export default function RedefinirSenha() {
                                 texto_placeholder="Digite o código (Token)"
                             />
 
-                            <TextInputCustom 
+                            <TextInputCustom
                                 texto="Nova Senha"
                                 value={newPassword}
                                 onChangeText={setNewPassword}
@@ -130,7 +137,7 @@ export default function RedefinirSenha() {
                                 texto_placeholder="Mínimo 6 caracteres"
                             />
 
-                            <TextInputCustom 
+                            <TextInputCustom
                                 texto="Confirme a Nova Senha"
                                 value={confirmPassword}
                                 onChangeText={setConfirmPassword}
@@ -139,18 +146,20 @@ export default function RedefinirSenha() {
                                 texto_placeholder="Repita a nova senha"
                             />
 
-                            <View style={{ marginTop: 30 }}>
-                                <Botao 
+                            <View style={{ marginTop: 25 }}>
+                                <Botao
                                     texto={loading ? "Alterando..." : "Redefinir Senha"}
+                                    iconName="checkmark-circle-outline"
                                     onPress={handleConfirmReset}
                                     disabled={loading}
                                 />
                             </View>
 
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={estilos.btnVoltar}
                                 onPress={() => setStep(1)}
                             >
+                                <Ionicons name="arrow-back" size={16} color="#11B5A4" />
                                 <Text style={estilos.btnVoltarText}>Voltar para o passo 1</Text>
                             </TouchableOpacity>
                         </View>
@@ -162,36 +171,59 @@ export default function RedefinirSenha() {
 }
 
 const estilos = StyleSheet.create({
-    container: {
-        padding: 25,
-        flexGrow: 1,
-    },
-    header: {
-        marginBottom: 30,
-        marginTop: 20,
-    },
-    titulo: {
-        fontSize: 26,
-        fontFamily: 'RalewayBold',
-        color: '#11B5A4',
-        marginBottom: 10,
-    },
-    subtitulo: {
-        fontSize: 16,
-        color: '#666',
-        lineHeight: 22,
-    },
-    form: {
+    tela: {
         flex: 1,
+        backgroundColor: 'white',
+    },
+    scrollContent: {
+        paddingBottom: 40,
+    },
+    headerBlock: {
+        paddingHorizontal: 25,
+        paddingTop: 15,
+        paddingBottom: 15,
+    },
+    screenTitle: {
+        fontSize: 18,
+        fontFamily: 'RalewayBold',
+        color: '#333',
+    },
+    screenSubtitle: {
+        fontSize: 14,
+        color: '#666',
+        marginTop: 5,
+        lineHeight: 20,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#eee',
+        marginHorizontal: 25,
+    },
+    formCard: {
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
+        borderRadius: 12,
+        padding: 20,
+        marginHorizontal: 25,
+        marginTop: 20,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     btnVoltar: {
+        flexDirection: 'row',
         marginTop: 20,
         alignItems: 'center',
+        justifyContent: 'center',
         padding: 10,
     },
     btnVoltarText: {
         color: '#11B5A4',
         fontFamily: 'RalewayBold',
         fontSize: 14,
+        marginLeft: 6,
     },
 });

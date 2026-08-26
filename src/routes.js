@@ -12,6 +12,8 @@ import TipoCadastro from "./screens/tipoCadastro";
 import CadastroPacientes from "./screens/cadastroPacientes";
 import CadastroPsicologos from "./screens/cadastroPsicologos";
 import RedefinirSenha from "./screens/redefinirSenha";
+import CompletarCadastroGoogle from "./screens/completarCadastroGoogle";
+import ConfirmarVinculoGoogle from "./screens/confirmarVinculoGoogle";
 
 // Telas Comuns / Compartilhadas
 import RegistroCompleto from "./screens/registroCompleto";
@@ -39,6 +41,7 @@ import MinhasSessoes from "./screens/minhasSessoes";           // ← NOVA
 import MeuPsicologo from "./screens/meuPsicologo";            // ← NOVA
 import SementesPaciente from "./screens/sementesPaciente";    // ← NOVA
 import MeusProntuarios from "./screens/meusProntuarios";      // ← NOVA
+import MeuPerfil from "./screens/meuPerfil";
 import Notificacoes from "./screens/notificacoes";
 import { notificationService } from "./services/notificationService";
 
@@ -53,7 +56,7 @@ const commonOptions = {
 };
 
 export default function Routes() {
-  const { isAuthenticated, userType, loading } = useAuth();
+  const { isAuthenticated, userType, initializing } = useAuth();
   const cleanupRef = useRef(null);
 
   useEffect(() => {
@@ -68,7 +71,7 @@ export default function Routes() {
     };
   }, [userType]);
 
-  if (loading) {
+  if (initializing) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "white" }}>
         <ActivityIndicator size="large" color="#11B5A4" />
@@ -88,6 +91,8 @@ export default function Routes() {
             <AppStack.Screen name="CadastroPacientes" component={CadastroPacientes} />
             <AppStack.Screen name="CadastroPsicologos" component={CadastroPsicologos} />
             <AppStack.Screen name="RedefinirSenha" component={RedefinirSenha} />
+            <AppStack.Screen name="CompletarCadastroGoogle" component={CompletarCadastroGoogle} />
+            <AppStack.Screen name="ConfirmarVinculoGoogle" component={ConfirmarVinculoGoogle} />
           </>
         ) : userType === "psicologo" ? (
           // ─── Fluxo do Psicólogo ───
@@ -124,6 +129,7 @@ export default function Routes() {
             <AppStack.Screen name="MeuPsicologo" component={MeuPsicologo} />
             <AppStack.Screen name="SementesPaciente" component={SementesPaciente} />
             <AppStack.Screen name="MeusProntuarios" component={MeusProntuarios} />
+            <AppStack.Screen name="MeuPerfil" component={MeuPerfil} />
             <AppStack.Screen name="Notificacoes" component={Notificacoes} />
           </>
         )}

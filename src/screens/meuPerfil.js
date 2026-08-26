@@ -1,82 +1,72 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import React, { useState, useCallback } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Topo from "./components/topo";
 import { useAuth } from "../hooks/useAuth";
+import { authService } from "../services/authService";
+import { pacienteService } from "../services/pacienteService";
 import TextInputCustom from "../components/common/TextInputField";
 import Botao from "../components/common/Button";
-import { authService } from "../services/authService";
 
-export default function PerfilPsicologo() {
+export default function MeuPerfil() {
     const navigation = useNavigation();
-    const { user, updateProfile, logout } = useAuth();
-    
-    const [nome, setNome] = useState(user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : "");
+    const { user, logout } = useAuth();
+
+    const [nome, setNome] = useState(user?.nome_completo || [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim());
     const [email, setEmail] = useState(user?.email || "");
-    const [crp, setCrp] = useState(user?.crp || "Não informado");
-    const [especialidade, setEspecialidade] = useState(user?.specialization || "");
+    const [cpf, setCpf] = useState(user?.cpf || "Não informado");
     const [hasPassword, setHasPassword] = useState(user?.has_password !== false);
-    const [loading, setLoading] = useState(false);
+
+    const [vinculo, setVinculo] = useState(null);
+    const [loadingVinculo, setLoadingVinculo] = useState(true);
 
     const sincronizarPerfil = useCallback(async () => {
         try {
             const response = await authService.getUserProfile();
-            if (!response.success) return;
-
-            const perfil = response.data;
-            setNome(perfil?.nome_completo || [perfil?.first_name, perfil?.last_name].filter(Boolean).join(' ').trim());
-            setEmail(perfil?.email || "");
-            setCrp(perfil?.crp || "Não informado");
-            setEspecialidade(perfil?.specialization || "");
-            setHasPassword(perfil?.has_password !== false);
+            if (response.success) {
+                const perfil = response.data;
+                setNome(perfil?.nome_completo || [perfil?.first_name, perfil?.last_name].filter(Boolean).join(' ').trim());
+                setEmail(perfil?.email || "");
+                setCpf(perfil?.cpf || "Não informado");
+                setHasPassword(perfil?.has_password !== false);
+            }
         } catch (error) {
-            console.error("Erro ao carregar perfil do psicólogo:", error);
+            console.error("Erro ao carregar perfil do paciente:", error);
+        }
+    }, []);
+
+    const carregarVinculo = useCallback(async () => {
+        setLoadingVinculo(true);
+        try {
+            const response = await pacienteService.getMeuPsicologo();
+            setVinculo(response.success ? response.data : null);
+        } catch (error) {
+            console.error("Erro ao carregar psicólogo vinculado:", error);
+            setVinculo(null);
+        } finally {
+            setLoadingVinculo(false);
         }
     }, []);
 
     useFocusEffect(
         useCallback(() => {
             sincronizarPerfil();
-        }, [sincronizarPerfil])
+            carregarVinculo();
+        }, [sincronizarPerfil, carregarVinculo])
     );
+
+    const handleLogout = async () => {
+        await logout();
+        navigation.navigate("Login");
+    };
 
     // Estados para mudança de senha
     const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [senhaAtual, setSenhaAtual] = useState("");
     const [novaSenha, setNovaSenha] = useState("");
     const [confirmarNovaSenha, setConfirmarNovaSenha] = useState("");
-
-    const handleSalvar = async () => {
-        if (!nome.trim()) {
-            Alert.alert("Erro", "O nome não pode estar vazio.");
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const firstName = nome.split(' ')[0];
-            const lastName = nome.split(' ').slice(1).join(' ');
-            
-            const result = await updateProfile({
-                first_name: firstName,
-                last_name: lastName,
-                specialization: especialidade
-            });
-
-            if (result.success) {
-                setNome(result.user?.nome_completo || `${firstName} ${lastName}`.trim());
-                setEspecialidade(result.user?.specialization || especialidade);
-                Alert.alert("Sucesso", "Perfil atualizado com sucesso!");
-            } else {
-                Alert.alert("Erro", result.message || "Erro ao atualizar perfil.");
-            }
-        } catch (error) {
-            Alert.alert("Erro", "Ocorreu um erro inesperado.");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const [loadingSenha, setLoadingSenha] = useState(false);
 
     const handleAlterarSenha = async () => {
         if (hasPassword && !senhaAtual) {
@@ -94,7 +84,7 @@ export default function PerfilPsicologo() {
             return;
         }
 
-        setLoading(true);
+        setLoadingSenha(true);
         try {
             await authService.changePassword(hasPassword ? senhaAtual : null, novaSenha);
             Alert.alert("Sucesso", hasPassword ? "Senha alterada com sucesso!" : "Senha criada com sucesso!");
@@ -106,58 +96,47 @@ export default function PerfilPsicologo() {
         } catch (error) {
             Alert.alert("Erro", error.message || "Erro ao alterar senha. Verifique sua senha atual.");
         } finally {
-            setLoading(false);
+            setLoadingSenha(false);
         }
     };
 
-    const handleLogout = async () => {
-        await logout();
-        navigation.navigate("Login");
-    };
+    const psicologo = vinculo?.psicologo;
 
     return (
         <View style={{ flex: 1, backgroundColor: 'white' }}>
             <Topo back={true} compact={true} />
-            
-            <KeyboardAvoidingView 
+
+            <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
             >
-                <ScrollView 
+                <ScrollView
                     style={estilos.container}
                     contentContainerStyle={{ paddingBottom: 40 }}
                 >
                     <View style={estilos.header}>
                         <View style={estilos.avatarBig}>
                             <Text style={estilos.avatarTextBig}>
-                                {user?.first_name ? user.first_name[0].toUpperCase() : "P"}
+                                {nome ? nome[0].toUpperCase() : "P"}
                             </Text>
                         </View>
                         <Text style={estilos.nomeUsuario}>{nome}</Text>
-                        <Text style={estilos.tipoUsuario}>Psicólogo(a)</Text>
+                        <Text style={estilos.tipoUsuario}>Paciente</Text>
                     </View>
 
                     <View style={estilos.form}>
-                        {/* Seção de Perfil */}
                         {!isChangingPassword ? (
                             <>
-                                <TextInputCustom 
-                                    texto="Nome Completo"
-                                    value={nome}
-                                    onChangeText={setNome}
-                                    iconName="person"
-                                />
-
-                                <TextInputCustom 
-                                    texto="Especialidade"
-                                    value={especialidade}
-                                    onChangeText={setEspecialidade}
-                                    iconName="school"
-                                    texto_placeholder="Ex: Terapia Cognitivo-Comportamental"
-                                />
+                                <View style={estilos.infoReadOnly}>
+                                    <Text style={estilos.labelReadOnly}>Nome Completo</Text>
+                                    <View style={estilos.readOnlyBox}>
+                                        <Ionicons name="person" size={20} color="#888" />
+                                        <Text style={estilos.textReadOnly}>{nome}</Text>
+                                    </View>
+                                </View>
 
                                 <View style={estilos.infoReadOnly}>
-                                    <Text style={estilos.labelReadOnly}>E-mail (Não editável)</Text>
+                                    <Text style={estilos.labelReadOnly}>E-mail</Text>
                                     <View style={estilos.readOnlyBox}>
                                         <Ionicons name="mail" size={20} color="#888" />
                                         <Text style={estilos.textReadOnly}>{email}</Text>
@@ -165,22 +144,45 @@ export default function PerfilPsicologo() {
                                 </View>
 
                                 <View style={estilos.infoReadOnly}>
-                                    <Text style={estilos.labelReadOnly}>CRP (Não editável)</Text>
+                                    <Text style={estilos.labelReadOnly}>CPF</Text>
                                     <View style={estilos.readOnlyBox}>
-                                        <Ionicons name="id-card" size={20} color="#888" />
-                                        <Text style={estilos.textReadOnly}>{crp}</Text>
+                                        <Ionicons name="card" size={20} color="#888" />
+                                        <Text style={estilos.textReadOnly}>{cpf}</Text>
                                     </View>
                                 </View>
 
-                                <View style={{ marginTop: 30 }}>
-                                    <Botao 
-                                        texto={loading ? "Salvando..." : "Salvar Alterações"}
-                                        onPress={handleSalvar}
-                                        disabled={loading}
-                                    />
-                                </View>
+                                <Text style={estilos.sectionTitle}>Meu Tratamento</Text>
 
-                                <TouchableOpacity 
+                                {loadingVinculo ? (
+                                    <ActivityIndicator size="small" color="#11B5A4" style={{ marginTop: 10 }} />
+                                ) : psicologo ? (
+                                    <>
+                                        <View style={estilos.infoReadOnly}>
+                                            <Text style={estilos.labelReadOnly}>Psicólogo Atribuído</Text>
+                                            <View style={estilos.readOnlyBox}>
+                                                <Ionicons name="medkit" size={20} color="#888" />
+                                                <Text style={estilos.textReadOnly}>{psicologo.nome_completo}</Text>
+                                            </View>
+                                        </View>
+
+                                        <View style={estilos.infoReadOnly}>
+                                            <Text style={estilos.labelReadOnly}>Tempo de Tratamento</Text>
+                                            <View style={estilos.readOnlyBox}>
+                                                <Ionicons name="time" size={20} color="#888" />
+                                                <Text style={estilos.textReadOnly}>
+                                                    {vinculo.duracao_dias != null ? `${vinculo.duracao_dias} dias` : 'Não informado'}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    </>
+                                ) : (
+                                    <View style={estilos.semVinculo}>
+                                        <Ionicons name="information-circle-outline" size={20} color="#888" />
+                                        <Text style={estilos.semVinculoText}>Nenhum psicólogo vinculado no momento.</Text>
+                                    </View>
+                                )}
+
+                                <TouchableOpacity
                                     style={estilos.btnSenha}
                                     onPress={() => setIsChangingPassword(true)}
                                 >
@@ -213,7 +215,7 @@ export default function PerfilPsicologo() {
                                     secureTextEntry={true}
                                 />
 
-                                <TextInputCustom 
+                                <TextInputCustom
                                     texto="Confirme a Nova Senha"
                                     value={confirmarNovaSenha}
                                     onChangeText={setConfirmarNovaSenha}
@@ -222,14 +224,14 @@ export default function PerfilPsicologo() {
                                 />
 
                                 <View style={{ marginTop: 20 }}>
-                                    <Botao 
-                                        texto={loading ? "Processando..." : "Confirmar Nova Senha"}
+                                    <Botao
+                                        texto={loadingSenha ? "Processando..." : "Confirmar Nova Senha"}
                                         onPress={handleAlterarSenha}
-                                        disabled={loading}
+                                        disabled={loadingSenha}
                                     />
                                 </View>
 
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     style={estilos.btnCancelar}
                                     onPress={() => setIsChangingPassword(false)}
                                 >
@@ -238,7 +240,7 @@ export default function PerfilPsicologo() {
                             </View>
                         )}
 
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={estilos.btnSair}
                             onPress={handleLogout}
                         >
@@ -293,6 +295,13 @@ const estilos = StyleSheet.create({
     form: {
         padding: 25,
     },
+    sectionTitle: {
+        fontSize: 18,
+        fontFamily: 'RalewayBold',
+        color: '#11B5A4',
+        marginTop: 30,
+        marginBottom: 10,
+    },
     infoReadOnly: {
         marginTop: 15,
     },
@@ -316,6 +325,22 @@ const estilos = StyleSheet.create({
         color: '#666',
         fontSize: 16,
     },
+    semVinculo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fafafa',
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
+        borderRadius: 8,
+        padding: 15,
+        marginTop: 10,
+    },
+    semVinculoText: {
+        marginLeft: 10,
+        color: '#888',
+        fontSize: 14,
+        flex: 1,
+    },
     btnSenha: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -325,22 +350,6 @@ const estilos = StyleSheet.create({
     },
     btnSenhaText: {
         color: '#11B5A4',
-        fontFamily: 'RalewayBold',
-        fontSize: 16,
-        marginLeft: 8,
-    },
-    btnSair: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 40,
-        padding: 15,
-        borderWidth: 1,
-        borderColor: '#EF5350',
-        borderRadius: 10,
-    },
-    btnSairText: {
-        color: '#EF5350',
         fontFamily: 'RalewayBold',
         fontSize: 16,
         marginLeft: 8,
@@ -363,5 +372,21 @@ const estilos = StyleSheet.create({
         color: '#666',
         fontFamily: 'RalewayBold',
         fontSize: 16,
+    },
+    btnSair: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 40,
+        padding: 15,
+        borderWidth: 1,
+        borderColor: '#EF5350',
+        borderRadius: 10,
+    },
+    btnSairText: {
+        color: '#EF5350',
+        fontFamily: 'RalewayBold',
+        fontSize: 16,
+        marginLeft: 8,
     },
 });

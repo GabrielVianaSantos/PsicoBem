@@ -9,10 +9,18 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.deviana-tech.cloud/api",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "612818948583-dpnb8stb6kfk8bb72tr5gvicnhqbncdh.apps.googleusercontent.com"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.deviana-tech.cloud/api",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "612818948583-dpnb8stb6kfk8bb72tr5gvicnhqbncdh.apps.googleusercontent.com"
+      }
     }
   },
   "submit": {

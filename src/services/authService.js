@@ -155,6 +155,54 @@ export const authService = {
     }
   },
 
+  // Login com Google — troca o id_token do Google pelos tokens do PsicoBem
+  async loginWithGoogle(idToken) {
+    try {
+      const response = await api.post('/auth/google/', { id_token: idToken });
+      return response.data;
+    } catch (error) {
+      const errorInfo = this.handleError(error);
+      const errorToThrow = new Error(errorInfo.message);
+      errorToThrow.status = errorInfo.status;
+      errorToThrow.data = errorInfo.data;
+      errorToThrow.code = errorInfo.code;
+      throw errorToThrow;
+    }
+  },
+
+  // Confirma o vínculo de uma conta local existente à identidade Google
+  async linkGoogleAccount({ linkToken, password }) {
+    try {
+      const response = await api.post('/auth/google/link/', {
+        link_token: linkToken,
+        password,
+      });
+      return response.data;
+    } catch (error) {
+      const errorInfo = this.handleError(error);
+      const errorToThrow = new Error(errorInfo.message);
+      errorToThrow.status = errorInfo.status;
+      errorToThrow.data = errorInfo.data;
+      errorToThrow.code = errorInfo.code;
+      throw errorToThrow;
+    }
+  },
+
+  // Completa o cadastro (paciente ou psicólogo) iniciado via Google
+  async completeGoogleRegistration(payload) {
+    try {
+      const response = await api.post('/auth/google/complete/', payload);
+      return response.data;
+    } catch (error) {
+      const errorInfo = this.handleError(error);
+      const errorToThrow = new Error(errorInfo.message);
+      errorToThrow.status = errorInfo.status;
+      errorToThrow.data = errorInfo.data;
+      errorToThrow.code = errorInfo.code;
+      throw errorToThrow;
+    }
+  },
+
   // Conectar paciente a psicólogo via CRP
   async conectarPsicologo(crp) {
     try {
@@ -236,6 +284,25 @@ export const authService = {
               }
             }
           }
+
+          // Senha inválida (ex.: tamanho mínimo)
+          else if (userErrors.password) {
+            if (Array.isArray(userErrors.password)) {
+              message = `Senha: ${userErrors.password[0]}`;
+            } else {
+              message = `Senha: ${userErrors.password}`;
+            }
+          }
+
+          // Confirmação de senha não coincide (erro de validate() do serializer)
+          else if (userErrors.non_field_errors) {
+            if (Array.isArray(userErrors.non_field_errors)) {
+              message = userErrors.non_field_errors[0];
+            } else {
+              message = userErrors.non_field_errors;
+            }
+          }
+
           else {
               message = 'Dados do usuário inválidos';
             }
@@ -271,19 +338,23 @@ export const authService = {
           }
         } 
       }
+      const code = error.response.data && error.response.data.code;
+
       // Mensagens específicas por status
-      if (error.response.status === 401) {
+      // (para 401 com `code` — ex.: endpoints do Google — mantém a mensagem vinda do backend)
+      if (error.response.status === 401 && !code) {
         message = 'Credenciais inválidas. Verifique email e senha.';
       } else if (error.response.status === 400) {
         message = message || 'Dados inválidos. Verifique as informações.';
       } else if (error.response.status === 500) {
         message = 'Erro interno do servidor. Tente novamente.';
       }
-      
+
       return {
         message,
         status: error.response.status,
         data: error.response.data,
+        code,
       };
     } else if (error.request) {
       // Erro de rede (não conseguiu se conectar ao backend)

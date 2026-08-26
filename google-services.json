@@ -12,7 +12,20 @@
           "package_name": "com.devianatech.psicoapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "612818948583-8hd9oo7l6l4rtcplpi87af3u53gm5frc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.devianatech.psicoapp",
+            "certificate_hash": "2af3b1dd53099265f3983ea5e503c6d45cb24305"
+          }
+        },
+        {
+          "client_id": "612818948583-dpnb8stb6kfk8bb72tr5gvicnhqbncdh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBR2_jIUtrVEgQpYqlQacFf-xAwuGjp7q0"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "612818948583-dpnb8stb6kfk8bb72tr5gvicnhqbncdh.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

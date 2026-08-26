@@ -19,38 +19,59 @@ export default function PerfilPaciente({ route }) {
     };
 
     return (
-        <View style={estilos.tela}>
-            <Topo back={true} compact={true}/>
-            <ScrollView contentContainerStyle={estilos.perfil}>
-                <View style={estilos.header}>
-                    <Text style={estilos.titulo}>Perfil do Paciente</Text>
+        <View style={estilos.container}>
+            <Topo back compact />
+            <ScrollView style={estilos.tela} contentContainerStyle={estilos.scrollContent}>
+                <View style={estilos.headerBlock}>
+                    <Text style={estilos.screenTitle}>Perfil do Paciente</Text>
                 </View>
-                
-                <Ionicons
-                    name="person-circle-outline"
-                    size={150}
-                    color="#11B5A4"
-                />
-                
-                <Text style={estilos.nomeDestaque}>{paciente.nome_completo || 'Paciente'}</Text>
+                <View style={estilos.divider} />
 
-                <View style={estilos.containerInfo}>
-                    <View style={estilos.caixasInfo}>
-                        <Text style={estilos.label}>Email</Text>
-                        <Text style={estilos.texto}>{paciente.user?.email || 'N/A'}</Text>
+                <View style={estilos.avatarCard}>
+                    <Ionicons name="person-circle-outline" size={90} color="#11B5A4" />
+                    <Text style={estilos.nomeDestaque}>{paciente.nome_completo || 'Paciente'}</Text>
+                </View>
+
+                <View style={estilos.sectionHeaderCont}>
+                    <Text style={estilos.sectionTitle}>Dados Pessoais</Text>
+                </View>
+
+                <View style={estilos.infoCard}>
+                    <View style={estilos.iconBadge}>
+                        <Ionicons name="mail-outline" size={20} color="#11B5A4" />
                     </View>
-                    <View style={estilos.caixasInfo}>
-                        <Text style={estilos.label}>CPF</Text>
-                        <Text style={estilos.texto}>{paciente.cpf || 'Não informado'}</Text>
-                    </View>
-                    <View style={estilos.caixasInfo}>
-                        <Text style={estilos.label}>Gênero</Text>
-                        <Text style={estilos.texto}>{generoMap[paciente.gender] || paciente.gender || 'Não informado'}</Text>
+                    <View style={{ flex: 1 }}>
+                        <Text style={estilos.infoLabel}>Email</Text>
+                        <Text style={estilos.infoValue}>{paciente.user?.email || 'N/A'}</Text>
                     </View>
                 </View>
 
-                <View style={{ width: '100%', marginTop: 20 }}>
-                    <Botao texto="Acessar Prontuários (Anotações)" onPress={navigateToProntuarios} />
+                <View style={estilos.infoCard}>
+                    <View style={estilos.iconBadge}>
+                        <Ionicons name="card-outline" size={20} color="#11B5A4" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={estilos.infoLabel}>CPF</Text>
+                        <Text style={estilos.infoValue}>{paciente.cpf || 'Não informado'}</Text>
+                    </View>
+                </View>
+
+                <View style={estilos.infoCard}>
+                    <View style={estilos.iconBadge}>
+                        <Ionicons name="person-outline" size={20} color="#11B5A4" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={estilos.infoLabel}>Gênero</Text>
+                        <Text style={estilos.infoValue}>{generoMap[paciente.gender] || paciente.gender || 'Não informado'}</Text>
+                    </View>
+                </View>
+
+                <View style={estilos.actionContainer}>
+                    <Botao
+                        texto="Acessar Prontuários (Anotações)"
+                        onPress={navigateToProntuarios}
+                        iconName="document-text-outline"
+                    />
                 </View>
             </ScrollView>
         </View>
@@ -58,54 +79,94 @@ export default function PerfilPaciente({ route }) {
 }
 
 const estilos = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: 'white',
+    },
     tela: {
         flex: 1,
         backgroundColor: 'white',
     },
-    header: {
-        width: '100%',
-        alignItems: 'flex-start',
-        marginBottom: 10,
-    },
-    titulo: {
-        color: "#11B5A4",
-        fontFamily: "RalewayBold",
-        fontSize: 23,
-    },
-    perfil: {
-        alignItems: 'center',
-        padding: 25,
+    scrollContent: {
         paddingBottom: 40,
+    },
+    headerBlock: {
+        paddingHorizontal: 25,
+        paddingTop: 15,
+        paddingBottom: 15,
+    },
+    screenTitle: {
+        fontSize: 18,
+        fontFamily: 'RalewayBold',
+        color: '#333',
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#eee',
+        marginHorizontal: 25,
+    },
+    avatarCard: {
+        alignItems: 'center',
+        backgroundColor: '#DEF6F0',
+        borderRadius: 12,
+        paddingVertical: 25,
+        marginHorizontal: 25,
+        marginTop: 20,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     nomeDestaque: {
         color: "#0B7A6E",
         fontFamily: "RalewayBold",
-        fontSize: 24,
+        fontSize: 20,
         marginTop: 10,
-        marginBottom: 20,
+        textAlign: 'center',
     },
-    containerInfo: {
-        width: '100%',
-        marginTop: 10,
+    sectionHeaderCont: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 25,
+        marginTop: 25,
+        marginBottom: 15,
     },
-    caixasInfo: {
-        width: '100%',
-        borderRadius: 8,
+    sectionTitle: {
+        fontSize: 18,
+        fontFamily: 'RalewayBold',
+        color: '#333',
+    },
+    infoCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
         borderWidth: 1,
-        borderColor: "rgba(17, 181, 164, 0.3)",
-        backgroundColor: '#DEF6F0',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        marginVertical: 6,
+        borderColor: '#f0f0f0',
+        borderRadius: 10,
+        padding: 15,
+        marginHorizontal: 25,
+        marginBottom: 12,
     },
-    label: {
-        color: "#666",
+    iconBadge: {
+        backgroundColor: '#f0f9f8',
+        padding: 8,
+        borderRadius: 6,
+        marginRight: 15,
+    },
+    infoLabel: {
+        color: "#777",
         fontSize: 12,
         marginBottom: 4,
     },
-    texto: {
-        color: "#11B5A4",
+    infoValue: {
+        color: "#333",
         fontFamily: "RalewayBold",
-        fontSize: 17,
+        fontSize: 16,
+    },
+    actionContainer: {
+        paddingHorizontal: 25,
+        marginTop: 20,
     },
 });

@@ -63,9 +63,9 @@ export default function HomePaciente() {
           {/* HEADER */}
           <View style={styles.headerRow}>
             <View style={styles.leftRow}>
-              <View style={styles.avatar}>
+              <TouchableOpacity style={styles.avatar} onPress={() => navigation.navigate('MeuPerfil')}>
                 <Text style={styles.avatarText}>{inicial}</Text>
-              </View>
+              </TouchableOpacity>
               <View>
                 <Text style={styles.greeting}>Olá, {primeiroNome} 👋</Text>
                 <Text style={styles.subtitle}>Seu espaço de cuidado</Text>

@@ -28,16 +28,16 @@ export default function CadastroPsicologos () {
     };
 
     const validateCRP = (crp) => {
-        // Basic CRP validation (XX/XXXX...)
-        const crpRegex = /^\d{2}\/\d{4,10}$/;
+        // CRP: 2 dígitos da região + até 6 dígitos de registro (XX/XXXXXX)
+        const crpRegex = /^\d{2}\/\d{4,6}$/;
         return crpRegex.test(crp);
     };
 
     const formatCRP = (value) => {
         const numbers = value.replace(/\D/g, '');
         if (numbers.length <= 2) return numbers;
-        // Permite mais caracteres para formatos variados (XX/XXXXXX+)
-        return `${numbers.slice(0, 2)}/${numbers.slice(2, 12)}`;
+        // Região (2 dígitos) + até 6 dígitos de registro
+        return `${numbers.slice(0, 2)}/${numbers.slice(2, 8)}`;
     };
 
     const handleCrpChange = (value) => {
@@ -105,6 +105,26 @@ export default function CadastroPsicologos () {
                 Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
             } else {
                 Alert.alert('Erro', result.message || 'Erro ao realizar cadastro');
+
+                const data = result.data;
+                if (data) {
+                    const erroServidor = {};
+                    if (data.crp) {
+                        erroServidor.crp = Array.isArray(data.crp) ? data.crp[0] : data.crp;
+                    }
+                    if (data.user?.email) {
+                        erroServidor.email = Array.isArray(data.user.email) ? data.user.email[0] : data.user.email;
+                    }
+                    if (data.user?.password) {
+                        erroServidor.senha = Array.isArray(data.user.password) ? data.user.password[0] : data.user.password;
+                    }
+                    if (data.user?.non_field_errors) {
+                        erroServidor.confirmaSenha = Array.isArray(data.user.non_field_errors) ? data.user.non_field_errors[0] : data.user.non_field_errors;
+                    }
+                    if (Object.keys(erroServidor).length > 0) {
+                        setErrors((prev) => ({ ...prev, ...erroServidor }));
+                    }
+                }
             }
         } catch (error) {
             console.error('Registration error:', error);
@@ -129,9 +149,10 @@ export default function CadastroPsicologos () {
                     <View style = {estilos.container}>
                 <View style = {estilos.containerTitulo}>
                     <Text style={estilos.titulo}>Cadastro de Psicólogos</Text>
-                </View> 
-                <View>    
-                    <TextInputCustom                    
+                </View>
+                <View style={estilos.divider} />
+                <View style={estilos.formCard}>
+                    <TextInputCustom
                         texto="Nome Completo"
                         iconName="person"
                         iconColor="#11B5A4"
@@ -157,7 +178,7 @@ export default function CadastroPsicologos () {
                         />
                     {errors.email && <Text style={estilos.errorText}>{errors.email}</Text>}
                     
-                    <TextInputCustom                    
+                    <TextInputCustom
                         texto="CRP"
                         iconName="id-card"
                         iconColor="#11B5A4"
@@ -165,7 +186,8 @@ export default function CadastroPsicologos () {
                         value={crp}
                         onChangeText={handleCrpChange}
                         texto_placeholder="XX/XXXXX"
-                        keyboardType="default"
+                        keyboardType="numeric"
+                        maxLength={9}
                         error={!!errors.crp}
                         />
                     {errors.crp && <Text style={estilos.errorText}>{errors.crp}</Text>}
@@ -207,10 +229,11 @@ export default function CadastroPsicologos () {
                     {errors.confirmaSenha && <Text style={estilos.errorText}>{errors.confirmaSenha}</Text>}
                     
                     <View style={estilos.containerBotao}>
-                        <Botao 
-                            texto={loading ? "Cadastrando..." : "Continuar"} 
-                            onPress={handleCadastro} 
+                        <Botao
+                            texto={loading ? "Cadastrando..." : "Continuar"}
+                            onPress={handleCadastro}
                             backgroundColor="#11B5A4"
+                            iconName="person-add-outline"
                             disabled={loading}
                         />
                     </View>
@@ -240,6 +263,25 @@ const estilos = StyleSheet.create ({
         fontFamily: "RalewayBold",
         fontSize: 23,
         marginBottom: 15,
+    },
+
+    divider: {
+        height: 1,
+        backgroundColor: '#eee',
+        marginBottom: 20,
+    },
+
+    formCard: {
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
+        borderRadius: 12,
+        padding: 20,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
 
     containerBotao:{

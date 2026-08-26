@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { View, StyleSheet, Text, TextInput, ScrollView, RefreshControl, ActivityIndicator, Alert } from "react-native";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
+import { Ionicons } from '@expo/vector-icons';
 import Topo from "./components/topo";
 import Botao from "../components/common/Button";
 import { odisseiaService } from "../services/odisseiaService";
@@ -68,25 +69,41 @@ export default function SementesCuidado(topo) {
     return (
         <View style={estilos.tela}>
             <Topo back={true} compact={true}/>
-            <ScrollView 
+            <ScrollView
+                style={estilos.tela}
                 contentContainerStyle={estilos.scrollContent}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor="#11B5A4"
+                        colors={["#11B5A4"]}
+                    />
+                }
             >
-                <Text style={estilos.titulo}>Sementes do Cuidado</Text>
-                <Text style={estilos.subtitulo}>Escreva pílulas inspiracionais. Suas sementes florescerão na home de todos os seus pacientes vinculados!</Text>
+                <View style={estilos.headerBlock}>
+                    <Text style={estilos.screenTitle}>Sementes do Cuidado</Text>
+                    <Text style={estilos.screenSubtitle}>Escreva pílulas inspiracionais. Suas sementes florescerão na home de todos os seus pacientes vinculados!</Text>
+                </View>
+                <View style={estilos.divider} />
 
-                <View style={estilos.novoContainer}>
-                    <Text style={estilos.sectionHeader}>Plantar Nova Semente 🌱</Text>
-                    <TextInput 
+                <View style={estilos.sectionHeaderCont}>
+                    <Text style={estilos.sectionTitle}>Plantar Nova Semente 🌱</Text>
+                </View>
+
+                <View style={estilos.highlightCard}>
+                    <TextInput
                         style={estilos.inputSimples}
                         placeholder="Título da Mensagem"
+                        placeholderTextColor="#999"
                         value={titulo}
                         onChangeText={setTitulo}
                         maxLength={100}
                     />
-                    <TextInput 
+                    <TextInput
                         style={estilos.inputArea}
                         placeholder="Escreva algo motivacional ou reflexivo para hoje..."
+                        placeholderTextColor="#999"
                         multiline={true}
                         numberOfLines={4}
                         value={conteudo}
@@ -96,28 +113,47 @@ export default function SementesCuidado(topo) {
                     {salvando ? (
                         <ActivityIndicator size="small" color="#11B5A4" style={{ marginTop: 10 }} />
                     ) : (
-                        <Botao texto="Publicar Semente" backgroundColor="#11B5A4" onPress={handleSalvar} />
+                        <Botao
+                            texto="Publicar Semente"
+                            backgroundColor="#11B5A4"
+                            iconName="leaf-outline"
+                            onPress={handleSalvar}
+                        />
                     )}
                 </View>
 
-                <Text style={[estilos.sectionHeader, { marginTop: 30 }]}>Seu Jardim de Sementes</Text>
+                <View style={estilos.sectionHeaderCont}>
+                    <Text style={estilos.sectionTitle}>Seu Jardim de Sementes</Text>
+                </View>
 
                 {loading && !refreshing ? (
-                    <ActivityIndicator size="large" color="#11B5A4" style={{ marginTop: 20 }} />
+                    <View style={estilos.loadingContainer}>
+                        <ActivityIndicator size="large" color="#11B5A4" />
+                    </View>
                 ) : sementes.length === 0 ? (
-                    <Text style={[estilos.textoStatus, {marginTop: 20}]}>Você ainda não plantou nenhuma semente.</Text>
+                    <View style={estilos.emptyBox}>
+                        <Ionicons name="leaf-outline" size={40} color="#ccc" />
+                        <Text style={estilos.emptyText}>Você ainda não plantou nenhuma semente.</Text>
+                    </View>
                 ) : (
-                    sementes.map((item, index) => (
-                        <View key={index} style={[estilos.cardSemente, String(sementeId) === String(item.id) && estilos.cardDestacado]}>
-                            <View style={estilos.cardHeader}>
-                                <Text style={estilos.cardTitulo}>{item.titulo}</Text>
-                                <Text style={estilos.cardData}>
-                                    {new Date(item.created_at).toLocaleDateString('pt-BR')}
-                                </Text>
+                    <View style={estilos.listaContainer}>
+                        {sementes.map((item, index) => (
+                            <View key={index} style={[estilos.cardSemente, String(sementeId) === String(item.id) && estilos.cardDestacado]}>
+                                <View style={estilos.cardHeader}>
+                                    <View style={estilos.cardHeaderLeft}>
+                                        <View style={estilos.iconBadge}>
+                                            <Ionicons name="leaf-outline" size={16} color="#11B5A4" />
+                                        </View>
+                                        <Text style={estilos.cardTitulo}>{item.titulo}</Text>
+                                    </View>
+                                    <Text style={estilos.cardData}>
+                                        {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                                    </Text>
+                                </View>
+                                <Text style={estilos.cardConteudo}>{item.conteudo}</Text>
                             </View>
-                            <Text style={estilos.cardConteudo}>{item.conteudo}</Text>
-                        </View>
-                    ))
+                        ))}
+                    </View>
                 )}
             </ScrollView>
         </View>
@@ -130,60 +166,100 @@ const estilos = StyleSheet.create({
         backgroundColor: 'white',
     },
     scrollContent: {
-        padding: 25,
         paddingBottom: 40,
     },
-    titulo: {
-        color: "#11B5A4",
-        fontFamily: "RalewayBold",
-        fontSize: 23,
+    headerBlock: {
+        paddingHorizontal: 25,
+        paddingTop: 15,
+        paddingBottom: 15,
     },
-    subtitulo: {
-        color: "#666",
-        marginTop: 5,
-        marginBottom: 20,
+    screenTitle: {
+        fontSize: 18,
+        fontFamily: 'RalewayBold',
+        color: '#333',
+    },
+    screenSubtitle: {
         fontSize: 14,
+        color: '#666',
+        marginTop: 5,
         lineHeight: 20,
     },
-    novoContainer: {
-        backgroundColor: '#f9f9f9',
-        padding: 15,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#11B5A4',
+    divider: {
+        height: 1,
+        backgroundColor: '#eee',
+        marginHorizontal: 25,
     },
-    sectionHeader: {
-        color: "#0B7A6E",
+    sectionHeaderCont: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 25,
+        marginTop: 20,
+        marginBottom: 15,
+    },
+    sectionTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 10,
+        fontFamily: 'RalewayBold',
+        color: '#333',
+    },
+    highlightCard: {
+        backgroundColor: '#DEF6F0',
+        borderRadius: 12,
+        padding: 20,
+        marginHorizontal: 25,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     inputSimples: {
         borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 6,
-        padding: 10,
+        borderColor: "#f0f0f0",
+        borderRadius: 8,
+        padding: 12,
         marginBottom: 10,
         backgroundColor: 'white',
+        color: '#333',
     },
     inputArea: {
         borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 6,
-        padding: 10,
+        borderColor: "#f0f0f0",
+        borderRadius: 8,
+        padding: 12,
         height: 100,
         marginBottom: 15,
         backgroundColor: 'white',
+        color: '#333',
     },
-    textoStatus: {
-        color: "#666",
-        textAlign: 'center',
+    loadingContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 30,
+    },
+    emptyBox: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 30,
+        marginHorizontal: 25,
+        backgroundColor: '#fbfbfb',
+        borderRadius: 10,
+    },
+    emptyText: {
+        marginTop: 10,
+        color: '#999',
+        fontSize: 14,
+    },
+    listaContainer: {
+        paddingHorizontal: 25,
     },
     cardSemente: {
-        backgroundColor: '#DEF6F0',
-        borderRadius: 8,
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
+        borderRadius: 10,
         padding: 15,
-        marginBottom: 10,
+        marginBottom: 12,
     },
     cardDestacado: {
         borderWidth: 2,
@@ -192,21 +268,34 @@ const estilos = StyleSheet.create({
     cardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 8,
     },
+    cardHeaderLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        marginRight: 10,
+    },
+    iconBadge: {
+        backgroundColor: '#f0f9f8',
+        padding: 6,
+        borderRadius: 6,
+        marginRight: 10,
+    },
     cardTitulo: {
-        color: "#0B7A6E",
+        color: "#333",
         fontFamily: "RalewayBold",
-        fontSize: 16,
+        fontSize: 15,
         flex: 1,
     },
     cardData: {
-        color: "#666",
+        color: "#777",
         fontSize: 12,
     },
     cardConteudo: {
-        color: "#333",
-        fontSize: 15,
-        lineHeight: 22,
+        color: "#555",
+        fontSize: 14,
+        lineHeight: 21,
     }
 });

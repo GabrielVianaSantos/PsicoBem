@@ -143,6 +143,26 @@ export default function CadastroPacientes () {
                 Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
             } else {
                 Alert.alert('Erro', result.message || 'Erro ao realizar cadastro');
+
+                const data = result.data;
+                if (data) {
+                    const erroServidor = {};
+                    if (data.cpf) {
+                        erroServidor.cpf = Array.isArray(data.cpf) ? data.cpf[0] : data.cpf;
+                    }
+                    if (data.user?.email) {
+                        erroServidor.email = Array.isArray(data.user.email) ? data.user.email[0] : data.user.email;
+                    }
+                    if (data.user?.password) {
+                        erroServidor.senha = Array.isArray(data.user.password) ? data.user.password[0] : data.user.password;
+                    }
+                    if (data.user?.non_field_errors) {
+                        erroServidor.confirmaSenha = Array.isArray(data.user.non_field_errors) ? data.user.non_field_errors[0] : data.user.non_field_errors;
+                    }
+                    if (Object.keys(erroServidor).length > 0) {
+                        setErrors((prev) => ({ ...prev, ...erroServidor }));
+                    }
+                }
             }
         } catch (error) {
             console.error('Registration error:', error);
@@ -163,9 +183,10 @@ export default function CadastroPacientes () {
                 <View style = {estilos.container}>
                     <View style = {estilos.containerTitulo}>
                         <Text style={estilos.titulo}>Cadastro de Pacientes</Text>
-                    </View> 
-                    <View>    
-                        <TextInputCustom                    
+                    </View>
+                    <View style={estilos.divider} />
+                    <View style={estilos.formCard}>
+                        <TextInputCustom
                             texto="Nome Completo"
                             iconName="person"
                             iconColor="#11B5A4"
@@ -191,7 +212,7 @@ export default function CadastroPacientes () {
                             />
                         {errors.email && <Text style={estilos.errorText}>{errors.email}</Text>}
                         
-                        <TextInputCustom                    
+                        <TextInputCustom
                             texto="CPF"
                             iconName="wallet"
                             iconColor="#11B5A4"
@@ -200,11 +221,12 @@ export default function CadastroPacientes () {
                             onChangeText={handleCpfChange}
                             texto_placeholder="XXX.XXX.XXX-XX"
                             keyboardType="numeric"
+                            maxLength={14}
                             error={!!errors.cpf}
                             />
                         {errors.cpf && <Text style={estilos.errorText}>{errors.cpf}</Text>}
-                        
-                        <TextInputCustom                    
+
+                        <TextInputCustom
                             texto="Telefone"
                             iconName="call"
                             iconColor="#11B5A4"
@@ -212,7 +234,8 @@ export default function CadastroPacientes () {
                             value={telefone}
                             onChangeText={handlePhoneChange}
                             texto_placeholder="(XX) XXXXX-XXXX"
-                            keyboardType="phone-pad"
+                            keyboardType="numeric"
+                            maxLength={15}
                             error={!!errors.telefone}
                             />
                         {errors.telefone && <Text style={estilos.errorText}>{errors.telefone}</Text>}
@@ -245,25 +268,30 @@ export default function CadastroPacientes () {
                         
                        <View style={estilos.containerSelect}>
                         <Text style={estilos.texto}>Gênero</Text>
+                        <Text style={estilos.textoApoio}>Selecione a opção com a qual você mais se identifica.</Text>
                         <Select
-                            isOpen={false} 
+                            isOpen={false}
                             selectedOption={sexo}
                             onSelect={setSexo}
                             title="Selecione o gênero"
-                            options={["Masculino", "Feminino", "Outro"]}
+                            options={["Masculino", "Feminino", "Não-binário / Outro"]}
                             error={!!errors.sexo}
                         />
                         {errors.sexo && <Text style={estilos.errorText}>{errors.sexo}</Text>}
+                        <Text style={estilos.textoNota}>
+                            No momento oferecemos estas categorias no cadastro. Estamos trabalhando para ampliar as opções de identidade de gênero.
+                        </Text>
                        </View>
                         <View style={estilos.containerBotao}>
-                            <Botao 
-                                texto={loading ? "Cadastrando..." : "Continuar"} 
-                                onPress={handleCadastro} 
+                            <Botao
+                                texto={loading ? "Cadastrando..." : "Continuar"}
+                                onPress={handleCadastro}
                                 backgroundColor="#11B5A4"
+                                iconName="person-add-outline"
                                 disabled={loading}
                             />
                         </View>
-                    </View>  
+                    </View>
                 </View>
             </CustomScrollView>
             </KeyboardAvoidingView>
@@ -292,12 +320,44 @@ const estilos = StyleSheet.create ({
         marginBottom: 15,
     },
 
+    divider: {
+        height: 1,
+        backgroundColor: '#eee',
+        marginBottom: 20,
+    },
+
+    formCard: {
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
+        borderRadius: 12,
+        padding: 20,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+    },
+
     texto:{
         color: "#11B5A4",
         fontFamily: "RalewayBold",
         fontSize: 15,
         marginTop: 15,
         marginBottom: 5,
+    },
+
+    textoApoio: {
+        color: "#666",
+        fontSize: 13,
+        marginBottom: 8,
+    },
+
+    textoNota: {
+        color: "#999",
+        fontSize: 12,
+        marginTop: 8,
+        lineHeight: 17,
     },
 
     containerBotao:{
