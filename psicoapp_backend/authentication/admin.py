@@ -8,12 +8,13 @@ class CustomUserAdmin(UserAdmin):
     Admin customizado para CustomUser
     """
     list_display = ('email', 'username', 'user_type', 'is_active', 'date_joined')
-    list_filter = ('user_type', 'is_active', 'date_joined')
+    list_filter = ('user_type', 'is_active', 'date_joined', 'auth_provider')
     search_fields = ('email', 'username', 'first_name', 'last_name')
-    
+    readonly_fields = UserAdmin.readonly_fields + ('google_sub',)
+
     fieldsets = UserAdmin.fieldsets + (
         ('Informações Adicionais', {
-            'fields': ('user_type', 'phone')
+            'fields': ('user_type', 'phone', 'auth_provider', 'email_verified', 'google_sub')
         }),
     )
 

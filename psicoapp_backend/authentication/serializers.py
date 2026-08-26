@@ -1,3 +1,5 @@
+import re
+
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import CustomUser, Paciente, Psicologo
@@ -74,6 +76,11 @@ class UserLoginSerializer(serializers.Serializer):
         if email and password:
             user = authenticate(username=email, password=password)
             if not user:
+                existing = CustomUser.objects.filter(email=email).first()
+                if existing is not None and not existing.has_usable_password():
+                    raise serializers.ValidationError(
+                        'Esta conta foi criada com o Google. Use o botão "Entre com o Google".'
+                    )
                 raise serializers.ValidationError('Credenciais inválidas')
             if not user.is_active:
                 raise serializers.ValidationError('Conta desativada')
@@ -81,6 +88,51 @@ class UserLoginSerializer(serializers.Serializer):
             return attrs
         else:
             raise serializers.ValidationError('Email e senha são obrigatórios')
+
+class GoogleCompleteRegistrationSerializer(serializers.Serializer):
+    """
+    Completa o cadastro iniciado via Google. `email` e `google_sub` NÃO
+    entram aqui de propósito — vêm exclusivamente do registration_token
+    assinado, decodificado na view antes desta validação.
+    """
+    CPF_REGEX = re.compile(r'^\d{3}\.\d{3}\.\d{3}-\d{2}$')
+    CRP_REGEX = re.compile(r'^\d{2}/\d{4,6}$')
+
+    user_type = serializers.ChoiceField(choices=CustomUser.USER_TYPE_CHOICES)
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True, default='')
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True, allow_null=True, default='')
+    cpf = serializers.CharField(required=False, allow_blank=True)
+    gender = serializers.CharField(required=False, allow_blank=True)
+    crp = serializers.CharField(required=False, allow_blank=True)
+    specialization = serializers.CharField(required=False, allow_blank=True, allow_null=True, default='')
+
+    def validate(self, attrs):
+        user_type = attrs.get('user_type')
+        errors = {}
+
+        if user_type == 'paciente':
+            cpf = attrs.get('cpf', '')
+            if not self.CPF_REGEX.match(cpf or ''):
+                errors['cpf'] = ['Informe um CPF válido no formato XXX.XXX.XXX-XX.']
+            elif Paciente.objects.filter(cpf=cpf).exists():
+                errors['cpf'] = ['Paciente com este CPF já existe.']
+
+            gender = attrs.get('gender', '')
+            if gender not in ('M', 'F', 'O'):
+                errors['gender'] = ['Informe um gênero válido (M, F ou O).']
+
+        elif user_type == 'psicologo':
+            crp = attrs.get('crp', '')
+            if not self.CRP_REGEX.match(crp or ''):
+                errors['crp'] = ['Informe um CRP válido no formato XX/XXXXX.']
+            elif Psicologo.objects.filter(crp=crp).exists():
+                errors['crp'] = ['Psicólogo com este CRP já existe.']
+
+        if errors:
+            raise serializers.ValidationError(errors)
+        return attrs
+
 
 class PsicologoVinculadoSerializer(serializers.ModelSerializer):
     """Dados básicos do psicólogo vinculado — retornado no perfil do paciente"""
@@ -116,6 +168,7 @@ class UserSerializer(serializers.ModelSerializer):
         allow_blank=True,
         allow_null=True,
     )
+    has_password = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
@@ -124,8 +177,15 @@ class UserSerializer(serializers.ModelSerializer):
             'user_type', 'phone', 'created_at',
             'paciente_id', 'psicologo_id', 'vinculo_ativo',
             'crp', 'cpf', 'specialization', 'biography',
+            'auth_provider', 'email_verified', 'avatar_url', 'has_password',
         )
-        read_only_fields = ('id', 'email', 'created_at')
+        read_only_fields = (
+            'id', 'email', 'created_at',
+            'auth_provider', 'email_verified', 'avatar_url', 'has_password',
+        )
+
+    def get_has_password(self, obj):
+        return obj.has_usable_password()
 
     def get_paciente_id(self, obj):
         try:

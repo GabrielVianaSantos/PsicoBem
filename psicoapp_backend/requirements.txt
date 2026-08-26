@@ -4,6 +4,8 @@ django-cors-headers==4.7.0
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
 PyJWT==2.10.1
+google-auth
+requests
 sqlparse==0.5.3
 tzdata==2025.2
 python-dotenv==1.0.1

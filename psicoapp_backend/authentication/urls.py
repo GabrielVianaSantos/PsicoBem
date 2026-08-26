@@ -1,4 +1,5 @@
 from django.urls import path
+from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 from .views import conecta_psicologo_view, paciente_dashboard_view
 
@@ -7,7 +8,13 @@ urlpatterns = [
     path('register/paciente/', views.PacienteRegistrationView.as_view(), name='register-paciente'),
     path('register/psicologo/', views.PsicologoRegistrationView.as_view(), name='register-psicologo'),
     path('login/', views.login_view, name='login'),
-    
+    path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+
+    # Rotas de autenticação com Google
+    path('google/', views.google_auth_view, name='google-auth'),
+    path('google/link/', views.google_link_view, name='google-link'),
+    path('google/complete/', views.google_complete_registration_view, name='google-complete'),
+
     # Rotas de perfil
     path('profile/', views.user_profile_view, name='user-profile'),
     path('profile/update/', views.user_update_view, name='user-update'),
