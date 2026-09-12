@@ -2,7 +2,7 @@ from decimal import Decimal
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from rest_framework.test import APIClient
 from rest_framework import status
 from authentication.models import Psicologo, Paciente
@@ -173,3 +173,162 @@ class NormalizarModalidadesMigrationLogicTest(TestCase):
         self.assertEqual(tipo_avulsa.tipo, 'online')
         self.assertEqual(tipo_primeira.tipo, 'online')
         self.assertEqual(tipo_urgencia.tipo, 'online')
+
+
+class DataHoraFormatadaTimezoneTest(TestCase):
+    """
+    Garante que data_hora_formatada reflete o horário de Brasília
+    (America/Sao_Paulo), não o horário UTC internamente armazenado.
+    """
+
+    def setUp(self):
+        self.user_psicologo = User.objects.create_user(
+            username='psi_tz', email='psi_tz@test.com', password='pass', user_type='psicologo'
+        )
+        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='22/22222')
+
+        self.user_paciente = User.objects.create_user(
+            username='pac_tz', email='pac_tz@test.com', password='pass', user_type='paciente'
+        )
+        self.paciente = Paciente.objects.create(user=self.user_paciente, cpf='555.555.555-55')
+
+        VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='ativo'
+        )
+
+        self.tipo_sessao = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta TZ', tipo='online', valor=100.00
+        )
+
+        # 14:00 UTC == 11:00 em America/Sao_Paulo (UTC-3, sem horário de verão).
+        self.data_hora_utc = datetime(2026, 6, 15, 14, 0, tzinfo=dt_timezone.utc)
+        self.hora_local_esperada = '11:00'
+
+        self.client = APIClient()
+
+    def test_serializer_detail_formata_em_horario_local(self):
+        sessao = Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=self.tipo_sessao,
+            data_hora=self.data_hora_utc, status='agendada', valor=Decimal('100.00'),
+        )
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.get(f'/api/sessoes/{sessao.id}/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn(self.hora_local_esperada, res.data['data_hora_formatada'])
+        # Confere explicitamente que NÃO é o horário cru em UTC.
+        self.assertNotIn('14:00', res.data['data_hora_formatada'])
+
+    def test_serializer_list_formata_em_horario_local(self):
+        Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=self.tipo_sessao,
+            data_hora=self.data_hora_utc, status='agendada', valor=Decimal('100.00'),
+        )
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.get('/api/sessoes/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        results = res.data.get('results', res.data)
+        self.assertIn(self.hora_local_esperada, results[0]['data_hora_formatada'])
+        self.assertNotIn('14:00', results[0]['data_hora_formatada'])
+
+    def test_proxima_sessao_formata_em_horario_local(self):
+        data_futura_utc = timezone.now() + timedelta(days=1)
+        data_futura_utc = data_futura_utc.replace(hour=14, minute=0, second=0, microsecond=0)
+        Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=self.tipo_sessao,
+            data_hora=data_futura_utc, status='agendada', valor=Decimal('100.00'),
+        )
+        self.client.force_authenticate(user=self.user_paciente)
+        res = self.client.get('/api/sessoes/proxima/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        esperado = timezone.localtime(data_futura_utc).strftime('%H:%M')
+        self.assertIn(esperado, res.data['data_hora_formatada'])
+
+
+class MarcarNaoRealizadaActionTests(TestCase):
+    """Testa a action POST /sessoes/{id}/nao-realizada/."""
+
+    def setUp(self):
+        self.user_psicologo = User.objects.create_user(
+            username='psi_falta', email='psi_falta@test.com', password='pass', user_type='psicologo'
+        )
+        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='33/33333')
+
+        self.outro_user_psicologo = User.objects.create_user(
+            username='outro_psi_falta', email='outro_psi_falta@test.com', password='pass', user_type='psicologo'
+        )
+        self.outro_psicologo = Psicologo.objects.create(user=self.outro_user_psicologo, crp='33/44444')
+
+        self.user_paciente = User.objects.create_user(
+            username='pac_falta', email='pac_falta@test.com', password='pass', user_type='paciente'
+        )
+        self.paciente = Paciente.objects.create(user=self.user_paciente, cpf='666.666.666-66')
+
+        VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='ativo'
+        )
+
+        self.tipo_sessao = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Falta', tipo='online', valor=100.00
+        )
+
+        self.client = APIClient()
+
+    def _criar_sessao(self, status_inicial='agendada', status_pagamento='pendente', no_passado=True):
+        offset = timedelta(days=-1) if no_passado else timedelta(days=1)
+        return Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=self.tipo_sessao,
+            data_hora=timezone.now() + offset, status=status_inicial,
+            status_pagamento=status_pagamento, valor=Decimal('100.00'),
+        )
+
+    def test_psicologo_marca_sessao_passada_como_nao_realizada(self):
+        sessao = self._criar_sessao(status_inicial='confirmada', status_pagamento='pendente')
+        # Sessão no passado: 'pode_ser_cancelada' já é False (regra pré-existente).
+        self.assertFalse(sessao.pode_ser_cancelada())
+
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.post(f'/api/sessoes/{sessao.id}/nao-realizada/')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        sessao.refresh_from_db()
+        self.assertEqual(sessao.status, 'faltou')
+        self.assertEqual(sessao.status_pagamento, 'pendente')  # não alterado
+
+    def test_paciente_nao_pode_marcar_falta(self):
+        sessao = self._criar_sessao()
+        self.client.force_authenticate(user=self.user_paciente)
+        res = self.client.post(f'/api/sessoes/{sessao.id}/nao-realizada/')
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        sessao.refresh_from_db()
+        self.assertEqual(sessao.status, 'agendada')
+
+    def test_psicologo_de_outra_sessao_recebe_404(self):
+        sessao = self._criar_sessao()
+        self.client.force_authenticate(user=self.outro_user_psicologo)
+        res = self.client.post(f'/api/sessoes/{sessao.id}/nao-realizada/')
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_sessao_realizada_nao_pode_ser_marcada_falta(self):
+        sessao = self._criar_sessao(status_inicial='realizada')
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.post(f'/api/sessoes/{sessao.id}/nao-realizada/')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        sessao.refresh_from_db()
+        self.assertEqual(sessao.status, 'realizada')
+
+    def test_sessao_cancelada_nao_pode_ser_marcada_falta(self):
+        sessao = self._criar_sessao(status_inicial='cancelada')
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.post(f'/api/sessoes/{sessao.id}/nao-realizada/')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_pode_marcar_falta_no_serializer(self):
+        sessao_elegivel = self._criar_sessao(status_inicial='agendada')
+        sessao_realizada = self._criar_sessao(status_inicial='realizada')
+        self.client.force_authenticate(user=self.user_psicologo)
+
+        res_elegivel = self.client.get(f'/api/sessoes/{sessao_elegivel.id}/')
+        res_realizada = self.client.get(f'/api/sessoes/{sessao_realizada.id}/')
+
+        self.assertTrue(res_elegivel.data['pode_marcar_falta'])
+        self.assertFalse(res_realizada.data['pode_marcar_falta'])

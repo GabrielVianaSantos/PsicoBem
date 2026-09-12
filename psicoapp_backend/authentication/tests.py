@@ -480,3 +480,47 @@ class TokenRefreshViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('access', response.data)
         self.assertIn('refresh', response.data)
+
+
+class PacienteDashboardDataHoraTimezoneTests(TestCase):
+    """
+    Garante que 'proxima_sessao.data_hora_formatada' no dashboard do
+    paciente reflete o horário de Brasília, não o horário UTC bruto.
+    """
+
+    def test_proxima_sessao_formata_em_horario_local(self):
+        from datetime import datetime, timedelta, timezone as dt_timezone
+        from decimal import Decimal
+        from django.utils import timezone
+        from core.models import VinculoPacientePsicologo
+        from sessoes.models import TipoSessao, Sessao
+
+        psicologo_user = CustomUser.objects.create_user(
+            email='dash-psi@gmail.com', username='dashpsi', user_type='psicologo', password='x',
+        )
+        psicologo = Psicologo.objects.create(user=psicologo_user, crp='07/12345')
+
+        paciente_user = CustomUser.objects.create_user(
+            email='dash-pac@gmail.com', username='dashpac', user_type='paciente', password='senha123',
+        )
+        paciente = Paciente.objects.create(user=paciente_user, cpf='444.444.444-44', gender='F')
+
+        VinculoPacientePsicologo.objects.create(paciente=paciente, psicologo=psicologo, status='ativo')
+        tipo_sessao = TipoSessao.objects.create(psicologo=psicologo, nome='Consulta', tipo='online', valor=100)
+
+        data_futura_utc = (timezone.now() + timedelta(days=1)).replace(
+            hour=14, minute=0, second=0, microsecond=0, tzinfo=dt_timezone.utc
+        )
+        Sessao.objects.create(
+            paciente=paciente, psicologo=psicologo, tipo_sessao=tipo_sessao,
+            data_hora=data_futura_utc, status='agendada', valor=Decimal('100.00'),
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=paciente_user)
+        response = client.get('/api/auth/paciente/dashboard/')
+
+        self.assertEqual(response.status_code, 200)
+        esperado = timezone.localtime(data_futura_utc).strftime('%H:%M')
+        self.assertIn(esperado, response.data['proxima_sessao']['data_hora_formatada'])
+        self.assertNotIn('14:00', response.data['proxima_sessao']['data_hora_formatada'])

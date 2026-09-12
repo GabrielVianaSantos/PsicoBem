@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.utils import timezone
 
 from .models import NotificacaoSistema, VinculoPacientePsicologo
 
@@ -85,7 +86,7 @@ class NotificationDomainService:
     def emit_session_created(sessao):
         paciente = sessao.paciente.user
         psicologo = sessao.psicologo.user
-        data_formatada = sessao.data_hora.strftime("%d/%m/%Y às %H:%M")
+        data_formatada = timezone.localtime(sessao.data_hora).strftime("%d/%m/%Y às %H:%M")
         # Parâmetro canônico: sessaoId (não mais 'id')
         route = NotificationDomainService._routing_payload(
             screen="DetalhesSessao",

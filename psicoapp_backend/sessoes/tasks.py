@@ -29,7 +29,7 @@ def notificar_pagamentos_atrasados():
             target=sessao.paciente.user,
             tipo='sistema',
             titulo='Lembrete de Pagamento 💳',
-            mensagem=f'Notamos que o pagamento da sua sessão de {sessao.data_hora.strftime("%d/%m/%Y")} ainda está pendente.',
+            mensagem=f'Notamos que o pagamento da sua sessão de {timezone.localtime(sessao.data_hora).strftime("%d/%m/%Y")} ainda está pendente.',
             link_relacionado=f'/sessoes/{sessao.pk}',
             dados_extras=NotificationDomainService._routing_payload(
                 screen='DetalhesSessao',

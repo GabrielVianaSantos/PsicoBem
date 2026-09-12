@@ -6,7 +6,7 @@ from rest_framework.test import APITestCase
 
 from authentication.models import CustomUser, Paciente, Psicologo
 from core.models import VinculoPacientePsicologo
-from engajamentos.models import RegistroOdisseia
+from engajamentos.models import RegistroOdisseia, SementeCuidado
 
 
 class RegistroOdisseiaViewSetTests(APITestCase):
@@ -126,3 +126,72 @@ class RegistroOdisseiaViewSetTests(APITestCase):
         self.client.force_authenticate(self.sem_perfil)
         self.assertEqual(self.paginated_results(self.client.get(self.list_url)), [])
         self.assertEqual(self.client.post(self.list_url, self.registro_payload(), format='json').status_code, status.HTTP_403_FORBIDDEN)
+
+
+class SementeCuidadoViewSetTests(APITestCase):
+    """Garante que apenas o psicólogo autor pode editar/excluir uma Semente do Cuidado."""
+
+    def setUp(self):
+        self.psicologo_user = self.create_user('semente-psi@example.com', 'psicologo')
+        self.psicologo = Psicologo.objects.create(user=self.psicologo_user, crp='06/11111')
+        self.outro_psicologo_user = self.create_user('semente-outro-psi@example.com', 'psicologo')
+        self.outro_psicologo = Psicologo.objects.create(user=self.outro_psicologo_user, crp='06/22222')
+
+        self.paciente_user = self.create_user('semente-paciente@example.com', 'paciente')
+        self.paciente = Paciente.objects.create(user=self.paciente_user, cpf='333.333.333-33', gender='F')
+        VinculoPacientePsicologo.objects.create(paciente=self.paciente, psicologo=self.psicologo, status='ativo')
+
+        self.semente = SementeCuidado.objects.create(
+            psicologo=self.psicologo, titulo='Título original', conteudo='Conteúdo original',
+            tipo='motivacional', status='ativa', publica=True,
+        )
+        self.detail_url = reverse('sementescuidado-detail', args=[self.semente.id])
+
+    @staticmethod
+    def create_user(email, user_type):
+        return CustomUser.objects.create_user(
+            username=email, email=email,
+            first_name=email.split('@')[0].replace('.', ' ').title(),
+            password='senha-segura', user_type=user_type,
+        )
+
+    def test_psicologo_dono_edita_e_exclui_a_propria_semente(self):
+        self.client.force_authenticate(self.psicologo_user)
+        patch_response = self.client.patch(self.detail_url, {'titulo': 'Título corrigido'}, format='json')
+        self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
+        self.semente.refresh_from_db()
+        self.assertEqual(self.semente.titulo, 'Título corrigido')
+
+        delete_response = self.client.delete(self.detail_url)
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(SementeCuidado.objects.filter(id=self.semente.id).exists())
+
+    def test_paciente_nao_edita_nem_exclui_semente_do_psicologo_vinculado(self):
+        self.client.force_authenticate(self.paciente_user)
+        # A semente aparece na leitura do paciente (público/ativa do seu vínculo)...
+        self.assertEqual(self.client.get(self.detail_url).status_code, status.HTTP_200_OK)
+        # ...mas não pode ser alterada nem excluída por ele.
+        patch_response = self.client.patch(self.detail_url, {'titulo': 'Invasão'}, format='json')
+        self.assertEqual(patch_response.status_code, status.HTTP_403_FORBIDDEN)
+        delete_response = self.client.delete(self.detail_url)
+        self.assertEqual(delete_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.semente.refresh_from_db()
+        self.assertEqual(self.semente.titulo, 'Título original')
+
+    def test_psicologo_nao_edita_nem_exclui_semente_de_outro_psicologo(self):
+        self.client.force_authenticate(self.outro_psicologo_user)
+        # Fora do queryset do outro psicólogo: nem aparece.
+        self.assertEqual(self.client.get(self.detail_url).status_code, status.HTTP_404_NOT_FOUND)
+        patch_response = self.client.patch(self.detail_url, {'titulo': 'Invasão'}, format='json')
+        self.assertEqual(patch_response.status_code, status.HTTP_404_NOT_FOUND)
+        delete_response = self.client.delete(self.detail_url)
+        self.assertEqual(delete_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.semente.refresh_from_db()
+        self.assertEqual(self.semente.titulo, 'Título original')
+
+    def test_paciente_ainda_consegue_visualizar_e_curtir(self):
+        self.client.force_authenticate(self.paciente_user)
+        visualizar_response = self.client.post(reverse('sementescuidado-visualizar', args=[self.semente.id]))
+        curtir_response = self.client.post(reverse('sementescuidado-curtir', args=[self.semente.id]))
+        self.assertEqual(visualizar_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(curtir_response.status_code, status.HTTP_200_OK)

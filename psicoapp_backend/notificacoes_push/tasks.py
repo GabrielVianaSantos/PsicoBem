@@ -270,7 +270,7 @@ def _reminder_minutes_to_types():
 
 
 def _build_reminder_message(sessao, reminder_type, minutes):
-    data_formatada = sessao.data_hora.strftime("%d/%m/%Y às %H:%M")
+    data_formatada = timezone.localtime(sessao.data_hora).strftime("%d/%m/%Y às %H:%M")
     if reminder_type == "lembrete_24h":
         return f"Sua sessão está marcada para amanhã, {data_formatada}."
     if reminder_type == "lembrete_2h":

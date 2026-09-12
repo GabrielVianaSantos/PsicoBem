@@ -21,6 +21,18 @@ class IsPacienteOdisseiaWritePermission(permissions.BasePermission):
     def has_permission(self, request, view):
         return hasattr(request.user, 'paciente_profile')
 
+
+class IsSementeOwner(permissions.BasePermission):
+    """Permite editar/excluir uma Semente do Cuidado apenas ao psicólogo autor."""
+
+    message = 'Apenas o psicólogo autor pode alterar ou excluir esta Semente do Cuidado.'
+
+    def has_object_permission(self, request, view, obj):
+        return (
+            hasattr(request.user, 'psicologo_profile') and
+            obj.psicologo == request.user.psicologo_profile
+        )
+
 #####################################################################################################################################
 # SEMENTES DO CUIDADO
 #####################################################################################################################################
@@ -33,6 +45,11 @@ class SementeCuidadoViewSet(viewsets.ModelViewSet):
     """
     serializer_class = SementeCuidadoSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ('update', 'partial_update', 'destroy'):
+            return [IsAuthenticated(), IsSementeOwner()]
+        return super().get_permissions()
 
     def get_queryset(self):
         user = self.request.user

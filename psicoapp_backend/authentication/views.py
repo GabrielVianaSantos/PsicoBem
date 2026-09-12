@@ -287,7 +287,7 @@ def paciente_dashboard_view(request):
         proxima_data = {
             'id': proxima.id,
             'data_hora': proxima.data_hora,
-            'data_hora_formatada': proxima.data_hora.strftime('%d/%m/%Y às %H:%M'),
+            'data_hora_formatada': tz.localtime(proxima.data_hora).strftime('%d/%m/%Y às %H:%M'),
             'tipo': proxima.tipo_sessao.nome if proxima.tipo_sessao else 'Sessão',
             'status': proxima.status,
         }

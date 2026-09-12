@@ -177,7 +177,7 @@ class SessaoViewSet(viewsets.ModelViewSet):
         # Issue 04: Notificação de cancelamento bidirecional
         from core.services import NotificationDomainService
         
-        data_formatada = sessao.data_hora.strftime("%d/%m/%Y às %H:%M")
+        data_formatada = timezone.localtime(sessao.data_hora).strftime("%d/%m/%Y às %H:%M")
         # Issue 02: parâmetro canônico sessaoId (não mais 'id'), entity_type/entity_id
         route = NotificationDomainService._routing_payload(
             screen='DetalhesSessao',
@@ -249,6 +249,49 @@ class SessaoViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(sessao)
         return Response({
             'message': 'Sessão marcada como realizada com sucesso.',
+            'sessao': serializer.data
+        })
+
+    @action(detail=True, methods=['post'], url_path='nao-realizada')
+    def nao_realizada(self, request, pk=None):
+        """Psicólogo: marca uma sessão como 'Paciente Faltou' (não realizada)."""
+        if not hasattr(request.user, 'psicologo_profile'):
+            return Response(
+                {'error': 'Apenas psicólogos podem marcar uma sessão como não realizada.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        sessao = self.get_object()
+
+        if not sessao.pode_ser_marcada_falta():
+            return Response(
+                {'error': 'Esta sessão não pode ser marcada como não realizada.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        sessao.status = 'faltou'
+        sessao.save()
+
+        from core.services import NotificationDomainService
+        data_formatada = timezone.localtime(sessao.data_hora).strftime("%d/%m/%Y às %H:%M")
+        NotificationDomainService.emit(
+            target=sessao.paciente.user,
+            tipo='sistema',
+            titulo='Sessão Não Realizada',
+            mensagem=f'Sua sessão de {data_formatada} foi marcada como não realizada pelo psicólogo.',
+            link_relacionado=f'/sessoes/{sessao.pk}',
+            dados_extras=NotificationDomainService._routing_payload(
+                screen='DetalhesSessao',
+                params={'sessaoId': sessao.pk},
+                event='sessao_nao_realizada',
+                entity_type='sessao',
+                entity_id=sessao.pk,
+            ),
+        )
+
+        serializer = self.get_serializer(sessao)
+        return Response({
+            'message': 'Sessão marcada como não realizada.',
             'sessao': serializer.data
         })
 

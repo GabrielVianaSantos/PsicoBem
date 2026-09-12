@@ -297,6 +297,10 @@ class Sessao(models.Model):
     def pode_ser_realizada(self):
         """Verifica se a sessão pode ser marcada como realizada"""
         return self.status in ['agendada', 'confirmada', 'remarcada']
+
+    def pode_ser_marcada_falta(self):
+        """Verifica se a sessão pode ser marcada como 'Paciente Faltou'"""
+        return self.status in ['agendada', 'confirmada', 'remarcada']
     
     def confirmar_pagamento(self):
         """Confirma o pagamento da sessão"""
@@ -306,7 +310,7 @@ class Sessao(models.Model):
             self.save()
 
             # Notificar paciente via emit() para disparar push nativo
-            data = self.data_hora.strftime("%d/%m/%Y")
+            data = timezone.localtime(self.data_hora).strftime("%d/%m/%Y")
             NotificationDomainService.emit(
                 target=self.paciente.user,
                 tipo='sistema',
