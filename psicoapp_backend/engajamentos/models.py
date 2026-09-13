@@ -386,14 +386,15 @@ class MensagemPaciente(models.Model):
     def marcar_como_curtida(self):
         """Marca a mensagem como curtida"""
         if self.status in ['enviada', 'visualizada']:
+            ja_tinha_visualizado = bool(self.visualizada_em)
             self.status = 'curtida'
             self.curtida_em = timezone.now()
-            if not self.visualizada_em:
+            if not ja_tinha_visualizado:
                 self.visualizada_em = timezone.now()
             self.save()
-            
+
             # Atualizar estatísticas da semente
-            if not self.visualizada_em:
+            if not ja_tinha_visualizado:
                 self.semente.total_visualizacoes += 1
             self.semente.total_curtidas += 1
             self.semente.save()

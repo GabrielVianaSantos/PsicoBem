@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from authentication.models import CustomUser, Paciente, Psicologo
-from core.models import Prontuario, VinculoPacientePsicologo
+from core.models import NotificacaoSistema, Prontuario, VinculoPacientePsicologo
 
 
 class ProntuarioViewSetAccessTests(APITestCase):
@@ -82,3 +82,111 @@ class ProntuarioViewSetAccessTests(APITestCase):
         self.assertFalse(
             NotificacaoSistema.objects.filter(paciente=self.paciente, tipo='sistema', titulo__icontains='Prontuário').exists()
         )
+
+
+class NotificacaoResumoPorCategoriaTests(APITestCase):
+    """Badges de novidade nos cards de menu: resumo e marcação por categoria."""
+
+    def setUp(self):
+        self.psicologo_user = CustomUser.objects.create_user(
+            username='cat-psi', email='cat-psi@example.com',
+            password='senha-segura', user_type='psicologo',
+        )
+        self.psicologo = Psicologo.objects.create(user=self.psicologo_user, crp='10/11111')
+
+        self.paciente_user = CustomUser.objects.create_user(
+            username='cat-pac', email='cat-pac@example.com',
+            password='senha-segura', user_type='paciente',
+        )
+        self.paciente = Paciente.objects.create(user=self.paciente_user, cpf='999.999.999-99', gender='F')
+
+        self.resumo_url = reverse('notificacoes-resumo-por-categoria')
+        self.marcar_url = reverse('notificacoes-marcar-categoria-lida')
+
+    def _criar(self, *, alvo, tipo, event=None, lida=False):
+        kwargs = {'psicologo': self.psicologo} if alvo == 'psicologo' else {'paciente': self.paciente}
+        return NotificacaoSistema.objects.create(
+            tipo=tipo, titulo='Título', mensagem='Mensagem', lida=lida,
+            dados_extras={'event': event} if event else {},
+            **kwargs,
+        )
+
+    def test_resumo_identifica_cada_categoria_isoladamente(self):
+        self._criar(alvo='paciente', tipo='nova_semente')
+        self.client.force_authenticate(self.paciente_user)
+
+        response = self.client.get(self.resumo_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'sementes': True, 'sessoes': False, 'odisseia': False})
+
+    def test_resumo_reconhece_evento_em_tipo_sistema(self):
+        self._criar(alvo='psicologo', tipo='sistema', event='semente_curtida')
+        self._criar(alvo='psicologo', tipo='sistema', event='sessao_nao_realizada')
+        self.client.force_authenticate(self.psicologo_user)
+
+        response = self.client.get(self.resumo_url)
+        self.assertEqual(response.data, {'sementes': True, 'sessoes': True, 'odisseia': False})
+
+    def test_sessao_lembrete_nao_acende_nenhuma_categoria(self):
+        self._criar(alvo='paciente', tipo='sessao_lembrete')
+        self.client.force_authenticate(self.paciente_user)
+
+        response = self.client.get(self.resumo_url)
+        self.assertEqual(response.data, {'sementes': False, 'sessoes': False, 'odisseia': False})
+
+    def test_notificacao_ja_lida_nao_conta_no_resumo(self):
+        self._criar(alvo='paciente', tipo='novo_registro', lida=True)
+        self.client.force_authenticate(self.paciente_user)
+
+        response = self.client.get(self.resumo_url)
+        self.assertFalse(response.data['odisseia'])
+
+    def test_marcar_categoria_lida_so_afeta_a_categoria_informada(self):
+        semente_notif = self._criar(alvo='paciente', tipo='nova_semente')
+        odisseia_notif = self._criar(alvo='paciente', tipo='comentario_psicologo')
+        self.client.force_authenticate(self.paciente_user)
+
+        response = self.client.post(self.marcar_url, {'categoria': 'sementes'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        semente_notif.refresh_from_db()
+        odisseia_notif.refresh_from_db()
+        self.assertTrue(semente_notif.lida)
+        self.assertFalse(odisseia_notif.lida)
+
+    def test_marcar_categoria_lida_nao_afeta_outro_usuario(self):
+        outro_paciente_user = CustomUser.objects.create_user(
+            username='cat-outro-pac', email='cat-outro-pac@example.com',
+            password='senha-segura', user_type='paciente',
+        )
+        outro_paciente = Paciente.objects.create(user=outro_paciente_user, cpf='111.222.333-44', gender='M')
+        notif_outro = NotificacaoSistema.objects.create(
+            paciente=outro_paciente, tipo='nova_semente', titulo='T', mensagem='M', lida=False,
+        )
+
+        self.client.force_authenticate(self.paciente_user)
+        self.client.post(self.marcar_url, {'categoria': 'sementes'}, format='json')
+
+        notif_outro.refresh_from_db()
+        self.assertFalse(notif_outro.lida)
+
+    def test_categoria_invalida_retorna_400(self):
+        self.client.force_authenticate(self.paciente_user)
+        response = self.client.post(self.marcar_url, {'categoria': 'inexistente'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_nao_lidas_ler_e_ler_todas_continuam_funcionando(self):
+        self.client.force_authenticate(self.paciente_user)
+        antes = self.client.get(reverse('notificacoes-nao-lidas')).data['nao_lidas']
+
+        self._criar(alvo='paciente', tipo='nova_semente')
+        self._criar(alvo='paciente', tipo='sistema')
+
+        nao_lidas = self.client.get(reverse('notificacoes-nao-lidas'))
+        self.assertEqual(nao_lidas.data['nao_lidas'], antes + 2)
+
+        ler_todas = self.client.post(reverse('notificacoes-ler-todas'))
+        self.assertEqual(ler_todas.status_code, status.HTTP_200_OK)
+
+        nao_lidas_depois = self.client.get(reverse('notificacoes-nao-lidas'))
+        self.assertEqual(nao_lidas_depois.data['nao_lidas'], 0)

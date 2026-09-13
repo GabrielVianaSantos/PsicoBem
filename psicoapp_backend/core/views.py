@@ -287,6 +287,18 @@ class NotificacaoViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NotificacaoSerializer
     permission_classes = [IsAuthenticated]
 
+    # Categorias exibidas como badge nos cards de menu das telas Home.
+    # 'sessao_lembrete' é intencionalmente excluído: é um lembrete de algo
+    # que o usuário já sabe, não uma novidade de estado.
+    CATEGORIA_FILTROS = {
+        'sementes': Q(tipo='nova_semente') | Q(dados_extras__event='semente_curtida'),
+        'sessoes': (
+            Q(tipo__in=['sessao_agendada', 'sessao_cancelada'])
+            | Q(dados_extras__event__in=['sessao_realizada', 'sessao_nao_realizada'])
+        ),
+        'odisseia': Q(tipo__in=['novo_registro', 'comentario_psicologo']),
+    }
+
     def get_queryset(self):
         user = self.request.user
         if hasattr(user, 'paciente_profile'):
@@ -315,3 +327,25 @@ class NotificacaoViewSet(viewsets.ReadOnlyModelViewSet):
         count = qs.count()
         qs.update(lida=True, data_leitura=timezone.now())
         return Response({'message': f'{count} notificação(ões) marcada(s) como lida(s).'})
+
+    @action(detail=False, methods=['get'], url_path='resumo-por-categoria')
+    def resumo_por_categoria(self, request):
+        """Indica, por assunto, se há notificação não lida — para acender os badges dos cards de menu."""
+        base = self.get_queryset().filter(lida=False)
+        return Response({
+            categoria: base.filter(filtro).exists()
+            for categoria, filtro in self.CATEGORIA_FILTROS.items()
+        })
+
+    @action(detail=False, methods=['post'], url_path='marcar-categoria-lida')
+    def marcar_categoria_lida(self, request):
+        """Marca como lidas as notificações não lidas de uma categoria (limpa o badge do card correspondente)."""
+        categoria = request.data.get('categoria')
+        filtro = self.CATEGORIA_FILTROS.get(categoria)
+        if filtro is None:
+            return Response({'error': 'Categoria inválida.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        self.get_queryset().filter(lida=False).filter(filtro).update(
+            lida=True, data_leitura=timezone.now()
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)

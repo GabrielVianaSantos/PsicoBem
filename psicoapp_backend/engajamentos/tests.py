@@ -223,6 +223,7 @@ class SementeCuidadoCurtirPersistenceTests(APITestCase):
         )
         self.detail_url = reverse('sementescuidado-detail', args=[self.semente.id])
         self.curtir_url = reverse('sementescuidado-curtir', args=[self.semente.id])
+        self.visualizar_url = reverse('sementescuidado-visualizar', args=[self.semente.id])
 
     def test_ja_curtida_persiste_apos_recarregar_a_lista(self):
         self.client.force_authenticate(self.paciente_user)
@@ -259,3 +260,32 @@ class SementeCuidadoCurtirPersistenceTests(APITestCase):
 
         notificacoes = NotificacaoSistema.objects.filter(psicologo=self.psicologo, tipo='engajamento')
         self.assertEqual(notificacoes.count(), 1)
+
+    def test_curtir_sem_visualizacao_previa_incrementa_ambos_contadores(self):
+        self.client.force_authenticate(self.paciente_user)
+        response = self.client.post(self.curtir_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.semente.refresh_from_db()
+        self.assertEqual(self.semente.total_curtidas, 1)
+        self.assertEqual(self.semente.total_visualizacoes, 1)
+
+    def test_curtir_apos_visualizacao_previa_nao_duplica_visualizacao(self):
+        self.client.force_authenticate(self.paciente_user)
+        self.client.post(self.visualizar_url)
+        self.semente.refresh_from_db()
+        self.assertEqual(self.semente.total_visualizacoes, 1)
+
+        self.client.post(self.curtir_url)
+        self.semente.refresh_from_db()
+        self.assertEqual(self.semente.total_visualizacoes, 1)
+        self.assertEqual(self.semente.total_curtidas, 1)
+
+    def test_curtir_duas_vezes_nao_incrementa_visualizacao_de_novo(self):
+        self.client.force_authenticate(self.paciente_user)
+        self.client.post(self.curtir_url)
+        self.client.post(self.curtir_url)
+
+        self.semente.refresh_from_db()
+        self.assertEqual(self.semente.total_visualizacoes, 1)
+        self.assertEqual(self.semente.total_curtidas, 1)
