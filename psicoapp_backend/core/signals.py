@@ -5,7 +5,7 @@ from authentication.models import Psicologo, Paciente
 from sessoes.models import TipoSessao, Sessao
 from engajamentos.models import CategoriaMensagem, RegistroOdisseia, ComentarioPsicologo
 from .models import (
-    NotificacaoSistema, VinculoPacientePsicologo, Prontuario
+    NotificacaoSistema, VinculoPacientePsicologo
 )
 from .services import NotificationDomainService
 
@@ -124,26 +124,6 @@ def notificar_paciente_comentario(sender, instance, created, **kwargs):
                 event='comentario_psicologo',
                 entity_type='registro',
                 entity_id=instance.registro.pk,
-            ),
-        )
-
-@receiver(post_save, sender=Prontuario)
-def notificar_paciente_prontuario(sender, instance, created, **kwargs):
-    """Notifica paciente quando psicólogo cria prontuário"""
-    if created:
-        NotificationDomainService.emit(
-            target=instance.paciente.user,
-            tipo='sistema',
-            titulo='Novo Prontuário Disponível 📋',
-            mensagem='Seu psicólogo adicionou um novo prontuário ao seu perfil.',
-            link_relacionado=f'/prontuarios/{instance.pk}',
-            dados_extras=NotificationDomainService._routing_payload(
-                screen='MeusProntuarios',
-                # Issue 02: parâmetro canônico prontuarioId
-                params={'prontuarioId': instance.pk},
-                event='novo_prontuario',
-                entity_type='prontuario',
-                entity_id=instance.pk,
             ),
         )
 

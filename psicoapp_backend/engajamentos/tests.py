@@ -195,3 +195,67 @@ class SementeCuidadoViewSetTests(APITestCase):
         curtir_response = self.client.post(reverse('sementescuidado-curtir', args=[self.semente.id]))
         self.assertEqual(visualizar_response.status_code, status.HTTP_200_OK)
         self.assertEqual(curtir_response.status_code, status.HTTP_200_OK)
+
+
+class SementeCuidadoCurtirPersistenceTests(APITestCase):
+    """
+    Garante que o 'curtido' persiste entre requisições (não é um estado
+    apenas local do app) e que a contagem exposta ao psicólogo é real.
+    """
+
+    def setUp(self):
+        self.psicologo_user = CustomUser.objects.create_user(
+            username='curtir-psi', email='curtir-psi@example.com',
+            password='senha-segura', user_type='psicologo',
+        )
+        self.psicologo = Psicologo.objects.create(user=self.psicologo_user, crp='09/11111')
+
+        self.paciente_user = CustomUser.objects.create_user(
+            username='curtir-pac', email='curtir-pac@example.com',
+            password='senha-segura', user_type='paciente',
+        )
+        self.paciente = Paciente.objects.create(user=self.paciente_user, cpf='888.888.888-88', gender='F')
+        VinculoPacientePsicologo.objects.create(paciente=self.paciente, psicologo=self.psicologo, status='ativo')
+
+        self.semente = SementeCuidado.objects.create(
+            psicologo=self.psicologo, titulo='Semente Curtível', conteudo='Conteúdo',
+            tipo='motivacional', status='ativa', publica=True,
+        )
+        self.detail_url = reverse('sementescuidado-detail', args=[self.semente.id])
+        self.curtir_url = reverse('sementescuidado-curtir', args=[self.semente.id])
+
+    def test_ja_curtida_persiste_apos_recarregar_a_lista(self):
+        self.client.force_authenticate(self.paciente_user)
+
+        antes = self.client.get(self.detail_url)
+        self.assertFalse(antes.data['ja_curtida'])
+
+        curtir = self.client.post(self.curtir_url)
+        self.assertEqual(curtir.status_code, status.HTTP_200_OK)
+        self.assertTrue(curtir.data['semente']['ja_curtida'])
+
+        # Simula "voltar na tela": nova requisição de leitura, sem estado local nenhum.
+        depois = self.client.get(self.detail_url)
+        self.assertTrue(depois.data['ja_curtida'])
+
+    def test_total_curtidas_reflete_curtidas_reais_e_nao_duplica(self):
+        self.client.force_authenticate(self.paciente_user)
+
+        self.client.post(self.curtir_url)
+        self.client.post(self.curtir_url)  # segundo toque no mesmo paciente: não deve contar de novo
+        self.semente.refresh_from_db()
+        self.assertEqual(self.semente.total_curtidas, 1)
+
+        self.client.force_authenticate(self.psicologo_user)
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.data['total_curtidas'], 1)
+
+    def test_segunda_curtida_do_mesmo_paciente_nao_notifica_de_novo(self):
+        from core.models import NotificacaoSistema
+
+        self.client.force_authenticate(self.paciente_user)
+        self.client.post(self.curtir_url)
+        self.client.post(self.curtir_url)
+
+        notificacoes = NotificacaoSistema.objects.filter(psicologo=self.psicologo, tipo='engajamento')
+        self.assertEqual(notificacoes.count(), 1)

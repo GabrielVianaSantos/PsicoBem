@@ -104,27 +104,34 @@ class SementeCuidadoViewSet(viewsets.ModelViewSet):
             paciente=request.user.paciente_profile,
             defaults={'status': 'enviada'}
         )
+        ja_curtida_antes = msg.status == 'curtida'
         msg.marcar_como_curtida()
 
-        # Issue 02: corrigir rota SementesPsicologo (inexistente) → SementesCuidado
-        # e usar parâmetro canônico sementeId
-        from core.services import NotificationDomainService
-        NotificationDomainService.emit(
-            target=semente.psicologo.user,
-            tipo='engajamento',
-            titulo='Semente Curtida ❤️',
-            mensagem=f'{request.user.first_name} curtiu a semente "{semente.titulo}".',
-            link_relacionado=f'/sementes/{semente.pk}',
-            dados_extras=NotificationDomainService._routing_payload(
-                screen='SementesCuidado',
-                params={'sementeId': semente.pk},
-                event='semente_curtida',
-                entity_type='semente',
-                entity_id=semente.pk,
-            ),
-        )
+        # Notifica o psicólogo só na primeira curtida deste paciente — evita
+        # notificação duplicada se o app reenviar a chamada (ex.: estado de
+        # "curtido" perdido no cliente e o paciente tocar novamente).
+        if not ja_curtida_antes:
+            # Issue 02: corrigir rota SementesPsicologo (inexistente) → SementesCuidado
+            # e usar parâmetro canônico sementeId
+            from core.services import NotificationDomainService
+            NotificationDomainService.emit(
+                target=semente.psicologo.user,
+                tipo='engajamento',
+                titulo='Semente Curtida ❤️',
+                mensagem=f'{request.user.first_name} curtiu a semente "{semente.titulo}".',
+                link_relacionado=f'/sementes/{semente.pk}',
+                dados_extras=NotificationDomainService._routing_payload(
+                    screen='SementesCuidado',
+                    params={'sementeId': semente.pk},
+                    event='semente_curtida',
+                    entity_type='semente',
+                    entity_id=semente.pk,
+                ),
+            )
 
-        return Response({'message': 'Semente curtida com sucesso!'})
+        semente.refresh_from_db()
+        serializer = self.get_serializer(semente)
+        return Response({'message': 'Semente curtida com sucesso!', 'semente': serializer.data})
 
 
 #####################################################################################################################################

@@ -10,11 +10,29 @@ from engajamentos.models import (
 
 class SementeCuidadoSerializer(serializers.ModelSerializer):
     psicologo_nome = serializers.CharField(source='psicologo.user.first_name', read_only=True)
-    
+    ja_curtida = serializers.SerializerMethodField()
+    ja_visualizada = serializers.SerializerMethodField()
+
     class Meta:
         model = SementeCuidado
         fields = '__all__'
         read_only_fields = ['id', 'psicologo', 'created_at', 'updated_at', 'total_visualizacoes', 'total_curtidas']
+
+    def _mensagem_do_paciente(self, obj):
+        request = self.context.get('request')
+        if not request or not hasattr(request.user, 'paciente_profile'):
+            return None
+        return MensagemPaciente.objects.filter(
+            semente=obj, paciente=request.user.paciente_profile
+        ).first()
+
+    def get_ja_curtida(self, obj):
+        mensagem = self._mensagem_do_paciente(obj)
+        return bool(mensagem and mensagem.status == 'curtida')
+
+    def get_ja_visualizada(self, obj):
+        mensagem = self._mensagem_do_paciente(obj)
+        return bool(mensagem and mensagem.status in ('visualizada', 'curtida'))
 
 class RegistroOdisseiaSerializer(serializers.ModelSerializer):
     paciente_nome = serializers.CharField(source='paciente.user.first_name', read_only=True)

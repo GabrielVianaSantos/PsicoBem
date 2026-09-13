@@ -242,7 +242,9 @@ class ProntuarioViewSet(viewsets.ModelViewSet):
     """
     ViewSet para Prontuários.
     - Psicólogo: CRUD completo de seus prontuários.
-    - Paciente: apenas leitura dos prontuários escritos pelo seu psicólogo vinculado.
+    - Paciente: NENHUM acesso. Prontuário é dado clínico sensível, de uso
+      exclusivo do psicólogo autor — o paciente nunca deve ler, listar ou
+      receber notificação com o conteúdo ou a existência de um prontuário.
     """
     serializer_class = ProntuarioSerializer
     permission_classes = [IsAuthenticated]
@@ -255,40 +257,12 @@ class ProntuarioViewSet(viewsets.ModelViewSet):
             if paciente_id:
                 qs = qs.filter(paciente_id=paciente_id)
             return qs
-        elif hasattr(user, 'paciente_profile'):
-            # Paciente vê apenas prontuários do seu psicólogo com vínculo ativo
-            vinculo = VinculoPacientePsicologo.objects.filter(
-                paciente=user.paciente_profile, status='ativo'
-            ).first()
-            if vinculo:
-                return Prontuario.objects.filter(
-                    paciente=user.paciente_profile,
-                    psicologo=vinculo.psicologo
-                ).order_by('-created_at')
         return Prontuario.objects.none()
 
     def perform_create(self, serializer):
         if not hasattr(self.request.user, 'psicologo_profile'):
             raise PermissionDenied("Apenas psicólogos podem criar prontuários.")
-        prontuario = serializer.save(psicologo=self.request.user.psicologo_profile)
-
-        # Notificar paciente sobre novo prontuário
-        from core.services import NotificationDomainService
-        NotificationDomainService.emit(
-            target=prontuario.paciente.user,
-            tipo='sistema',
-            titulo='Novo Prontuário Disponível 📝',
-            mensagem='Seu psicólogo disponibilizou uma nova guia ou prontuário para você.',
-            link_relacionado='/prontuarios',
-            # Issue 02: parâmetro canônico prontuarioId, entity_type/entity_id
-            dados_extras=NotificationDomainService._routing_payload(
-                screen='MeusProntuarios',
-                params={'prontuarioId': prontuario.pk},
-                event='prontuario_criado',
-                entity_type='prontuario',
-                entity_id=prontuario.pk,
-            ),
-        )
+        serializer.save(psicologo=self.request.user.psicologo_profile)
 
     def update(self, request, *args, **kwargs):
         if not hasattr(request.user, 'psicologo_profile'):
