@@ -41,12 +41,12 @@ const ROUTES_BY_PROFILE = {
   psicologo: new Set([
     'HomeBarNavigation', 'Home', 'Sessoes', 'AgendarSessao', 'DetalhesSessao',
     'TipoSessao', 'PerfilPsicologo', 'Prontuarios', 'SementesCuidado',
-    'GuiasApoio', 'RegistrosOdisseia', 'RegistroCompleto', 'Navigation',
+    'GuiasApoio', 'RegistrosOdisseia', 'Navigation',
     'VinculosPacientes', 'Notificacoes', 'PerfilPaciente',
   ]),
   paciente: new Set([
     'HomePaciente', 'ConexaoTerapeutica', 'RegistrosOdisseia', 'PerfilPaciente',
-    'RegistroCompleto', 'DetalhesSessao', 'MinhasSessoes', 'MeuPsicologo',
+    'DetalhesSessao', 'MinhasSessoes', 'MeuPsicologo',
     'SementesPaciente', 'Notificacoes',
   ]),
 };
@@ -269,5 +269,11 @@ export const notificationService = {
   /** Marca como lidas as notificações de uma categoria, limpando o badge correspondente. */
   async marcarCategoriaLida(categoria) {
     await api.post('/notificacoes/marcar-categoria-lida/', { categoria });
+  },
+
+  /** Contagem geral de notificações não lidas — alimenta o badge do sino. */
+  async getNaoLidas() {
+    const response = await api.get('/notificacoes/nao-lidas/');
+    return response.data.nao_lidas;
   },
 };

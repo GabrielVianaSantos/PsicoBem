@@ -130,8 +130,9 @@ class NotificationDomainService:
             mensagem=f"{registro.paciente.user.first_name} fez um novo registro emocional.",
             link_relacionado=f"/registros/{registro.pk}",
             dados_extras=NotificationDomainService._routing_payload(
-                screen="RegistroCompleto",
-                # Parâmetro canônico: registroId (não mais 'id')
+                # RegistroCompleto foi descontinuada — a lista de RegistrosOdisseia
+                # já exibe o conteúdo completo de cada registro inline.
+                screen="RegistrosOdisseia",
                 params={"registroId": registro.pk},
                 event="novo_registro_odisseia",
                 entity_type="registro",

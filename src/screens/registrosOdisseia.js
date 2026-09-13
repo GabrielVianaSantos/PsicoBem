@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
   titulo: { color: '#11B5A4', fontFamily: 'RalewayBold', fontSize: 24 },
   subtitulo: { color: '#888', fontSize: 14, marginTop: 4, marginBottom: 20, lineHeight: 20 },
 
-  // RegistroCompleto card
+  // Card de registro
   cardRegistro: {
     backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 16,
     borderLeftWidth: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },

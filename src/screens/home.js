@@ -21,16 +21,18 @@ const Home = () => {
     const [profile, setProfile] = useState(null);
     const [sessoesHoje, setSessoesHoje] = useState([]);
     const [novidades, setNovidades] = useState({ sementes: false, sessoes: false, odisseia: false });
+    const [naoLidas, setNaoLidas] = useState(0);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const { logout } = useAuth();
 
     const carregarDados = async () => {
         setLoading(true);
-        const [profileRes, sessoesRes, resumoNovidades] = await Promise.all([
+        const [profileRes, sessoesRes, resumoNovidades, contagemNaoLidas] = await Promise.all([
             authService.getUserProfile(),
             sessaoService.getSessoesHoje(),
             notificationService.getResumoPorCategoria().catch(() => null),
+            notificationService.getNaoLidas().catch(() => null),
         ]);
 
         if (profileRes.success) {
@@ -41,6 +43,9 @@ const Home = () => {
         }
         if (resumoNovidades) {
             setNovidades(resumoNovidades);
+        }
+        if (contagemNaoLidas !== null) {
+            setNaoLidas(contagemNaoLidas);
         }
 
         setLoading(false);
@@ -92,6 +97,11 @@ const Home = () => {
               onPress={() => navigation.navigate('Notificacoes')}
             >
               <Ionicons name="notifications" size={24} color="#11B5A4" />
+              {naoLidas > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{naoLidas > 9 ? '9+' : naoLidas}</Text>
+                </View>
+              )}
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -243,6 +253,14 @@ const styles = StyleSheet.create ({
     },
     notificationIcon: {
         padding: 5,
+        position: 'relative',
+    },
+    badge: {
+        position: 'absolute', top: 0, right: 0, width: 18, height: 18,
+        borderRadius: 9, backgroundColor: '#EF5350', justifyContent: 'center', alignItems: 'center',
+    },
+    badgeText: {
+        color: '#fff', fontSize: 10, fontFamily: 'RalewayBold',
     },
     logoutIcon: {
         padding: 5,

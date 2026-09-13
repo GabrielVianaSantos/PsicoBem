@@ -15,9 +15,6 @@ import RedefinirSenha from "./screens/redefinirSenha";
 import CompletarCadastroGoogle from "./screens/completarCadastroGoogle";
 import ConfirmarVinculoGoogle from "./screens/confirmarVinculoGoogle";
 
-// Telas Comuns / Compartilhadas
-import RegistroCompleto from "./screens/registroCompleto";
-
 // ─── TELAS DO PSICÓLOGO ─────────────────────────────────────
 import Home from "./screens/home";
 import HomeBarNavigation from "./screens/homeBarNavigation";
@@ -107,7 +104,6 @@ export default function Routes() {
             <AppStack.Screen name="SementesCuidado" component={SementesCuidado} />
             <AppStack.Screen name="GuiasApoio" component={GuiasApoio} />
             <AppStack.Screen name="RegistrosOdisseia" component={RegistrosOdisseia} />
-            <AppStack.Screen name="RegistroCompleto" component={RegistroCompleto} />
             <AppStack.Screen name="Navigation" component={Navigation} />
             <AppStack.Screen name="VinculosPacientes" component={VinculosPacientes} />
             <AppStack.Screen name="Notificacoes" component={Notificacoes} />
@@ -121,7 +117,6 @@ export default function Routes() {
             <AppStack.Screen name="ConexaoTerapeutica" component={ConexaoTerapeutica} />
             <AppStack.Screen name="RegistrosOdisseia" component={RegistrosOdisseia} />
             <AppStack.Screen name="PerfilPaciente" component={PerfilPaciente} />
-            <AppStack.Screen name="RegistroCompleto" component={RegistroCompleto} />
             {/* DetalhesSessao: disponível ao paciente via MinhasSessoes e notificações de sessão */}
             <AppStack.Screen name="DetalhesSessao" component={DetalhesSessao} />
             <AppStack.Screen name="MinhasSessoes" component={MinhasSessoes} />

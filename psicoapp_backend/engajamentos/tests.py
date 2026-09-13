@@ -6,7 +6,7 @@ from rest_framework.test import APITestCase
 
 from authentication.models import CustomUser, Paciente, Psicologo
 from core.models import NotificacaoSistema, VinculoPacientePsicologo
-from engajamentos.models import MensagemPaciente, RegistroOdisseia, SementeCuidado
+from engajamentos.models import ComentarioPsicologo, MensagemPaciente, RegistroOdisseia, SementeCuidado
 
 
 class RegistroOdisseiaViewSetTests(APITestCase):
@@ -353,3 +353,45 @@ class SementeCuidadoCriacaoNotificaPacientesTests(APITestCase):
 
         semente = SementeCuidado.objects.get(id=response.data['id'])
         self.assertFalse(MensagemPaciente.objects.filter(semente=semente).exists())
+
+
+class NotificacaoOdisseiaApontaParaTelaAtualTests(APITestCase):
+    """
+    RegistroCompleto foi descontinuada — as notificações de novo registro
+    e de comentário do psicólogo devem apontar para RegistrosOdisseia,
+    que já exibe o conteúdo completo de cada registro inline.
+    """
+
+    def setUp(self):
+        self.psicologo_user = CustomUser.objects.create_user(
+            username='odisseia-tela-psi', email='odisseia-tela-psi@example.com',
+            password='senha-segura', user_type='psicologo',
+        )
+        self.psicologo = Psicologo.objects.create(user=self.psicologo_user, crp='12/33333')
+
+        self.paciente_user = CustomUser.objects.create_user(
+            username='odisseia-tela-pac', email='odisseia-tela-pac@example.com',
+            password='senha-segura', user_type='paciente',
+        )
+        self.paciente = Paciente.objects.create(user=self.paciente_user, cpf='555.444.333-22', gender='F')
+        VinculoPacientePsicologo.objects.create(paciente=self.paciente, psicologo=self.psicologo, status='ativo')
+
+    def test_novo_registro_compartilhado_notifica_psicologo_com_tela_atual(self):
+        registro = RegistroOdisseia.objects.create(
+            paciente=self.paciente, data_registro=date(2026, 8, 1), hora_registro=time(9, 0),
+            situacao='Situação', pensamentos='Pensamentos', compartilhar_psicologo=True,
+        )
+        notif = NotificacaoSistema.objects.get(psicologo=self.psicologo, tipo='novo_registro')
+        self.assertEqual(notif.dados_extras['screen'], 'RegistrosOdisseia')
+        self.assertNotEqual(notif.dados_extras['screen'], 'RegistroCompleto')
+
+    def test_comentario_psicologo_notifica_paciente_com_tela_atual(self):
+        registro = RegistroOdisseia.objects.create(
+            paciente=self.paciente, data_registro=date(2026, 8, 1), hora_registro=time(9, 0),
+            situacao='Situação', pensamentos='Pensamentos', compartilhar_psicologo=True,
+        )
+        ComentarioPsicologo.objects.create(registro=registro, psicologo=self.psicologo, comentario='Muito bem!')
+
+        notif = NotificacaoSistema.objects.get(paciente=self.paciente, tipo='comentario_psicologo')
+        self.assertEqual(notif.dados_extras['screen'], 'RegistrosOdisseia')
+        self.assertNotEqual(notif.dados_extras['screen'], 'RegistroCompleto')

@@ -118,8 +118,9 @@ def notificar_paciente_comentario(sender, instance, created, **kwargs):
             mensagem=f'Seu psicólogo comentou no seu registro de {instance.registro.data_registro.strftime("%d/%m/%Y")}.',
             link_relacionado=f'/registros/{instance.registro.pk}',
             dados_extras=NotificationDomainService._routing_payload(
-                screen='RegistroCompleto',
-                # Issue 02: parâmetro canônico registroId (não mais 'id')
+                # RegistroCompleto foi descontinuada — a lista de RegistrosOdisseia
+                # já exibe o conteúdo completo de cada registro inline.
+                screen='RegistrosOdisseia',
                 params={'registroId': instance.registro.pk},
                 event='comentario_psicologo',
                 entity_type='registro',
