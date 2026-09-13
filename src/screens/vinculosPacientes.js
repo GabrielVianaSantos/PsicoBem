@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Alert, TextInput,
+  ActivityIndicator, RefreshControl, TextInput,
 } from 'react-native';
+import { CustomAlert as Alert } from '../components/common/CustomAlert';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { vinculoService } from '../services/vinculoService';

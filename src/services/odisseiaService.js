@@ -21,6 +21,26 @@ export const odisseiaService = {
     }
   },
 
+  async updateSementeCuidado(id, dados) {
+    try {
+      const response = await api.patch(`/sementes-cuidado/${id}/`, dados);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Erro updateSementeCuidado:', error);
+      return { success: false, message: this.extractErrorMessage(error) };
+    }
+  },
+
+  async deleteSementeCuidado(id) {
+    try {
+      await api.delete(`/sementes-cuidado/${id}/`);
+      return { success: true };
+    } catch (error) {
+      console.error('Erro deleteSementeCuidado:', error);
+      return { success: false, message: this.extractErrorMessage(error) };
+    }
+  },
+
   async getRegistrosOdisseia(pacienteId = null) {
     try {
       const url = pacienteId ? `/registros-odisseia/?paciente_id=${pacienteId}` : '/registros-odisseia/';

@@ -128,6 +128,15 @@ export const sessaoService = {
     }
   },
 
+  async marcarNaoRealizada(id) {
+    try {
+      const response = await api.post(`/sessoes/${id}/nao-realizada/`);
+      return { success: true, data: response.data, message: response.data.message || 'Sessão marcada como não realizada!' };
+    } catch (error) {
+      return this.buildError(error, 'Erro ao marcar sessão como não realizada');
+    }
+  },
+
   async confirmarPagamento(id) {
     try {
       const response = await api.post(`/sessoes/${id}/confirmar-pagamento/`);

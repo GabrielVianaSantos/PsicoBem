@@ -47,7 +47,7 @@ const ROUTES_BY_PROFILE = {
   paciente: new Set([
     'HomePaciente', 'ConexaoTerapeutica', 'RegistrosOdisseia', 'PerfilPaciente',
     'RegistroCompleto', 'DetalhesSessao', 'MinhasSessoes', 'MeuPsicologo',
-    'SementesPaciente', 'MeusProntuarios', 'Notificacoes',
+    'SementesPaciente', 'Notificacoes',
   ]),
 };
 
@@ -255,5 +255,19 @@ export const notificationService = {
     });
 
     return { success: true, data: response.data };
+  },
+
+  /**
+   * Badges de novidade nos cards de menu das Home — indica, por assunto,
+   * se há notificação não lida (sem contagem, apenas presença).
+   */
+  async getResumoPorCategoria() {
+    const response = await api.get('/notificacoes/resumo-por-categoria/');
+    return response.data;
+  },
+
+  /** Marca como lidas as notificações de uma categoria, limpando o badge correspondente. */
+  async marcarCategoriaLida(categoria) {
+    await api.post('/notificacoes/marcar-categoria-lida/', { categoria });
   },
 };

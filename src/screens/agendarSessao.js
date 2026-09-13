@@ -6,12 +6,12 @@ import {
     Text,
     StyleSheet,
     ScrollView,
-    Alert,
     ActivityIndicator,
     TouchableOpacity,
     Platform,
     KeyboardAvoidingView
 } from "react-native";
+import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from '@react-native-picker/picker';

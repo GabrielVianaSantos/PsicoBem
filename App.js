@@ -8,6 +8,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import useLoadFonts from './src/hooks/useLoadFonts';
 import Routes from "./src/routes";
 import AuthProvider from './src/providers/AuthProvider';
+import { CustomAlertProvider } from './src/components/common/CustomAlert';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -17,11 +18,13 @@ export default function App() {
   return null;
 
   return (
-    <AuthProvider>
-      <SafeAreaView style = {{flex: 1}} onLayout={onLayoutRootView}>
-      <StatusBar backgroundColor={"transparent"} translucent/>
-          <Routes/>
-      </SafeAreaView>
-    </AuthProvider>
+    <CustomAlertProvider>
+      <AuthProvider>
+        <SafeAreaView style = {{flex: 1}} onLayout={onLayoutRootView}>
+        <StatusBar backgroundColor={"transparent"} translucent/>
+            <Routes/>
+        </SafeAreaView>
+      </AuthProvider>
+    </CustomAlertProvider>
   );
 }

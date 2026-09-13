@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert, KeyboardAvoidingView, ScrollView, Platform } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, ScrollView, Platform } from "react-native";
+import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { Ionicons } from "@expo/vector-icons";
 import Topo from "./components/topo";
 import Botao from "../components/common/Button";

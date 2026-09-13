@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Botao from "../components/common/Button";
 import Topo from "./components/topo";
-import { 
-    View, 
-    Text, 
-    StyleSheet, 
-    ScrollView, 
-    TouchableOpacity, 
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
     RefreshControl,
-    ActivityIndicator,
-    Alert
+    ActivityIndicator
 } from "react-native";
+import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { sessaoService } from "../services/sessaoService";
+import { notificationService } from "../services/notificationService";
 
 export default function Sessoes() {
     const navigation = useNavigation();
@@ -25,6 +26,7 @@ export default function Sessoes() {
     useFocusEffect(
         useCallback(() => {
             carregarSessoes();
+            notificationService.marcarCategoriaLida('sessoes').catch(() => {});
         }, [filtro])
     );
 

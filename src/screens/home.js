@@ -14,20 +14,23 @@ import Topo from "./components/topo";
 import CustomScrollView from "./components/customScrollView";   
 import { authService } from "../services/authService";
 import { sessaoService } from "../services/sessaoService";
+import { notificationService } from "../services/notificationService";
 
 const Home = () => {
     const navigation = useNavigation();
     const [profile, setProfile] = useState(null);
     const [sessoesHoje, setSessoesHoje] = useState([]);
+    const [novidades, setNovidades] = useState({ sementes: false, sessoes: false, odisseia: false });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const { logout } = useAuth();
 
     const carregarDados = async () => {
         setLoading(true);
-        const [profileRes, sessoesRes] = await Promise.all([
+        const [profileRes, sessoesRes, resumoNovidades] = await Promise.all([
             authService.getUserProfile(),
-            sessaoService.getSessoesHoje()
+            sessaoService.getSessoesHoje(),
+            notificationService.getResumoPorCategoria().catch(() => null),
         ]);
 
         if (profileRes.success) {
@@ -36,7 +39,10 @@ const Home = () => {
         if (sessoesRes.success) {
             setSessoesHoje(sessoesRes.data);
         }
-        
+        if (resumoNovidades) {
+            setNovidades(resumoNovidades);
+        }
+
         setLoading(false);
         setRefreshing(false);
     };
@@ -101,6 +107,7 @@ const Home = () => {
         {/* Menu Cards */}
         <View style={styles.cardsContainer}>
           <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('RegistrosOdisseia')}>
+            {novidades.odisseia && <View style={styles.badgeDot} />}
             <View style={styles.cardContent}>
               <View style={{flex: 1}}>
                 <Text style={styles.cardTitle}>Registros de Odisseia</Text>
@@ -111,6 +118,7 @@ const Home = () => {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('SementesCuidado')}>
+            {novidades.sementes && <View style={styles.badgeDot} />}
             <View style={styles.cardContent}>
               <View style={{flex: 1}}>
                 <Text style={styles.cardTitle}>Sementes do Cuidado</Text>
@@ -143,7 +151,10 @@ const Home = () => {
 
         {/* Hoje Section */}
         <View style={styles.sectionHeaderCont}>
-            <Text style={styles.sectionTitle}>Sessões de Hoje</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={styles.sectionTitle}>Sessões de Hoje</Text>
+                {novidades.sessoes && <View style={styles.badgeDotInline} />}
+            </View>
             <TouchableOpacity onPress={() => navigation.navigate('Sessoes')}>
                 <Text style={styles.verTodos}>Ver tudo</Text>
             </TouchableOpacity>
@@ -255,6 +266,23 @@ const styles = StyleSheet.create ({
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
+        position: 'relative',
+    },
+    badgeDot: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: '#EF5350',
+    },
+    badgeDotInline: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#EF5350',
+        marginLeft: 6,
     },
     cardContent: {
         flexDirection: 'row',

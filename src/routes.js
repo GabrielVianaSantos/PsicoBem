@@ -40,7 +40,6 @@ import PerfilPaciente from "./screens/PerfilPaciente";
 import MinhasSessoes from "./screens/minhasSessoes";           // ← NOVA
 import MeuPsicologo from "./screens/meuPsicologo";            // ← NOVA
 import SementesPaciente from "./screens/sementesPaciente";    // ← NOVA
-import MeusProntuarios from "./screens/meusProntuarios";      // ← NOVA
 import MeuPerfil from "./screens/meuPerfil";
 import Notificacoes from "./screens/notificacoes";
 import { notificationService } from "./services/notificationService";
@@ -128,7 +127,6 @@ export default function Routes() {
             <AppStack.Screen name="MinhasSessoes" component={MinhasSessoes} />
             <AppStack.Screen name="MeuPsicologo" component={MeuPsicologo} />
             <AppStack.Screen name="SementesPaciente" component={SementesPaciente} />
-            <AppStack.Screen name="MeusProntuarios" component={MeusProntuarios} />
             <AppStack.Screen name="MeuPerfil" component={MeuPerfil} />
             <AppStack.Screen name="Notificacoes" component={Notificacoes} />
           </>

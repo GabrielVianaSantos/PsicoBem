@@ -1,10 +1,12 @@
 import React, { useState, useCallback } from "react";
-import { View, StyleSheet, Text, TextInput, ScrollView, RefreshControl, ActivityIndicator, Alert } from "react-native";
+import { View, StyleSheet, Text, TextInput, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity } from "react-native";
+import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
 import Topo from "./components/topo";
 import Botao from "../components/common/Button";
 import { odisseiaService } from "../services/odisseiaService";
+import { notificationService } from "../services/notificationService";
 
 export default function SementesCuidado(topo) {
     const route = useRoute();
@@ -13,10 +15,11 @@ export default function SementesCuidado(topo) {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    // Campos nova Semente
+    // Campos do formulário (reaproveitado para criar e editar)
     const [titulo, setTitulo] = useState("");
     const [conteudo, setConteudo] = useState("");
     const [salvando, setSalvando] = useState(false);
+    const [sementeEmEdicao, setSementeEmEdicao] = useState(null);
 
     const carregarSementes = async () => {
         setLoading(true);
@@ -32,6 +35,7 @@ export default function SementesCuidado(topo) {
     useFocusEffect(
         useCallback(() => {
             carregarSementes();
+            notificationService.marcarCategoriaLida('sementes').catch(() => {});
         }, [])
     );
 
@@ -47,23 +51,67 @@ export default function SementesCuidado(topo) {
         }
 
         setSalvando(true);
-        const result = await odisseiaService.createSementeCuidado({
-            titulo: titulo,
-            conteudo: conteudo,
-            tipo: "motivacional",
-            status: "ativa",
-            publica: true
-        });
+        const result = sementeEmEdicao
+            ? await odisseiaService.updateSementeCuidado(sementeEmEdicao, { titulo, conteudo })
+            : await odisseiaService.createSementeCuidado({
+                titulo: titulo,
+                conteudo: conteudo,
+                tipo: "motivacional",
+                status: "ativa",
+                publica: true
+            });
 
         setSalvando(false);
         if (result.success) {
+            const eraEdicao = !!sementeEmEdicao;
             setTitulo("");
             setConteudo("");
-            Alert.alert("Sucesso", "Semente lançada! Seus pacientes agora verão a sua mensagem. 🌱");
+            setSementeEmEdicao(null);
+            Alert.alert(
+                "Sucesso",
+                eraEdicao ? "Semente atualizada com sucesso!" : "Semente lançada! Seus pacientes agora verão a sua mensagem. 🌱"
+            );
             carregarSementes();
         } else {
-            Alert.alert("Erro", "Não foi possível plantar essa Semente.");
+            Alert.alert("Erro", sementeEmEdicao ? "Não foi possível salvar as alterações." : "Não foi possível plantar essa Semente.");
         }
+    };
+
+    const handleEditar = (item) => {
+        setSementeEmEdicao(item.id);
+        setTitulo(item.titulo);
+        setConteudo(item.conteudo);
+    };
+
+    const handleCancelarEdicao = () => {
+        setSementeEmEdicao(null);
+        setTitulo("");
+        setConteudo("");
+    };
+
+    const handleExcluir = (item) => {
+        Alert.alert(
+            "Excluir Semente",
+            "Tem certeza que deseja excluir esta semente? Essa ação não pode ser desfeita.",
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Excluir",
+                    style: "destructive",
+                    onPress: async () => {
+                        const result = await odisseiaService.deleteSementeCuidado(item.id);
+                        if (result.success) {
+                            if (sementeEmEdicao === item.id) {
+                                handleCancelarEdicao();
+                            }
+                            carregarSementes();
+                        } else {
+                            Alert.alert("Erro", "Não foi possível excluir essa Semente.");
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     return (
@@ -88,7 +136,9 @@ export default function SementesCuidado(topo) {
                 <View style={estilos.divider} />
 
                 <View style={estilos.sectionHeaderCont}>
-                    <Text style={estilos.sectionTitle}>Plantar Nova Semente 🌱</Text>
+                    <Text style={estilos.sectionTitle}>
+                        {sementeEmEdicao ? "Editar Semente ✏️" : "Plantar Nova Semente 🌱"}
+                    </Text>
                 </View>
 
                 <View style={estilos.highlightCard}>
@@ -113,12 +163,19 @@ export default function SementesCuidado(topo) {
                     {salvando ? (
                         <ActivityIndicator size="small" color="#11B5A4" style={{ marginTop: 10 }} />
                     ) : (
-                        <Botao
-                            texto="Publicar Semente"
-                            backgroundColor="#11B5A4"
-                            iconName="leaf-outline"
-                            onPress={handleSalvar}
-                        />
+                        <>
+                            <Botao
+                                texto={sementeEmEdicao ? "Salvar Alterações" : "Publicar Semente"}
+                                backgroundColor="#11B5A4"
+                                iconName={sementeEmEdicao ? "checkmark-outline" : "leaf-outline"}
+                                onPress={handleSalvar}
+                            />
+                            {sementeEmEdicao && (
+                                <TouchableOpacity style={estilos.btnCancelarEdicao} onPress={handleCancelarEdicao}>
+                                    <Text style={estilos.btnCancelarEdicaoText}>Cancelar edição</Text>
+                                </TouchableOpacity>
+                            )}
+                        </>
                     )}
                 </View>
 
@@ -151,6 +208,34 @@ export default function SementesCuidado(topo) {
                                     </Text>
                                 </View>
                                 <Text style={estilos.cardConteudo}>{item.conteudo}</Text>
+                                <View style={estilos.cardStats}>
+                                    <View style={estilos.cardStatItem}>
+                                        <Ionicons name="heart" size={14} color="#EF5350" />
+                                        <Text style={estilos.cardStatText}>{item.total_curtidas || 0}</Text>
+                                    </View>
+                                    <View style={estilos.cardStatItem}>
+                                        <Ionicons name="eye-outline" size={14} color="#999" />
+                                        <Text style={estilos.cardStatText}>{item.total_visualizacoes || 0}</Text>
+                                    </View>
+                                </View>
+                                <View style={estilos.cardActions}>
+                                    <TouchableOpacity
+                                        style={estilos.cardActionBtn}
+                                        onPress={() => handleEditar(item)}
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                        <Ionicons name="create-outline" size={18} color="#11B5A4" />
+                                        <Text style={estilos.cardActionText}>Editar</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={estilos.cardActionBtn}
+                                        onPress={() => handleExcluir(item)}
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                        <Ionicons name="trash-outline" size={18} color="#EF5350" />
+                                        <Text style={[estilos.cardActionText, { color: '#EF5350' }]}>Excluir</Text>
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         ))}
                     </View>
@@ -297,5 +382,49 @@ const estilos = StyleSheet.create({
         color: "#555",
         fontSize: 14,
         lineHeight: 21,
-    }
+    },
+    cardStats: {
+        flexDirection: 'row',
+        marginTop: 12,
+    },
+    cardStatItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginRight: 18,
+    },
+    cardStatText: {
+        color: '#777',
+        fontSize: 13,
+        fontFamily: 'RalewayBold',
+        marginLeft: 5,
+    },
+    cardActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginTop: 12,
+        paddingTop: 10,
+        borderTopWidth: 1,
+        borderTopColor: '#f5f5f5',
+    },
+    cardActionBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 20,
+    },
+    cardActionText: {
+        color: '#11B5A4',
+        fontSize: 13,
+        fontFamily: 'RalewayBold',
+        marginLeft: 5,
+    },
+    btnCancelarEdicao: {
+        alignItems: 'center',
+        marginTop: 12,
+        padding: 8,
+    },
+    btnCancelarEdicaoText: {
+        color: '#666',
+        fontFamily: 'RalewayBold',
+        fontSize: 14,
+    },
 });

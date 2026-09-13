@@ -1,11 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Dimensions, Alert,
+  ActivityIndicator, RefreshControl, Dimensions,
 } from 'react-native';
+import { CustomAlert as Alert } from '../components/common/CustomAlert';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { pacienteService } from '../services/pacienteService';
+import { notificationService } from '../services/notificationService';
 import Topo from './components/topo';
 
 const { width } = Dimensions.get('window');
@@ -27,31 +29,50 @@ export default function SementesPaciente() {
   const [sementes, setSementes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [curtidas, setCurtidas] = useState(new Set());
   const [curtindo, setCurtindo] = useState(null);
 
   const carregar = async () => {
     setLoading(true);
     const res = await pacienteService.getSementesDisponiveis();
-    if (res.success) setSementes(res.data);
+    if (res.success) {
+      setSementes(res.data);
+      registrarVisualizacoes(res.data);
+    }
     setLoading(false);
     setRefreshing(false);
   };
 
-  useFocusEffect(useCallback(() => { carregar(); }, []));
+  // Dispara /visualizar/ para sementes ainda não vistas por este paciente,
+  // sem bloquear o carregamento da lista (fire-and-forget).
+  const registrarVisualizacoes = (lista) => {
+    const naoVisualizadas = lista.filter((s) => !s.ja_visualizada);
+    if (naoVisualizadas.length === 0) return;
+
+    naoVisualizadas.forEach((s) => {
+      pacienteService.visualizarSemente(s.id).catch(() => {});
+    });
+
+    const idsVisualizados = new Set(naoVisualizadas.map((s) => s.id));
+    setSementes((prev) => prev.map((s) => (
+      idsVisualizados.has(s.id) ? { ...s, ja_visualizada: true } : s
+    )));
+  };
+
+  useFocusEffect(useCallback(() => {
+    carregar();
+    notificationService.marcarCategoriaLida('sementes').catch(() => {});
+  }, []));
   const onRefresh = () => { setRefreshing(true); carregar(); };
 
   const handleCurtir = async (semente) => {
-    if (curtindo) return;
+    if (curtindo || semente.ja_curtida) return;
     setCurtindo(semente.id);
     const res = await pacienteService.curtirSemente(semente.id);
     if (res.success) {
-      setCurtidas(prev => {
-        const next = new Set(prev);
-        if (next.has(semente.id)) next.delete(semente.id);
-        else next.add(semente.id);
-        return next;
-      });
+      // Reflete o estado real devolvido pelo servidor (não um toggle local) —
+      // é o que garante que o "curtido" sobrevive a sair e voltar da tela.
+      const atualizada = res.data.semente;
+      setSementes(prev => prev.map(s => (s.id === semente.id ? { ...s, ...atualizada } : s)));
     } else {
       Alert.alert('Atenção', res.message);
     }
@@ -83,7 +104,7 @@ export default function SementesPaciente() {
         ) : (
           sementes.map((s, i) => {
             const cfg = TIPO_CONFIG[s.tipo] || TIPO_CONFIG.default;
-            const curtida = curtidas.has(s.id);
+            const curtida = !!s.ja_curtida;
             return (
               <View key={i} style={[styles.card, { borderLeftColor: cfg.cor }, String(sementeId) === String(s.id) && styles.cardDestacado]}>
                 {/* Header */}
@@ -114,7 +135,7 @@ export default function SementesPaciente() {
                   <TouchableOpacity
                     style={[styles.btnCurtir, curtida && { backgroundColor: '#FFEBEE' }]}
                     onPress={() => handleCurtir(s)}
-                    disabled={curtindo === s.id}
+                    disabled={curtindo === s.id || curtida}
                   >
                     {curtindo === s.id ? (
                       <ActivityIndicator size="small" color="#EF5350" />

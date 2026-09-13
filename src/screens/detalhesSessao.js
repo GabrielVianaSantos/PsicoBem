@@ -1,23 +1,25 @@
 import React, { useState, useEffect } from "react";
 import Botao from "../components/common/Button";
 import Topo from "./components/topo";
-import { 
-    View, 
-    Text, 
-    StyleSheet, 
+import {
+    View,
+    Text,
+    StyleSheet,
     ScrollView,
-    Alert,
     ActivityIndicator,
     TouchableOpacity
 } from "react-native";
+import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { sessaoService } from "../services/sessaoService";
+import { useAuth } from "../hooks/useAuth";
 
 export default function DetalhesSessao() {
     const navigation = useNavigation();
     const route = useRoute();
     const { sessaoId } = route.params;
-    
+    const { userType } = useAuth();
+
     const [sessao, setSessao] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -77,6 +79,28 @@ export default function DetalhesSessao() {
                     text: 'Confirmar',
                     onPress: async () => {
                         const result = await sessaoService.confirmarRealizacao(sessaoId);
+                        if (result.success) {
+                            Alert.alert('Sucesso', result.message);
+                            carregarSessao();
+                        } else {
+                            Alert.alert('Erro', result.message);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const marcarNaoRealizada = () => {
+        Alert.alert(
+            'Confirmar Falta',
+            'Confirmar que esta sessão não foi realizada (falta do paciente)?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Confirmar',
+                    onPress: async () => {
+                        const result = await sessaoService.marcarNaoRealizada(sessaoId);
                         if (result.success) {
                             Alert.alert('Sucesso', result.message);
                             carregarSessao();
@@ -245,10 +269,20 @@ export default function DetalhesSessao() {
 
                     {sessao.pode_realizar && (
                         <View style={estilos.buttonContainer}>
-                            <Botao 
+                            <Botao
                                 texto="Marcar como Realizada"
                                 onPress={realizarSessao}
                                 backgroundColor="#42A5F5"
+                            />
+                        </View>
+                    )}
+
+                    {userType === 'psicologo' && sessao.pode_marcar_falta && (
+                        <View style={estilos.buttonContainer}>
+                            <Botao
+                                texto="Marcar como Não Realizada"
+                                onPress={marcarNaoRealizada}
+                                backgroundColor="#8D6E63"
                             />
                         </View>
                     )}

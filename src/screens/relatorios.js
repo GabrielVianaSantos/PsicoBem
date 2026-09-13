@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, StyleSheet, Image, ActivityIndicator, Alert, ScrollView, RefreshControl, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Image, ActivityIndicator, ScrollView, RefreshControl, TouchableOpacity } from "react-native";
+import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
 import SectionRelatorioFinanceiro from "../sections/money.png";

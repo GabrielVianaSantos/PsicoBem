@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
-import { View, StyleSheet, Text, TextInput, ScrollView, RefreshControl, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { View, StyleSheet, Text, TextInput, ScrollView, RefreshControl, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
 import Topo from "./components/topo";

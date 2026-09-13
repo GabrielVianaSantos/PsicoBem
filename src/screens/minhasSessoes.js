@@ -7,6 +7,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { pacienteService } from '../services/pacienteService';
+import { notificationService } from '../services/notificationService';
 import Topo from './components/topo';
 
 const { width } = Dimensions.get('window');
@@ -16,9 +17,10 @@ const STATUS_CONFIG = {
   confirmada:{ label: 'Confirmada',cor: '#DCEDC8', textoCor: '#33691E' },
   realizada: { label: 'Realizada', cor: '#E0F2F1', textoCor: '#00695C' },
   cancelada: { label: 'Cancelada', cor: '#FFEBEE', textoCor: '#B71C1C' },
+  faltou:    { label: 'Não Realizada', cor: '#EFEBE9', textoCor: '#5D4037' },
 };
 
-const FILTROS = ['todas', 'agendada', 'confirmada', 'realizada', 'cancelada'];
+const FILTROS = ['todas', 'agendada', 'confirmada', 'realizada', 'cancelada', 'faltou'];
 
 export default function MinhasSessoes() {
   const navigation = useNavigation();
@@ -40,7 +42,10 @@ export default function MinhasSessoes() {
     setRefreshing(false);
   };
 
-  useFocusEffect(useCallback(() => { carregar(); }, []));
+  useFocusEffect(useCallback(() => {
+    carregar();
+    notificationService.marcarCategoriaLida('sessoes').catch(() => {});
+  }, []));
   const onRefresh = () => { setRefreshing(true); carregar(); };
 
   const sessoesFiltradas = filtro === 'todas' ? sessoes : sessoes.filter(s => s.status === filtro);

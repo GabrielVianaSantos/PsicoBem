@@ -61,19 +61,6 @@ export const pacienteService = {
     }
   },
 
-  // ==================== PRONTUÁRIOS ====================
-
-  async getMeusProntuarios() {
-    try {
-      const response = await api.get('/prontuarios/');
-      const data = response.data;
-      return { success: true, data: Array.isArray(data) ? data : (data.results || []) };
-    } catch (error) {
-      console.error('Erro getMeusProntuarios:', error);
-      return { success: false, message: this._extractError(error) };
-    }
-  },
-
   // ==================== SEMENTES DO CUIDADO ====================
 
   async getSementesDisponiveis() {

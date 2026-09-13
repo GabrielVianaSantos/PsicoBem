@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Text, Image, Alert, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
+import { View, StyleSheet, Text, Image, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
+import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { Ionicons } from "@expo/vector-icons";
 import { CheckBox } from '@rneui/themed';
 import Topo from "./components/topo";

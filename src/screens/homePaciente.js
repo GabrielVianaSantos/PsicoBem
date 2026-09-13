@@ -8,11 +8,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { pacienteService } from '../services/pacienteService';
+import { notificationService } from '../services/notificationService';
 import Topo from './components/topo';
 
 import SectionOdisseia from '../sections/montanha.png';
 import SectionSementes from '../sections/semente.png';
-import SectionGuias from '../sections/prancheta.png';
 import SectionPaciente from '../sections/patient.png';
 
 const { width } = Dimensions.get('window');
@@ -29,13 +29,18 @@ export default function HomePaciente() {
   const navigation = useNavigation();
   const { user, logout } = useAuth();
   const [dashboard, setDashboard] = useState(null);
+  const [novidades, setNovidades] = useState({ sementes: false, sessoes: false, odisseia: false });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const carregarDashboard = async () => {
     setLoading(true);
-    const res = await pacienteService.getDashboard();
+    const [res, resumoNovidades] = await Promise.all([
+      pacienteService.getDashboard(),
+      notificationService.getResumoPorCategoria().catch(() => null),
+    ]);
     if (res.success) setDashboard(res.data);
+    if (resumoNovidades) setNovidades(resumoNovidades);
     setLoading(false);
     setRefreshing(false);
   };
@@ -177,28 +182,26 @@ export default function HomePaciente() {
               </View>
               <View style={styles.grid}>
                 <TouchableOpacity style={styles.menuCard} onPress={() => navigation.navigate('RegistrosOdisseia')}>
+                  {novidades.odisseia && <View style={styles.badgeDot} />}
                   <Image source={SectionOdisseia} style={styles.menuIcon} />
                   <Text style={styles.menuCardTitle}>Odisseia</Text>
                   <Text style={styles.menuCardSub}>Diário emocional</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.menuCard} onPress={() => navigation.navigate('MinhasSessoes')}>
+                  {novidades.sessoes && <View style={styles.badgeDot} />}
                   <Image source={SectionPaciente} style={styles.menuIcon} />
                   <Text style={styles.menuCardTitle}>Sessões</Text>
                   <Text style={styles.menuCardSub}>Minhas consultas</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.menuCard} onPress={() => navigation.navigate('SementesPaciente')}>
+                  {novidades.sementes && <View style={styles.badgeDot} />}
                   <Image source={SectionSementes} style={styles.menuIcon} />
                   <Text style={styles.menuCardTitle}>Sementes</Text>
                   <Text style={styles.menuCardSub}>Dicas do meu psicólogo</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.menuCard} onPress={() => navigation.navigate('MeusProntuarios')}>
-                  <Image source={SectionGuias} style={styles.menuIcon} />
-                  <Text style={styles.menuCardTitle}>Prontuários</Text>
-                  <Text style={styles.menuCardSub}>Anotações clínicas</Text>
-                </TouchableOpacity>
               </View>
             </>
           )}
@@ -313,8 +316,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#DEF6F0', padding: 18, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05, shadowRadius: 2, elevation: 1,
+    position: 'relative',
   },
   menuIcon: { width: 50, height: 50, resizeMode: 'contain', marginBottom: 10 },
   menuCardTitle: { fontFamily: 'RalewayBold', color: '#0B7A6E', fontSize: 15, textAlign: 'center' },
   menuCardSub: { color: '#666', fontSize: 12, textAlign: 'center', marginTop: 3 },
+  badgeDot: {
+    position: 'absolute', top: 10, right: 10,
+    width: 10, height: 10, borderRadius: 5, backgroundColor: '#EF5350',
+  },
 });

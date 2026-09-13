@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { 
-    View, 
-    StyleSheet, 
-    Text, 
-    TouchableOpacity, 
-    TextInput, 
-    ScrollView, 
-    ActivityIndicator, 
-    Alert,
+import {
+    View,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    TextInput,
+    ScrollView,
+    ActivityIndicator,
     RefreshControl,
     KeyboardAvoidingView,
     Platform
 } from "react-native";
+import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from '@react-native-picker/picker';

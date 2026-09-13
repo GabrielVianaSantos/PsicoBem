@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Text, Alert, KeyboardAvoidingView, ScrollView, Platform } from "react-native";
+import { View, StyleSheet, Text, KeyboardAvoidingView, ScrollView, Platform } from "react-native";
+import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import Topo from "./components/topo";
 import Botao from "../components/common/Button";
 import { useNavigation } from "@react-navigation/native";

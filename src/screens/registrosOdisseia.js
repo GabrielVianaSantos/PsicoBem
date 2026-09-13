@@ -6,13 +6,15 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  ActivityIndicator, RefreshControl, Alert,
+  ActivityIndicator, RefreshControl,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { CustomAlert as Alert } from '../components/common/CustomAlert';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { pacienteService } from '../services/pacienteService';
 import { odisseiaService } from '../services/odisseiaService';
+import { notificationService } from '../services/notificationService';
 import { useAuth } from '../hooks/useAuth';
 import Topo from './components/topo';
 import NivelChip from '../components/common/NivelChip';
@@ -84,7 +86,10 @@ export default function RegistrosOdisseia({ route }) {
     setRefreshing(false);
   };
 
-  useFocusEffect(useCallback(() => { carregarRegistros(); }, [isPsicologo]));
+  useFocusEffect(useCallback(() => {
+    carregarRegistros();
+    notificationService.marcarCategoriaLida('odisseia').catch(() => {});
+  }, [isPsicologo]));
 
   const onRefresh = () => { setRefreshing(true); carregarRegistros(); };
 

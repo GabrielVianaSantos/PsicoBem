@@ -5,11 +5,11 @@ import {
     StyleSheet,
     Image,
     TouchableOpacity,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView
 } from 'react-native';
+import { CustomAlert as Alert } from '../components/common/CustomAlert';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Topo from './components/topo';
