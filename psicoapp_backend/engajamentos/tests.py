@@ -5,8 +5,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from authentication.models import CustomUser, Paciente, Psicologo
-from core.models import VinculoPacientePsicologo
-from engajamentos.models import RegistroOdisseia, SementeCuidado
+from core.models import NotificacaoSistema, VinculoPacientePsicologo
+from engajamentos.models import MensagemPaciente, RegistroOdisseia, SementeCuidado
 
 
 class RegistroOdisseiaViewSetTests(APITestCase):
@@ -289,3 +289,67 @@ class SementeCuidadoCurtirPersistenceTests(APITestCase):
         self.semente.refresh_from_db()
         self.assertEqual(self.semente.total_visualizacoes, 1)
         self.assertEqual(self.semente.total_curtidas, 1)
+
+
+class SementeCuidadoCriacaoNotificaPacientesTests(APITestCase):
+    """
+    Publicar uma semente precisa avisar os pacientes vinculados — sem isso,
+    o badge de novidade de 'Sementes' nunca acende para o paciente.
+    """
+
+    def setUp(self):
+        self.psicologo_user = CustomUser.objects.create_user(
+            username='nova-semente-psi', email='nova-semente-psi@example.com',
+            password='senha-segura', user_type='psicologo',
+        )
+        self.psicologo = Psicologo.objects.create(user=self.psicologo_user, crp='11/22222')
+
+        self.paciente_user = CustomUser.objects.create_user(
+            username='nova-semente-pac', email='nova-semente-pac@example.com',
+            password='senha-segura', user_type='paciente',
+        )
+        self.paciente = Paciente.objects.create(user=self.paciente_user, cpf='222.333.444-55', gender='F')
+        VinculoPacientePsicologo.objects.create(paciente=self.paciente, psicologo=self.psicologo, status='ativo')
+
+        self.list_url = reverse('sementescuidado-list')
+
+    def _payload(self, **overrides):
+        payload = {'titulo': 'Semente nova', 'conteudo': 'Conteúdo', 'tipo': 'motivacional', 'status': 'ativa', 'publica': True}
+        payload.update(overrides)
+        return payload
+
+    def test_publicar_semente_ativa_publica_notifica_pacientes_vinculados(self):
+        self.client.force_authenticate(self.psicologo_user)
+        response = self.client.post(self.list_url, self._payload(), format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        semente = SementeCuidado.objects.get(id=response.data['id'])
+        self.assertTrue(MensagemPaciente.objects.filter(semente=semente, paciente=self.paciente).exists())
+        self.assertTrue(
+            NotificacaoSistema.objects.filter(paciente=self.paciente, tipo='nova_semente').exists()
+        )
+
+    def test_badge_de_sementes_acende_para_o_paciente_apos_publicacao(self):
+        self.client.force_authenticate(self.psicologo_user)
+        self.client.post(self.list_url, self._payload(), format='json')
+
+        self.client.force_authenticate(self.paciente_user)
+        resumo = self.client.get(reverse('notificacoes-resumo-por-categoria'))
+        self.assertTrue(resumo.data['sementes'])
+
+    def test_rascunho_nao_notifica_pacientes(self):
+        self.client.force_authenticate(self.psicologo_user)
+        response = self.client.post(self.list_url, self._payload(status='rascunho'), format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        semente = SementeCuidado.objects.get(id=response.data['id'])
+        self.assertFalse(MensagemPaciente.objects.filter(semente=semente).exists())
+        self.assertFalse(NotificacaoSistema.objects.filter(paciente=self.paciente, tipo='nova_semente').exists())
+
+    def test_semente_nao_publica_nao_notifica_pacientes(self):
+        self.client.force_authenticate(self.psicologo_user)
+        response = self.client.post(self.list_url, self._payload(publica=False), format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        semente = SementeCuidado.objects.get(id=response.data['id'])
+        self.assertFalse(MensagemPaciente.objects.filter(semente=semente).exists())

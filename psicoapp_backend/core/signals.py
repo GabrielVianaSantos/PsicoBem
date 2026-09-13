@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from authentication.models import Psicologo, Paciente
 from sessoes.models import TipoSessao, Sessao
-from engajamentos.models import CategoriaMensagem, RegistroOdisseia, ComentarioPsicologo
+from engajamentos.models import CategoriaMensagem, RegistroOdisseia, ComentarioPsicologo, SementeCuidado
 from .models import (
     NotificacaoSistema, VinculoPacientePsicologo
 )
@@ -132,6 +132,12 @@ def notificar_agendamento_sessao(sender, instance, created, **kwargs):
     """Notifica sobre agendamento/alterações de sessão"""
     if created:
         NotificationDomainService.emit_session_created(instance)
+
+@receiver(post_save, sender=SementeCuidado)
+def notificar_pacientes_nova_semente(sender, instance, created, **kwargs):
+    """Envia a semente aos pacientes vinculados e notifica cada um (badge de novidade)."""
+    if created and instance.publica and instance.status == 'ativa':
+        instance.enviar_para_pacientes()
 
 @receiver(pre_delete, sender=Sessao)
 def validar_delecao_sessao(sender, instance, **kwargs):
