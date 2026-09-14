@@ -14,7 +14,6 @@ export default function RedefinirSenha() {
 
     const [email, setEmail] = useState("");
     const [token, setToken] = useState("");
-    const [uid, setUid] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
@@ -27,21 +26,12 @@ export default function RedefinirSenha() {
 
         setLoading(true);
         try {
-            const result = await authService.requestPasswordReset(email);
-
-            // Simulação de e-mail: mostramos o token no alerta para o desenvolvedor
-            if (result.token) {
-                setUid(result.uid);
-                // setToken(result.token); // Opcional: preencher automaticamente em dev
-                Alert.alert(
-                    "Solicitação Enviada",
-                    "No futuro, um e-mail será enviado. \n\nPara fins de teste agora, use o código: " + result.token,
-                    [{ text: "OK", onPress: () => setStep(2) }]
-                );
-            } else {
-                setStep(2);
-                Alert.alert("Sucesso", "Se o e-mail existir, você receberá as instruções em breve.");
-            }
+            await authService.requestPasswordReset(email);
+            Alert.alert(
+                "Solicitação Enviada",
+                "Se o e-mail estiver cadastrado, você receberá um código de recuperação em instantes. Confira sua caixa de entrada (e o spam).",
+                [{ text: "OK", onPress: () => setStep(2) }]
+            );
         } catch (error) {
             Alert.alert("Erro", error.message || "Ocorreu um erro ao processar sua solicitação.");
         } finally {
@@ -62,14 +52,22 @@ export default function RedefinirSenha() {
 
         setLoading(true);
         try {
-            await authService.confirmPasswordReset(uid, token, newPassword);
+            await authService.confirmPasswordReset(token, newPassword);
             Alert.alert(
                 "Sucesso",
                 "Sua senha foi alterada com sucesso!",
                 [{ text: "Ir para Login", onPress: () => navigation.navigate("Login") }]
             );
         } catch (error) {
-            Alert.alert("Erro", error.message || "Código inválido ou expirado.");
+            if (error.code === 'password_reset_token_expired') {
+                Alert.alert(
+                    "Código expirado",
+                    "Esse código não é mais válido. Solicite um novo código de recuperação.",
+                    [{ text: "OK", onPress: () => { setToken(""); setStep(1); } }]
+                );
+            } else {
+                Alert.alert("Erro", error.message || "Código inválido ou expirado.");
+            }
         } finally {
             setLoading(false);
         }

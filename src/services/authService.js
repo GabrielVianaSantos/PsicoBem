@@ -122,22 +122,29 @@ export const authService = {
       return response.data;
     } catch (error) {
       const errorInfo = this.handleError(error);
-      throw new Error(errorInfo.message);
+      const errorToThrow = new Error(errorInfo.message);
+      errorToThrow.status = errorInfo.status;
+      errorToThrow.data = errorInfo.data;
+      errorToThrow.code = errorInfo.code;
+      throw errorToThrow;
     }
   },
 
   // Confirmar redefinição de senha
-  async confirmPasswordReset(uid, token, newPassword) {
+  async confirmPasswordReset(token, newPassword) {
     try {
-      const response = await api.post('/auth/password/reset/confirm/', { 
-        uid, 
-        token, 
-        new_password: newPassword 
+      const response = await api.post('/auth/password/reset/confirm/', {
+        token,
+        new_password: newPassword
       });
       return response.data;
     } catch (error) {
       const errorInfo = this.handleError(error);
-      throw new Error(errorInfo.message);
+      const errorToThrow = new Error(errorInfo.message);
+      errorToThrow.status = errorInfo.status;
+      errorToThrow.data = errorInfo.data;
+      errorToThrow.code = errorInfo.code;
+      throw errorToThrow;
     }
   },
 
