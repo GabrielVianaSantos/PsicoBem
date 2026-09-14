@@ -1,3 +1,4 @@
+import logging
 import random
 import re
 import string
@@ -12,6 +13,8 @@ from django.conf import settings
 from django.core.mail import send_mail
 
 from .models import CustomUser
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleAuthError(Exception):
@@ -122,3 +125,29 @@ def send_password_reset_email(user, token):
         recipient_list=[user.email],
         fail_silently=False,
     )
+
+
+def send_welcome_email(user):
+    """
+    Envia e-mail de boas-vindas após cadastro (conta nativa ou Google).
+    Best-effort: falha de envio não deve impedir o cadastro, então erros
+    são apenas logados.
+    """
+    tipo_conta = user.get_user_type_display()
+    mensagem = (
+        f"Olá, {user.first_name or user.email}!\n\n"
+        f"Seu cadastro no PsicoBem foi realizado com sucesso.\n\n"
+        f"Tipo de conta: {tipo_conta}\n\n"
+        f"Agora você já pode acessar o aplicativo com o e-mail cadastrado.\n\n"
+        f"Seja bem-vindo(a)!"
+    )
+    try:
+        send_mail(
+            subject="Bem-vindo(a) ao PsicoBem!",
+            message=mensagem,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception("Falha ao enviar e-mail de boas-vindas para %s", user.email)

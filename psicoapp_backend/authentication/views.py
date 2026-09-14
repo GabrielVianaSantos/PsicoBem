@@ -23,6 +23,7 @@ from .services import (
     generate_unique_username,
     issue_purpose_token,
     send_password_reset_email,
+    send_welcome_email,
     verify_google_id_token,
 )
 
@@ -55,6 +56,7 @@ class PacienteRegistrationView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             paciente = serializer.save()
+            send_welcome_email(paciente.user)
             return _auth_success_response(
                 paciente.user, 'Paciente cadastrado com sucesso!', status.HTTP_201_CREATED
             )
@@ -73,6 +75,7 @@ class PsicologoRegistrationView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             psicologo = serializer.save()
+            send_welcome_email(psicologo.user)
             return _auth_success_response(
                 psicologo.user, 'Psicólogo cadastrado com sucesso!', status.HTTP_201_CREATED
             )
@@ -593,4 +596,5 @@ def google_complete_registration_view(request):
                 user=user, crp=data['crp'], specialization=data.get('specialization', '')
             )
 
+    send_welcome_email(user)
     return _auth_success_response(user, 'Cadastro realizado com sucesso!', status.HTTP_201_CREATED)

@@ -231,6 +231,8 @@ class GoogleCompleteRegistrationViewTests(TestCase):
         return token
 
     def test_creates_paciente(self):
+        from django.core import mail
+
         token = self._registration_token()
         response = self.client.post('/api/auth/google/complete/', {
             'registration_token': token,
@@ -249,8 +251,14 @@ class GoogleCompleteRegistrationViewTests(TestCase):
         self.assertTrue(user.email_verified)
         self.assertFalse(user.has_usable_password())
         self.assertTrue(Paciente.objects.filter(user=user, cpf='123.456.789-00').exists())
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['complete@gmail.com'])
+        self.assertIn('Bem-vindo', mail.outbox[0].subject)
+        self.assertIn('Paciente', mail.outbox[0].body)
 
     def test_creates_psicologo(self):
+        from django.core import mail
+
         token = self._registration_token(sub='sub-complete-2', email='psi@gmail.com')
         response = self.client.post('/api/auth/google/complete/', {
             'registration_token': token,
@@ -264,8 +272,12 @@ class GoogleCompleteRegistrationViewTests(TestCase):
         self.assertEqual(response.status_code, 201)
         user = CustomUser.objects.get(email='psi@gmail.com')
         self.assertTrue(Psicologo.objects.filter(user=user, crp='06/12345').exists())
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Psicólogo', mail.outbox[0].body)
 
     def test_duplicate_submit_is_idempotent(self):
+        from django.core import mail
+
         payload = {
             'user_type': 'paciente',
             'first_name': 'Ana',
@@ -282,6 +294,8 @@ class GoogleCompleteRegistrationViewTests(TestCase):
         second = self.client.post('/api/auth/google/complete/', payload, format='json')
         self.assertEqual(second.status_code, 200)
         self.assertEqual(CustomUser.objects.filter(email='dup@gmail.com').count(), 1)
+        # Retry idempotente não deve reenviar o e-mail de boas-vindas.
+        self.assertEqual(len(mail.outbox), 1)
 
     def test_invalid_cpf_returns_400_at_root(self):
         token = self._registration_token(sub='sub-complete-4', email='badcpf@gmail.com')
@@ -649,3 +663,75 @@ class PasswordResetConfirmViewTests(TestCase):
         }, format='json')
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.data['code'], 'password_reset_token_expired')
+
+
+class PacienteRegistrationWelcomeEmailTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_cadastro_envia_email_de_boas_vindas(self):
+        from django.core import mail
+
+        response = self.client.post('/api/auth/register/paciente/', {
+            'user': {
+                'email': 'novapaciente@gmail.com',
+                'username': 'novapaciente',
+                'first_name': 'Nova',
+                'last_name': 'Paciente',
+                'password': 'senhaSegura1',
+                'password_confirm': 'senhaSegura1',
+                'user_type': 'paciente',
+            },
+            'cpf': '222.333.444-55',
+            'gender': 'F',
+        }, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['novapaciente@gmail.com'])
+        self.assertIn('Bem-vindo', mail.outbox[0].subject)
+        self.assertIn('Paciente', mail.outbox[0].body)
+
+    def test_cadastro_invalido_nao_envia_email(self):
+        from django.core import mail
+
+        response = self.client.post('/api/auth/register/paciente/', {
+            'user': {
+                'email': 'incompleta@gmail.com',
+                'username': 'incompleta',
+                'first_name': 'Incompleta',
+                'password': 'senhaSegura1',
+                'password_confirm': 'outraSenha',
+                'user_type': 'paciente',
+            },
+            'cpf': '333.444.555-66',
+            'gender': 'F',
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(len(mail.outbox), 0)
+
+
+class PsicologoRegistrationWelcomeEmailTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_cadastro_envia_email_de_boas_vindas(self):
+        from django.core import mail
+
+        response = self.client.post('/api/auth/register/psicologo/', {
+            'user': {
+                'email': 'novopsi@gmail.com',
+                'username': 'novopsi',
+                'first_name': 'Novo',
+                'last_name': 'Psicólogo',
+                'password': 'senhaSegura1',
+                'password_confirm': 'senhaSegura1',
+                'user_type': 'psicologo',
+            },
+            'crp': '02/54321',
+            'specialization': 'Clínica',
+        }, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['novopsi@gmail.com'])
+        self.assertIn('Bem-vindo', mail.outbox[0].subject)
+        self.assertIn('Psicólogo', mail.outbox[0].body)
