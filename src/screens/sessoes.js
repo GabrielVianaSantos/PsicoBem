@@ -14,6 +14,13 @@ import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { sessaoService } from "../services/sessaoService";
 import { notificationService } from "../services/notificationService";
+import {
+    jaPediuConsentimento,
+    registrarConsentimento,
+    solicitarPermissaoAgenda,
+    temPermissaoAgenda,
+    sincronizarAgenda,
+} from "../services/agendaDispositivo";
 
 export default function Sessoes() {
     const navigation = useNavigation();
@@ -69,6 +76,41 @@ export default function Sessoes() {
     const onRefresh = () => {
         setRefreshing(true);
         carregarSessoes();
+    };
+
+    useEffect(() => {
+        if (!Array.isArray(sessoes) || sessoes.length === 0) return;
+        sincronizarAgendaComConsentimento(sessoes);
+    }, [sessoes]);
+
+    const sincronizarAgendaComConsentimento = async (listaSessoes) => {
+        const jaPediu = await jaPediuConsentimento();
+
+        if (!jaPediu) {
+            Alert.alert(
+                'Sincronizar com a agenda do aparelho?',
+                'O PsicoBem pode adicionar suas próximas sessões à agenda do seu aparelho, com um alarme 15 minutos antes. Se o aparelho estiver com uma conta Google, o evento também pode aparecer no Google Calendar. Nenhum dado sobre o motivo da consulta é incluído — apenas "Sessão PsicoBem".',
+                [
+                    { text: 'Agora não', style: 'cancel', onPress: () => registrarConsentimento(false) },
+                    {
+                        text: 'Permitir',
+                        onPress: async () => {
+                            const concedida = await solicitarPermissaoAgenda();
+                            await registrarConsentimento(concedida);
+                            if (concedida) {
+                                sincronizarAgenda(listaSessoes).catch((error) => console.error('Erro ao sincronizar agenda:', error));
+                            }
+                        },
+                    },
+                ]
+            );
+            return;
+        }
+
+        const permitido = await temPermissaoAgenda();
+        if (permitido) {
+            sincronizarAgenda(listaSessoes).catch((error) => console.error('Erro ao sincronizar agenda:', error));
+        }
     };
 
     const cancelarSessao = (id) => {

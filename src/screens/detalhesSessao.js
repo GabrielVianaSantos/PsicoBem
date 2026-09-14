@@ -7,7 +7,8 @@ import {
     StyleSheet,
     ScrollView,
     ActivityIndicator,
-    TouchableOpacity
+    TouchableOpacity,
+    Linking
 } from "react-native";
 import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -22,6 +23,8 @@ export default function DetalhesSessao() {
 
     const [sessao, setSessao] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [erroAbrirSala, setErroAbrirSala] = useState(false);
+    const [compartilhandoIcs, setCompartilhandoIcs] = useState(false);
 
     useEffect(() => {
         carregarSessao();
@@ -44,6 +47,32 @@ export default function DetalhesSessao() {
             navigation.goBack();
         } finally {
             setLoading(false);
+        }
+    };
+
+    const entrarNaSala = async () => {
+        setErroAbrirSala(false);
+        try {
+            const suportado = await Linking.canOpenURL(sessao.sala_url);
+            if (!suportado) {
+                throw new Error('URL da sala não suportada pelo dispositivo.');
+            }
+            await Linking.openURL(sessao.sala_url);
+        } catch (error) {
+            console.error('Erro ao abrir a sala:', error);
+            setErroAbrirSala(true);
+        }
+    };
+
+    const adicionarNaAgenda = async () => {
+        setCompartilhandoIcs(true);
+        try {
+            const result = await sessaoService.compartilharAgendaIcs(sessaoId);
+            if (!result.success) {
+                Alert.alert('Erro', result.message);
+            }
+        } finally {
+            setCompartilhandoIcs(false);
         }
     };
 
@@ -254,6 +283,58 @@ export default function DetalhesSessao() {
                     </View>
                 )}
 
+                {/* Sala online (Jitsi) */}
+                {sessao.sala_url && (
+                    <View style={estilos.actionsContainer}>
+                        {sessao.pode_entrar_sala ? (
+                            <View style={estilos.buttonContainer}>
+                                <Botao
+                                    texto="Entrar na sessão"
+                                    onPress={entrarNaSala}
+                                    iconName="videocam-outline"
+                                    backgroundColor="#11B5A4"
+                                />
+                                {erroAbrirSala && (
+                                    <View style={estilos.salaAvisoBox}>
+                                        <Text style={estilos.salaAvisoTexto}>
+                                            Não foi possível abrir a sala automaticamente. Copie o link abaixo (toque e segure para copiar) e cole no navegador:
+                                        </Text>
+                                        <Text selectable style={estilos.salaLinkTexto}>
+                                            {sessao.sala_url}
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
+                        ) : (
+                            <View style={estilos.salaAvisoBox}>
+                                <Text style={estilos.salaAvisoTexto}>
+                                    {sessao.sala_disponivel_em
+                                        ? `Você poderá entrar na sala a partir de ${new Date(sessao.sala_disponivel_em).toLocaleString('pt-BR')}.`
+                                        : 'A sala ainda não está disponível para entrada.'}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                )}
+
+                {/* Adicionar à agenda via .ics (opcional, complementar à sincronização automática) */}
+                {['agendada', 'confirmada', 'remarcada'].includes(sessao.status) && (
+                    <View style={estilos.actionsContainer}>
+                        <View style={estilos.buttonContainer}>
+                            <Botao
+                                texto={compartilhandoIcs ? 'Gerando arquivo...' : 'Adicionar à minha agenda'}
+                                onPress={adicionarNaAgenda}
+                                iconName="calendar-outline"
+                                backgroundColor="#8D6E63"
+                                disabled={compartilhandoIcs}
+                            />
+                            <Text style={estilos.icsAvisoTexto}>
+                                Gera uma cópia estática. Se a sessão for remarcada, adicione novamente.
+                            </Text>
+                        </View>
+                    </View>
+                )}
+
                 {/* Ações */}
                 <View style={estilos.actionsContainer}>
                     {sessao.pode_cancelar && (
@@ -405,6 +486,37 @@ const estilos = StyleSheet.create({
         color: 'white',
         fontFamily: 'RalewayBold',
         fontSize: 16,
+    },
+
+    salaAvisoBox: {
+        marginTop: 10,
+        padding: 12,
+        borderRadius: 8,
+        backgroundColor: '#F0F9F8',
+        borderWidth: 1,
+        borderColor: '#B2E0DA',
+    },
+
+    salaAvisoTexto: {
+        color: '#333',
+        fontFamily: 'Raleway',
+        fontSize: 13,
+        lineHeight: 18,
+    },
+
+    icsAvisoTexto: {
+        color: '#999',
+        fontFamily: 'Raleway',
+        fontSize: 11,
+        marginTop: 6,
+        textAlign: 'center',
+    },
+
+    salaLinkTexto: {
+        color: '#11B5A4',
+        fontFamily: 'RalewayBold',
+        fontSize: 13,
+        marginTop: 8,
     },
 
     btnVoltar: {
