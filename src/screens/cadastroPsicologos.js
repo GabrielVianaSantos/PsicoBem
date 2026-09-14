@@ -162,6 +162,7 @@ export default function CadastroPsicologos () {
                         onChangeText={setNomeCompleto}
                         texto_placeholder="Digite seu nome completo"
                         error={!!errors.nomeCompleto}
+                        maxLength={60}
                         />
                     {errors.nomeCompleto && <Text style={estilos.errorText}>{errors.nomeCompleto}</Text>}
                     

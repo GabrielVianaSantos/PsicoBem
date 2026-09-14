@@ -86,7 +86,7 @@ const Home = () => {
                 </Text>
               </TouchableOpacity>
               <View style={styles.profileInfo}>
-                <Text style={styles.greetingText}>Olá, {profile ? profile.first_name : "Psicólogo"}</Text>
+                <Text style={styles.greetingText} numberOfLines={1} ellipsizeMode="tail">Olá, {profile ? profile.first_name : "Psicólogo"}</Text>
                 <Text style={styles.phoneNumber}>
                   {profile?.crp ? `CRP ${profile.crp}` : (profile ? profile.email : "Carregando...")}
                 </Text>
@@ -225,6 +225,8 @@ const styles = StyleSheet.create ({
     profileLeft: {
         flexDirection: 'row',
         alignItems: 'center',
+        flex: 1,
+        marginRight: 10,
     },
     avatarContainer: {
         width: 50,
@@ -241,6 +243,7 @@ const styles = StyleSheet.create ({
     },
     profileInfo: {
         marginLeft: 15,
+        flexShrink: 1,
     },
     greetingText: {
         fontSize: 18,

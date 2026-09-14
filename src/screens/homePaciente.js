@@ -71,8 +71,8 @@ export default function HomePaciente() {
               <TouchableOpacity style={styles.avatar} onPress={() => navigation.navigate('MeuPerfil')}>
                 <Text style={styles.avatarText}>{inicial}</Text>
               </TouchableOpacity>
-              <View>
-                <Text style={styles.greeting}>Olá, {primeiroNome} 👋</Text>
+              <View style={styles.greetingBlock}>
+                <Text style={styles.greeting} numberOfLines={1} ellipsizeMode="tail">Olá, {primeiroNome} 👋</Text>
                 <Text style={styles.subtitle}>Seu espaço de cuidado</Text>
               </View>
             </View>
@@ -105,7 +105,7 @@ export default function HomePaciente() {
                       </Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.psicNome}>{dashboard.psicologo_vinculado.nome_completo}</Text>
+                      <Text style={styles.psicNome} numberOfLines={1} ellipsizeMode="tail">{dashboard.psicologo_vinculado.nome_completo}</Text>
                       <Text style={styles.psicCRP}>CRP {dashboard.psicologo_vinculado.crp}</Text>
                       <Text style={styles.psicEsp}>{dashboard.psicologo_vinculado.specialization}</Text>
                     </View>
@@ -221,8 +221,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 10,
   },
-  leftRow: { flexDirection: 'row', alignItems: 'center' },
-  rightRow: { flexDirection: 'row', alignItems: 'center' },
+  leftRow: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 },
+  greetingBlock: { flexShrink: 1 },
+  rightRow: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
   avatar: {
     width: 48, height: 48, borderRadius: 24,
     backgroundColor: '#11B5A4', justifyContent: 'center', alignItems: 'center', marginRight: 12,
