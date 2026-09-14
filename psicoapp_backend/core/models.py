@@ -173,6 +173,7 @@ class NotificacaoSistema(models.Model):
         ('sessao_agendada', 'Sessão Agendada'),
         ('sessao_cancelada', 'Sessão Cancelada'),
         ('sessao_lembrete', 'Lembrete de Sessão'),
+        ('sessao_confirmacao', 'Confirmação Pós-Sessão'),
         ('nova_semente', 'Nova Semente do Cuidado'),
         ('novo_registro', 'Novo Registro de Odisseia'),
         ('comentario_psicologo', 'Comentário do Psicólogo'),

@@ -86,6 +86,9 @@ class SessaoListSerializer(serializers.ModelSerializer):
     pode_remarcar = serializers.SerializerMethodField()
     pode_realizar = serializers.SerializerMethodField()
     pode_marcar_falta = serializers.SerializerMethodField()
+    sala_url = serializers.ReadOnlyField()
+    pode_entrar_sala = serializers.SerializerMethodField()
+    sala_disponivel_em = serializers.ReadOnlyField()
 
     class Meta:
         model = Sessao
@@ -93,7 +96,8 @@ class SessaoListSerializer(serializers.ModelSerializer):
             'id', 'paciente', 'psicologo', 'tipo_sessao', 'data_hora', 'status',
             'status_pagamento', 'valor', 'data_hora_formatada', 'valor_formatado',
             'status_display', 'status_pagamento_display', 'pode_cancelar',
-            'pode_remarcar', 'pode_realizar', 'pode_marcar_falta'
+            'pode_remarcar', 'pode_realizar', 'pode_marcar_falta',
+            'sala_url', 'pode_entrar_sala', 'sala_disponivel_em'
         ]
 
     def get_valor_formatado(self, obj):
@@ -114,6 +118,9 @@ class SessaoListSerializer(serializers.ModelSerializer):
     def get_pode_marcar_falta(self, obj):
         return obj.pode_ser_marcada_falta()
 
+    def get_pode_entrar_sala(self, obj):
+        return obj.pode_entrar_na_sala()
+
 class SessaoDetailSerializer(serializers.ModelSerializer):
     """Serializer completo para detalhes da sessão"""
     paciente = PacienteBasicSerializer(read_only=True)
@@ -127,6 +134,9 @@ class SessaoDetailSerializer(serializers.ModelSerializer):
     pode_remarcar = serializers.SerializerMethodField()
     pode_realizar = serializers.SerializerMethodField()
     pode_marcar_falta = serializers.SerializerMethodField()
+    sala_url = serializers.ReadOnlyField()
+    pode_entrar_sala = serializers.SerializerMethodField()
+    sala_disponivel_em = serializers.ReadOnlyField()
 
     class Meta:
         model = Sessao
@@ -135,7 +145,8 @@ class SessaoDetailSerializer(serializers.ModelSerializer):
             'status_pagamento', 'valor', 'observacoes_agendamento', 'observacoes_sessao',
             'data_pagamento', 'created_at', 'updated_at', 'data_hora_formatada',
             'valor_formatado', 'status_display', 'status_pagamento_display',
-            'pode_cancelar', 'pode_remarcar', 'pode_realizar', 'pode_marcar_falta'
+            'pode_cancelar', 'pode_remarcar', 'pode_realizar', 'pode_marcar_falta',
+            'sala_url', 'pode_entrar_sala', 'sala_disponivel_em'
         ]
         read_only_fields = ['created_at', 'updated_at', 'data_pagamento']
 
@@ -156,6 +167,9 @@ class SessaoDetailSerializer(serializers.ModelSerializer):
 
     def get_pode_marcar_falta(self, obj):
         return obj.pode_ser_marcada_falta()
+
+    def get_pode_entrar_sala(self, obj):
+        return obj.pode_entrar_na_sala()
 
 class SessaoCreateSerializer(serializers.ModelSerializer):
     """Serializer para criar sessões"""

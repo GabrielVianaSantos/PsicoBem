@@ -7,7 +7,7 @@ except ModuleNotFoundError:  # pragma: no cover - fallback para ambiente sem Cel
         return func
 
 import logging
-from django.db import IntegrityError, models
+from django.db import IntegrityError, models, transaction
 from django.db.models import Q
 
 from django.utils import timezone
@@ -275,6 +275,11 @@ def _build_reminder_message(sessao, reminder_type, minutes):
         return f"Sua sessão está marcada para amanhã, {data_formatada}."
     if reminder_type == "lembrete_2h":
         return f"Sua sessão começa em cerca de 2 horas: {data_formatada}."
+
+    # lembrete_15m: sessão online convida a entrar direto; a URL da sala
+    # nunca entra aqui — o app busca sala_url pela API autenticada (issue 02).
+    if sessao.tipo_sessao and sessao.tipo_sessao.tipo == "online":
+        return "Sua sessão online começa em 15 minutos. Toque para entrar."
     return f"Sua sessão começa em 15 minutos: {data_formatada}."
 
 
@@ -282,7 +287,9 @@ def _build_reminder_message(sessao, reminder_type, minutes):
 def dispatch_session_reminders():
     now = timezone.now()
     window_minutes = [24 * 60, 2 * 60, 15]
-    results = {"processed": 0, "created": 0, "skipped": 0}
+    # "criados" (não "created"): chave "created" colide com o atributo
+    # reservado LogRecord.created e derruba logger.info(extra=...) abaixo.
+    results = {"processed": 0, "criados": 0, "skipped": 0}
     logger.info("push.reminders.start", extra={"now": now.isoformat()})
 
     for minutes in window_minutes:
@@ -297,14 +304,22 @@ def dispatch_session_reminders():
 
         for sessao in sessoes:
             results["processed"] += 1
+            routing_extra = {}
+            if sessao.tipo_sessao and sessao.tipo_sessao.tipo == "online":
+                routing_extra["modalidade"] = "online"
+
             for target_user in [sessao.paciente.user, sessao.psicologo.user]:
                 created = False
                 try:
-                    ReminderDispatch.objects.create(
-                        session_id=sessao.id,
-                        reminder_type=reminder_type,
-                        destinatario_user=target_user,
-                    )
+                    # Savepoint dedicado: sem ele, um IntegrityError aqui
+                    # invalidaria toda transação envolvente (ex.: dentro de
+                    # TestCase, ou de qualquer atomic() de nível superior).
+                    with transaction.atomic():
+                        ReminderDispatch.objects.create(
+                            session_id=sessao.id,
+                            reminder_type=reminder_type,
+                            destinatario_user=target_user,
+                        )
                     created = True
                 except IntegrityError:
                     results["skipped"] += 1
@@ -324,9 +339,10 @@ def dispatch_session_reminders():
                             event=reminder_type,
                             entity_type="sessao",
                             entity_id=sessao.pk,
+                            **routing_extra,
                         ),
                     )
-                    results["created"] += 1
+                    results["criados"] += 1
                     logger.info(
                         "push.reminders.created",
                         extra={
@@ -337,4 +353,68 @@ def dispatch_session_reminders():
                     )
 
     logger.info("push.reminders.finish", extra=results)
+    return results
+
+
+@shared_task
+def dispatch_post_session_confirmations():
+    """
+    Provoca o psicólogo a registrar o desfecho (realizada/faltou) pouco
+    depois do horário previsto de término — nunca marca nada sozinho.
+
+    Alvo: data_hora + duracao_minutos (fallback 60) + 15min, com a mesma
+    janela de ±2 minutos usada nos lembretes pré-sessão.
+    """
+    now = timezone.now()
+    margem = timedelta(minutes=2)
+    # Cobre folgadamente a duração máxima configurável (8h, ver
+    # TipoSessaoCreateSerializer.validate_duracao_minutos) + 15min + margem,
+    # sem depender de duracao_minutos no SQL (ele varia por tipo_sessao).
+    candidatos = Sessao.objects.filter(
+        status__in=["agendada", "confirmada", "remarcada"],
+        data_hora__range=(now - timedelta(minutes=550), now - timedelta(minutes=10)),
+    ).select_related("psicologo__user", "tipo_sessao")
+
+    results = {"processed": 0, "criados": 0, "skipped": 0}
+    logger.info("push.pos_sessao.start", extra={"now": now.isoformat()})
+
+    for sessao in candidatos:
+        alvo = sessao.data_hora + timedelta(minutes=sessao._duracao_sessao_minutos() + 15)
+        if not (now - margem <= alvo <= now + margem):
+            continue
+
+        results["processed"] += 1
+        try:
+            # Savepoint dedicado (mesmo motivo do dispatch_session_reminders).
+            with transaction.atomic():
+                ReminderDispatch.objects.create(
+                    session_id=sessao.id,
+                    reminder_type="pos_sessao",
+                    destinatario_user=sessao.psicologo.user,
+                )
+        except IntegrityError:
+            results["skipped"] += 1
+            continue
+
+        NotificationDomainService.emit(
+            target=sessao.psicologo.user,
+            tipo="sessao_confirmacao",
+            titulo="Registrar sessão",
+            mensagem="Sua sessão já deveria ter terminado. Toque para confirmar o desfecho.",
+            link_relacionado=f"/sessoes/{sessao.pk}",
+            dados_extras=NotificationDomainService._routing_payload(
+                screen="DetalhesSessao",
+                params={"sessaoId": sessao.pk},
+                event="pos_sessao",
+                entity_type="sessao",
+                entity_id=sessao.pk,
+            ),
+        )
+        results["criados"] += 1
+        logger.info(
+            "push.pos_sessao.created",
+            extra={"session_id": sessao.id, "psicologo_user_id": sessao.psicologo.user_id},
+        )
+
+    logger.info("push.pos_sessao.finish", extra=results)
     return results

@@ -1,5 +1,5 @@
 from decimal import Decimal
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import datetime, timedelta, timezone as dt_timezone
@@ -332,3 +332,322 @@ class MarcarNaoRealizadaActionTests(TestCase):
 
         self.assertTrue(res_elegivel.data['pode_marcar_falta'])
         self.assertFalse(res_realizada.data['pode_marcar_falta'])
+
+
+@override_settings(JITSI_ENABLED=True, JITSI_BASE_URL='https://meet.jit.si')
+class SalaUuidGeracaoTests(TestCase):
+    """Issue 01 — geração/regeneração de sala_uuid e URL derivada."""
+
+    def setUp(self):
+        self.user_psicologo = User.objects.create_user(
+            username='psi_sala', email='psi_sala@test.com', password='pass', user_type='psicologo'
+        )
+        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='44/44444')
+
+        self.user_paciente = User.objects.create_user(
+            username='pac_sala', email='pac_sala@test.com', password='pass', user_type='paciente'
+        )
+        self.paciente = Paciente.objects.create(user=self.user_paciente, cpf='777.777.777-77')
+
+        VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='ativo'
+        )
+
+        self.tipo_online = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Online', tipo='online', valor=100.00
+        )
+        self.tipo_presencial = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Presencial', tipo='presencial', valor=100.00
+        )
+
+    def _criar_sessao(self, tipo_sessao, data_hora=None):
+        return Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=tipo_sessao,
+            data_hora=data_hora or (timezone.now() + timedelta(days=1)),
+            status='agendada', valor=Decimal('100.00'),
+        )
+
+    def test_sessao_online_recebe_sala_uuid(self):
+        sessao = self._criar_sessao(self.tipo_online)
+        self.assertIsNotNone(sessao.sala_uuid)
+
+    def test_sessao_presencial_nao_recebe_sala_uuid(self):
+        sessao = self._criar_sessao(self.tipo_presencial)
+        self.assertIsNone(sessao.sala_uuid)
+
+    def test_remarcar_regenera_sala_uuid(self):
+        sessao = self._criar_sessao(self.tipo_online)
+        uuid_original = sessao.sala_uuid
+
+        sessao.data_hora = sessao.data_hora + timedelta(hours=2)
+        sessao.save()
+        sessao.refresh_from_db()
+
+        self.assertIsNotNone(sessao.sala_uuid)
+        self.assertNotEqual(sessao.sala_uuid, uuid_original)
+
+    def test_salvar_sem_alterar_data_hora_preserva_sala_uuid(self):
+        sessao = self._criar_sessao(self.tipo_online)
+        uuid_original = sessao.sala_uuid
+
+        sessao.observacoes_agendamento = 'nota qualquer'
+        sessao.save()
+        sessao.refresh_from_db()
+
+        self.assertEqual(sessao.sala_uuid, uuid_original)
+
+    def test_trocar_para_online_gera_sala_uuid(self):
+        sessao = self._criar_sessao(self.tipo_presencial)
+        self.assertIsNone(sessao.sala_uuid)
+
+        sessao.tipo_sessao = self.tipo_online
+        sessao.save()
+        sessao.refresh_from_db()
+
+        self.assertIsNotNone(sessao.sala_uuid)
+
+    def test_trocar_para_presencial_limpa_sala_uuid(self):
+        sessao = self._criar_sessao(self.tipo_online)
+        self.assertIsNotNone(sessao.sala_uuid)
+
+        sessao.tipo_sessao = self.tipo_presencial
+        sessao.save()
+        sessao.refresh_from_db()
+
+        self.assertIsNone(sessao.sala_uuid)
+
+    def test_sala_url_deriva_de_jitsi_base_url(self):
+        sessao = self._criar_sessao(self.tipo_online)
+        esperado = f"https://meet.jit.si/psicobem-{sessao.sala_uuid.hex}"
+        self.assertEqual(sessao.sala_url, esperado)
+
+    @override_settings(JITSI_BASE_URL='https://jitsi.exemplo.com/')
+    def test_sala_url_com_barra_final_nao_duplica_barra(self):
+        sessao = self._criar_sessao(self.tipo_online)
+        self.assertNotIn('//psicobem-', sessao.sala_url.replace('https://', ''))
+        self.assertTrue(sessao.sala_url.startswith('https://jitsi.exemplo.com/psicobem-'))
+
+    @override_settings(JITSI_ENABLED=False)
+    def test_jitsi_desabilitado_nao_gera_sala(self):
+        sessao = self._criar_sessao(self.tipo_online)
+        self.assertIsNone(sessao.sala_uuid)
+        self.assertIsNone(sessao.sala_url)
+
+
+@override_settings(JITSI_ENABLED=True, JITSI_BASE_URL='https://meet.jit.si')
+class SalaUrlExposicaoEAutorizacaoTests(TestCase):
+    """Issue 02 — sala_url/pode_entrar_sala nos serializers, janela e autorização."""
+
+    def setUp(self):
+        self.user_psicologo = User.objects.create_user(
+            username='psi_expo', email='psi_expo@test.com', password='pass', user_type='psicologo'
+        )
+        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='55/55555')
+
+        self.user_paciente = User.objects.create_user(
+            username='pac_expo', email='pac_expo@test.com', password='pass', user_type='paciente'
+        )
+        self.paciente = Paciente.objects.create(user=self.user_paciente, cpf='888.888.888-88')
+
+        VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='ativo'
+        )
+
+        self.outro_user_psicologo = User.objects.create_user(
+            username='outro_psi_expo', email='outro_psi_expo@test.com', password='pass', user_type='psicologo'
+        )
+        self.outro_psicologo = Psicologo.objects.create(user=self.outro_user_psicologo, crp='66/66666')
+
+        self.tipo_online = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Online Expo', tipo='online',
+            valor=100.00, duracao_minutos=50
+        )
+        self.tipo_presencial = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Presencial Expo', tipo='presencial', valor=100.00
+        )
+
+        self.client = APIClient()
+
+    def _criar_sessao(self, tipo_sessao=None, data_hora=None, status_sessao='agendada'):
+        return Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=tipo_sessao or self.tipo_online,
+            data_hora=data_hora or timezone.now(), status=status_sessao, valor=Decimal('100.00'),
+        )
+
+    def test_participante_recebe_sala_url(self):
+        sessao = self._criar_sessao()
+        self.client.force_authenticate(user=self.user_paciente)
+        res = self.client.get(f'/api/sessoes/{sessao.id}/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(res.data['sala_url'])
+        self.assertIn(str(sessao.sala_uuid.hex), res.data['sala_url'])
+
+    def test_nao_participante_recebe_404_e_nunca_ve_campo(self):
+        sessao = self._criar_sessao()
+        self.client.force_authenticate(user=self.outro_user_psicologo)
+        res = self.client.get(f'/api/sessoes/{sessao.id}/')
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertNotIn('sala_url', res.data)
+
+    def test_nao_participante_nao_ve_sessao_na_listagem(self):
+        self._criar_sessao()
+        self.client.force_authenticate(user=self.outro_user_psicologo)
+        res = self.client.get('/api/sessoes/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        results = res.data.get('results', res.data)
+        self.assertEqual(len(results), 0)
+
+    def test_sessao_presencial_sala_url_null(self):
+        sessao = self._criar_sessao(tipo_sessao=self.tipo_presencial)
+        self.client.force_authenticate(user=self.psicologo.user)
+        res = self.client.get(f'/api/sessoes/{sessao.id}/')
+        self.assertIsNone(res.data['sala_url'])
+        self.assertFalse(res.data['pode_entrar_sala'])
+
+    def test_sala_uuid_nunca_aparece_na_resposta(self):
+        sessao = self._criar_sessao()
+        self.client.force_authenticate(user=self.psicologo.user)
+        res = self.client.get(f'/api/sessoes/{sessao.id}/')
+        self.assertNotIn('sala_uuid', res.data)
+        res_list = self.client.get('/api/sessoes/')
+        results = res_list.data.get('results', res_list.data)
+        self.assertNotIn('sala_uuid', results[0])
+
+    @override_settings(JITSI_ENABLED=False)
+    def test_jitsi_desabilitado_sala_url_null_para_todas(self):
+        sessao = self._criar_sessao()
+        self.client.force_authenticate(user=self.psicologo.user)
+        res = self.client.get(f'/api/sessoes/{sessao.id}/')
+        self.assertIsNone(res.data['sala_url'])
+
+    def test_status_resolvido_nao_permite_entrar(self):
+        for status_sessao in ('cancelada', 'realizada', 'faltou'):
+            sessao = self._criar_sessao(status_sessao=status_sessao)
+            self.assertFalse(sessao.pode_entrar_na_sala(), f"status={status_sessao}")
+
+    # ---- Janela de entrada: cinco pontos de fronteira ----
+    # duracao_minutos=50; janela = [inicio-15min, inicio+50min+30min] = [-15, +80] em relação a data_hora.
+
+    def test_janela_antes_do_inicio(self):
+        sessao = self._criar_sessao(data_hora=timezone.now() + timedelta(minutes=20))
+        self.assertFalse(sessao.pode_entrar_na_sala())
+
+    def test_janela_exatamente_no_inicio(self):
+        sessao = self._criar_sessao(data_hora=timezone.now() + timedelta(minutes=15))
+        self.assertTrue(sessao.pode_entrar_na_sala())
+
+    def test_janela_durante_a_sessao(self):
+        sessao = self._criar_sessao(data_hora=timezone.now() - timedelta(minutes=10))
+        self.assertTrue(sessao.pode_entrar_na_sala())
+
+    def test_janela_dentro_da_margem_posterior(self):
+        sessao = self._criar_sessao(data_hora=timezone.now() - timedelta(minutes=79))
+        self.assertTrue(sessao.pode_entrar_na_sala())
+
+    def test_janela_depois_da_margem_posterior(self):
+        sessao = self._criar_sessao(data_hora=timezone.now() - timedelta(minutes=81))
+        self.assertFalse(sessao.pode_entrar_na_sala())
+
+    def test_janela_usa_fallback_60min_sem_tipo_sessao(self):
+        # 85 min atrás: fora da janela de 50+30=80min do tipo original, mas
+        # dentro do fallback de 60+30=90min usado quando tipo_sessao é nulo.
+        sessao = self._criar_sessao(data_hora=timezone.now() - timedelta(minutes=85))
+        # Simula sessão legada sem tipo_sessao, preservando a sala já gerada
+        # (bypass de save() para não disparar a regra "sem tipo => sem sala").
+        Sessao.objects.filter(pk=sessao.pk).update(tipo_sessao=None)
+        sessao.refresh_from_db()
+
+        self.assertIsNone(sessao.tipo_sessao)
+        self.assertIsNotNone(sessao.sala_uuid)
+        self.assertTrue(sessao.pode_entrar_na_sala())
+
+
+@override_settings(JITSI_ENABLED=True, JITSI_BASE_URL='https://meet.jit.si')
+class AgendaIcsTests(TestCase):
+    """Issue 07 (opcional) — endpoint .ics restrito aos participantes."""
+
+    def setUp(self):
+        self.user_psicologo = User.objects.create_user(
+            username='psi_ics', email='psi_ics@test.com', password='pass', user_type='psicologo'
+        )
+        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='11/22333')
+
+        self.user_paciente = User.objects.create_user(
+            username='pac_ics', email='pac_ics@test.com', password='pass', user_type='paciente'
+        )
+        self.paciente = Paciente.objects.create(user=self.user_paciente, cpf='222.111.333-44')
+
+        VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='ativo'
+        )
+
+        self.outro_user_psicologo = User.objects.create_user(
+            username='outro_psi_ics', email='outro_psi_ics@test.com', password='pass', user_type='psicologo'
+        )
+        self.outro_psicologo = Psicologo.objects.create(user=self.outro_user_psicologo, crp='11/99999')
+
+        self.tipo_online = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Online ICS', tipo='online',
+            valor=100.00, duracao_minutos=50
+        )
+
+        self.sessao = Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=self.tipo_online,
+            data_hora=timezone.now() + timedelta(days=1), status='agendada', valor=Decimal('100.00'),
+        )
+
+        self.client = APIClient()
+
+    def _url(self, sessao_id):
+        return f'/api/sessoes/{sessao_id}/agenda.ics/'
+
+    def test_arquivo_bem_formado_com_alarme_e_link(self):
+        self.client.force_authenticate(user=self.user_paciente)
+        res = self.client.get(self._url(self.sessao.id))
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('text/calendar', res['Content-Type'])
+        conteudo = res.content.decode('utf-8')
+        self.assertIn('BEGIN:VCALENDAR', conteudo)
+        self.assertIn('BEGIN:VEVENT', conteudo)
+        self.assertIn('END:VEVENT', conteudo)
+        self.assertIn('END:VCALENDAR', conteudo)
+        self.assertIn('SUMMARY:Sessão PsicoBem', conteudo)
+        self.assertIn('TRIGGER:-PT15M', conteudo)
+        self.assertIn(self.sessao.sala_url, conteudo)
+        self.assertRegex(conteudo, r'DTSTART:\d{8}T\d{6}Z')
+        self.assertRegex(conteudo, r'DTEND:\d{8}T\d{6}Z')
+
+    def test_uid_estavel_entre_requisicoes(self):
+        self.client.force_authenticate(user=self.user_psicologo)
+        res1 = self.client.get(self._url(self.sessao.id))
+        res2 = self.client.get(self._url(self.sessao.id))
+
+        def extrair_uid(conteudo):
+            for linha in conteudo.decode('utf-8').splitlines():
+                if linha.startswith('UID:'):
+                    return linha
+            return None
+
+        self.assertEqual(extrair_uid(res1.content), extrair_uid(res2.content))
+
+    def test_sequence_incrementa_apos_alteracao(self):
+        self.client.force_authenticate(user=self.user_psicologo)
+        res1 = self.client.get(self._url(self.sessao.id))
+
+        def extrair_sequence(conteudo):
+            for linha in conteudo.decode('utf-8').splitlines():
+                if linha.startswith('SEQUENCE:'):
+                    return int(linha.split(':')[1])
+            return None
+
+        self.sessao.observacoes_sessao = 'nota nova'
+        self.sessao.save()
+
+        res2 = self.client.get(self._url(self.sessao.id))
+        self.assertGreaterEqual(extrair_sequence(res2.content), extrair_sequence(res1.content))
+
+    def test_nao_participante_recebe_404(self):
+        self.client.force_authenticate(user=self.outro_user_psicologo)
+        res = self.client.get(self._url(self.sessao.id))
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
