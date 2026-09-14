@@ -524,3 +524,128 @@ class PacienteDashboardDataHoraTimezoneTests(TestCase):
         esperado = timezone.localtime(data_futura_utc).strftime('%H:%M')
         self.assertIn(esperado, response.data['proxima_sessao']['data_hora_formatada'])
         self.assertNotIn('14:00', response.data['proxima_sessao']['data_hora_formatada'])
+
+
+class PasswordResetRequestViewTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()  # evita acumular o throttle entre os testes desta classe
+        self.client = APIClient()
+
+    def test_conta_nativa_existente_recebe_email_com_token(self):
+        from django.core import mail
+
+        user = CustomUser.objects.create_user(
+            email='nativa@gmail.com', username='nativa', user_type='paciente', password='senha123',
+        )
+        response = self.client.post('/api/auth/password/reset/', {'email': 'nativa@gmail.com'}, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('token', response.data)
+        self.assertNotIn('uid', response.data)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['nativa@gmail.com'])
+        self.assertIn('Recuperação de senha', mail.outbox[0].subject)
+
+    def test_conta_google_only_nao_recebe_email(self):
+        from django.core import mail
+
+        user = CustomUser.objects.create_user(
+            email='google-only@gmail.com', username='googleonly', user_type='paciente', password='x',
+        )
+        user.set_unusable_password()
+        user.save()
+
+        response = self.client.post('/api/auth/password/reset/', {'email': 'google-only@gmail.com'}, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(
+            response.data['message'],
+            'Se o e-mail estiver cadastrado, você receberá um código em instantes.',
+        )
+
+    def test_email_inexistente_recebe_mesma_resposta_generica(self):
+        from django.core import mail
+
+        response = self.client.post('/api/auth/password/reset/', {'email': 'nao-existe@gmail.com'}, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(
+            response.data['message'],
+            'Se o e-mail estiver cadastrado, você receberá um código em instantes.',
+        )
+
+    def test_email_ausente_retorna_400(self):
+        response = self.client.post('/api/auth/password/reset/', {}, format='json')
+        self.assertEqual(response.status_code, 400)
+
+
+class PasswordResetConfirmViewTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.client = APIClient()
+        self.user = CustomUser.objects.create_user(
+            email='confirmar@gmail.com', username='confirmar', user_type='paciente', password='senhaAntiga1',
+        )
+
+    def _gerar_token(self, **overrides):
+        payload = {'sub': str(self.user.pk), 'email': self.user.email}
+        payload.update(overrides)
+        token, _ = issue_purpose_token('password_reset', payload, ttl=settings.PASSWORD_RESET_TOKEN_TTL)
+        return token
+
+    def test_token_valido_altera_senha_e_permite_login(self):
+        token = self._gerar_token()
+        response = self.client.post('/api/auth/password/reset/confirm/', {
+            'token': token, 'new_password': 'senhaNova123',
+        }, format='json')
+        self.assertEqual(response.status_code, 200)
+
+        login = self.client.post('/api/auth/login/', {
+            'email': 'confirmar@gmail.com', 'password': 'senhaNova123',
+        }, format='json')
+        self.assertEqual(login.status_code, 200)
+
+    def test_dados_incompletos_retorna_400(self):
+        response = self.client.post('/api/auth/password/reset/confirm/', {'token': 'x'}, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_senha_curta_retorna_400(self):
+        token = self._gerar_token()
+        response = self.client.post('/api/auth/password/reset/confirm/', {
+            'token': token, 'new_password': '123',
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('new_password', response.data)
+
+    def test_token_expirado_retorna_401_com_code(self):
+        now = int(time.time())
+        claims = {
+            'typ': 'password_reset', 'iss': 'psicobem', 'sub': str(self.user.pk), 'email': self.user.email,
+            'iat': now - 1000, 'exp': now - 1, 'jti': 'x',
+        }
+        token = jwt.encode(claims, settings.SECRET_KEY, algorithm='HS256')
+        response = self.client.post('/api/auth/password/reset/confirm/', {
+            'token': token, 'new_password': 'senhaNova123',
+        }, format='json')
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.data['code'], 'password_reset_token_expired')
+
+    def test_token_de_outro_typ_e_rejeitado(self):
+        token, _ = issue_purpose_token('link', {'sub': str(self.user.pk), 'email': self.user.email})
+        response = self.client.post('/api/auth/password/reset/confirm/', {
+            'token': token, 'new_password': 'senhaNova123',
+        }, format='json')
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.data['code'], 'password_reset_token_expired')
+
+    def test_usuario_inexistente_no_token_e_rejeitado(self):
+        token = self._gerar_token(sub='999999', email='fantasma@gmail.com')
+        response = self.client.post('/api/auth/password/reset/confirm/', {
+            'token': token, 'new_password': 'senhaNova123',
+        }, format='json')
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.data['code'], 'password_reset_token_expired')

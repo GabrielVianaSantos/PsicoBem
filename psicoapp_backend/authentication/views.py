@@ -1,15 +1,13 @@
 from rest_framework import status, generics
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
 from django.contrib.auth import authenticate, update_session_auth_hash
-from django.contrib.auth.tokens import default_token_generator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
 from .models import CustomUser, Paciente, Psicologo
 from .serializers import (
     UserRegistrationSerializer,
@@ -24,6 +22,7 @@ from .services import (
     decode_purpose_token,
     generate_unique_username,
     issue_purpose_token,
+    send_password_reset_email,
     verify_google_id_token,
 )
 
@@ -118,59 +117,78 @@ def user_update_view(request):
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class PasswordResetRequestThrottle(AnonRateThrottle):
+    scope = 'password_reset'
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([PasswordResetRequestThrottle])
 def password_reset_request_view(request):
     """
-    View para solicitar redefinição de senha
+    View para solicitar redefinição de senha.
+
+    A resposta é sempre a mesma mensagem genérica, independentemente de a
+    conta existir, não existir, ou ser uma conta Google-only — evita
+    enumeração de contas e impede que essa via conceda acesso paralelo
+    não autenticado a uma conta protegida por login Google.
     """
     email = request.data.get('email')
     if not email:
         return Response({'email': 'Este campo é obrigatório.'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    try:
-        user = CustomUser.objects.get(email=email)
-        token = default_token_generator.make_token(user)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        
-        # Log do token para desenvolvimento (já que não há e-mail)
-        print(f"--- RESET PASSWORD TOKEN FOR {email} ---")
-        print(f"UID: {uid}")
-        print(f"TOKEN: {token}")
-        print("------------------------------------------")
-        
-        return Response({
-            'message': 'Link de redefinição gerado.',
-            'uid': uid,
-            'token': token # Retornando token para facilitar o dev agora
-        }, status=status.HTTP_200_OK)
-    except CustomUser.DoesNotExist:
-        # Por segurança, não confirmamos se o email existe ou não
-        return Response({'message': 'Se o email estiver cadastrado, você receberá um link.'}, status=status.HTTP_200_OK)
+
+    user = CustomUser.objects.filter(email=email).first()
+    if user is not None and user.has_usable_password():
+        token, _ = issue_purpose_token(
+            'password_reset', {'sub': str(user.pk), 'email': user.email},
+            ttl=settings.PASSWORD_RESET_TOKEN_TTL,
+        )
+        send_password_reset_email(user, token)
+
+    return Response(
+        {'message': 'Se o e-mail estiver cadastrado, você receberá um código em instantes.'},
+        status=status.HTTP_200_OK,
+    )
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def password_reset_confirm_view(request):
     """
-    View para confirmar redefinição de senha usando token
+    View para confirmar redefinição de senha usando o token enviado por e-mail.
     """
-    uidb64 = request.data.get('uid')
     token = request.data.get('token')
     new_password = request.data.get('new_password')
-    
-    if not all([uidb64, token, new_password]):
+
+    if not token or not new_password:
         return Response({'detail': 'Dados incompletos.'}, status=status.HTTP_400_BAD_REQUEST)
-    
+
+    if len(new_password) < 6:
+        return Response(
+            {'new_password': 'A senha deve ter no mínimo 6 caracteres.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
-        user = CustomUser.objects.get(pk=uid)
-    except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+        claims = decode_purpose_token(token, 'password_reset')
+    except GoogleAuthError:
+        return Response(
+            {'detail': 'Código inválido ou expirado.', 'code': 'password_reset_token_expired'},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    try:
+        user = CustomUser.objects.filter(pk=int(claims['sub']), email=claims['email']).first()
+    except (TypeError, ValueError):
         user = None
-    
-    if user is not None and default_token_generator.check_token(user, token):
-        user.set_password(new_password)
-        user.save()
-        return Response({'message': 'Senha alterada com sucesso!'}, status=status.HTTP_200_OK)
+
+    if user is None:
+        return Response(
+            {'detail': 'Código inválido ou expirado.', 'code': 'password_reset_token_expired'},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    user.set_password(new_password)
+    user.save()
+    return Response({'message': 'Senha alterada com sucesso!'}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

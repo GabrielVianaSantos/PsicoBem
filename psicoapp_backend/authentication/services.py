@@ -9,6 +9,7 @@ from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 
 from django.conf import settings
+from django.core.mail import send_mail
 
 from .models import CustomUser
 
@@ -50,13 +51,14 @@ def verify_google_id_token(raw):
     return payload
 
 
-def issue_purpose_token(typ, payload):
+def issue_purpose_token(typ, payload, ttl=None):
     """
-    Emite um JWT HS256 de propósito específico (ex.: link/registro),
-    não confundível com os tokens do SimpleJWT.
+    Emite um JWT HS256 de propósito específico (ex.: link/registro/reset de
+    senha), não confundível com os tokens do SimpleJWT.
     """
+    ttl = ttl or settings.GOOGLE_PURPOSE_TOKEN_TTL
     now = int(time.time())
-    exp = now + settings.GOOGLE_PURPOSE_TOKEN_TTL
+    exp = now + ttl
     claims = {
         'typ': typ,
         'iss': 'psicobem',
@@ -66,7 +68,7 @@ def issue_purpose_token(typ, payload):
     }
     claims.update(payload)
     token = jwt.encode(claims, settings.SECRET_KEY, algorithm='HS256')
-    return token, settings.GOOGLE_PURPOSE_TOKEN_TTL
+    return token, ttl
 
 
 def decode_purpose_token(raw, expected_typ):
@@ -101,3 +103,22 @@ def generate_unique_username(email):
             return candidate
 
     return f'user_{uuid.uuid4().hex[:12]}'
+
+
+def send_password_reset_email(user, token):
+    """Envia o código de recuperação de senha por e-mail (texto simples)."""
+    minutos = settings.PASSWORD_RESET_TOKEN_TTL // 60
+    mensagem = (
+        f"Olá, {user.first_name or user.email}!\n\n"
+        f"Recebemos uma solicitação para redefinir a senha da sua conta PsicoBem.\n\n"
+        f"Seu código de recuperação é:\n\n{token}\n\n"
+        f"Esse código expira em {minutos} minutos. Se você não solicitou essa "
+        f"alteração, pode ignorar este e-mail com segurança."
+    )
+    send_mail(
+        subject="Recuperação de senha — PsicoBem",
+        message=mensagem,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )

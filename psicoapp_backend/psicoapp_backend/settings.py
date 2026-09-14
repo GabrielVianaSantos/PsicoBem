@@ -176,7 +176,10 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20
+    'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_RATES': {
+        'password_reset': '5/hour',
+    },
 }
 
 # JWT Settings
@@ -191,6 +194,24 @@ GOOGLE_OAUTH_WEB_CLIENT_ID = os.getenv("GOOGLE_OAUTH_WEB_CLIENT_ID", "")
 GOOGLE_OAUTH_ALLOWED_AUDIENCES = env_list("GOOGLE_OAUTH_ALLOWED_AUDIENCES", GOOGLE_OAUTH_WEB_CLIENT_ID)
 GOOGLE_PURPOSE_TOKEN_TTL = int(os.getenv("GOOGLE_PURPOSE_TOKEN_TTL", "900"))
 GOOGLE_AUTH_ENABLED = bool(GOOGLE_OAUTH_ALLOWED_AUDIENCES)
+
+# E-mail (recuperação de senha)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", "True")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "PsicoBem <naoresponda@psicobem.app>")
+
+if EMAIL_HOST:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+else:
+    # Sem credenciais configuradas (ex.: dev local): imprime o e-mail no
+    # console em vez de tentar enviar de verdade.
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# TTL do token de recuperação de senha (reaproveita issue_purpose_token)
+PASSWORD_RESET_TOKEN_TTL = int(os.getenv("PASSWORD_RESET_TOKEN_TTL", "900"))
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = env_list(
