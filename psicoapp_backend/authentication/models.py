@@ -64,6 +64,13 @@ class Psicologo(models.Model):
     specialization = models.CharField(max_length=200, blank=True, null=True)
     license_date = models.DateField(null=True, blank=True)
     biography = models.TextField(blank=True, null=True)
+    # Link pessoal e fixo do Google Meet (SPEC_SESSOES_ONLINE_GOOGLE_MEET.md).
+    # Nullable pois psicólogos cadastrados antes desta feature não têm esse
+    # dado e não há como preenchê-lo retroativamente.
+    link_sala_video = models.URLField(
+        max_length=300, blank=True, null=True,
+        verbose_name='Link da Sala de Vídeo (Google Meet)'
+    )
     
     def __str__(self):
         return f"Dr(a). {self.user.first_name} {self.user.last_name} - CRP: {self.crp}"

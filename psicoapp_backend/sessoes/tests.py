@@ -1,5 +1,5 @@
 from decimal import Decimal
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import datetime, timedelta, timezone as dt_timezone
@@ -334,15 +334,17 @@ class MarcarNaoRealizadaActionTests(TestCase):
         self.assertFalse(res_realizada.data['pode_marcar_falta'])
 
 
-@override_settings(JITSI_ENABLED=True, JITSI_BASE_URL='https://meet.jit.si')
-class SalaUuidGeracaoTests(TestCase):
-    """Issue 01 — geração/regeneração de sala_uuid e URL derivada."""
+class SalaUrlLinkFixoTests(TestCase):
+    """Issue 01 — sala_url deriva do link fixo do psicólogo (Google Meet)."""
 
     def setUp(self):
+        self.link_meet = 'https://meet.google.com/abc-defg-hij'
         self.user_psicologo = User.objects.create_user(
             username='psi_sala', email='psi_sala@test.com', password='pass', user_type='psicologo'
         )
-        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='44/44444')
+        self.psicologo = Psicologo.objects.create(
+            user=self.user_psicologo, crp='44/44444', link_sala_video=self.link_meet
+        )
 
         self.user_paciente = User.objects.create_user(
             username='pac_sala', email='pac_sala@test.com', password='pass', user_type='paciente'
@@ -367,74 +369,50 @@ class SalaUuidGeracaoTests(TestCase):
             status='agendada', valor=Decimal('100.00'),
         )
 
-    def test_sessao_online_recebe_sala_uuid(self):
+    def test_sessao_online_usa_link_do_psicologo(self):
         sessao = self._criar_sessao(self.tipo_online)
-        self.assertIsNotNone(sessao.sala_uuid)
+        self.assertEqual(sessao.sala_url, self.link_meet)
 
-    def test_sessao_presencial_nao_recebe_sala_uuid(self):
+    def test_sessao_presencial_sala_url_none(self):
         sessao = self._criar_sessao(self.tipo_presencial)
-        self.assertIsNone(sessao.sala_uuid)
+        self.assertIsNone(sessao.sala_url)
 
-    def test_remarcar_regenera_sala_uuid(self):
+    def test_sessao_online_sem_link_configurado(self):
+        self.psicologo.link_sala_video = None
+        self.psicologo.save()
         sessao = self._criar_sessao(self.tipo_online)
-        uuid_original = sessao.sala_uuid
+        self.assertIsNone(sessao.sala_url)
+        self.assertTrue(sessao.sala_pendente_configuracao)
 
+    def test_sessao_online_com_link_nao_esta_pendente(self):
+        sessao = self._criar_sessao(self.tipo_online)
+        self.assertFalse(sessao.sala_pendente_configuracao)
+
+    def test_sessao_presencial_nunca_esta_pendente(self):
+        self.psicologo.link_sala_video = None
+        self.psicologo.save()
+        sessao = self._criar_sessao(self.tipo_presencial)
+        self.assertFalse(sessao.sala_pendente_configuracao)
+
+    def test_atualizar_link_no_perfil_reflete_em_sessoes_existentes(self):
+        # Diferente do Jitsi: não há sala por sessão — o link é do
+        # psicólogo, então editá-lo no perfil reflete em todas as sessões.
+        sessao = self._criar_sessao(self.tipo_online)
+        novo_link = 'https://meet.google.com/xyz-wvut-srq'
+        self.psicologo.link_sala_video = novo_link
+        self.psicologo.save()
+        sessao.refresh_from_db()
+        self.assertEqual(sessao.sala_url, novo_link)
+
+    def test_remarcar_nao_altera_o_link(self):
+        sessao = self._criar_sessao(self.tipo_online)
+        link_original = sessao.sala_url
         sessao.data_hora = sessao.data_hora + timedelta(hours=2)
         sessao.save()
         sessao.refresh_from_db()
-
-        self.assertIsNotNone(sessao.sala_uuid)
-        self.assertNotEqual(sessao.sala_uuid, uuid_original)
-
-    def test_salvar_sem_alterar_data_hora_preserva_sala_uuid(self):
-        sessao = self._criar_sessao(self.tipo_online)
-        uuid_original = sessao.sala_uuid
-
-        sessao.observacoes_agendamento = 'nota qualquer'
-        sessao.save()
-        sessao.refresh_from_db()
-
-        self.assertEqual(sessao.sala_uuid, uuid_original)
-
-    def test_trocar_para_online_gera_sala_uuid(self):
-        sessao = self._criar_sessao(self.tipo_presencial)
-        self.assertIsNone(sessao.sala_uuid)
-
-        sessao.tipo_sessao = self.tipo_online
-        sessao.save()
-        sessao.refresh_from_db()
-
-        self.assertIsNotNone(sessao.sala_uuid)
-
-    def test_trocar_para_presencial_limpa_sala_uuid(self):
-        sessao = self._criar_sessao(self.tipo_online)
-        self.assertIsNotNone(sessao.sala_uuid)
-
-        sessao.tipo_sessao = self.tipo_presencial
-        sessao.save()
-        sessao.refresh_from_db()
-
-        self.assertIsNone(sessao.sala_uuid)
-
-    def test_sala_url_deriva_de_jitsi_base_url(self):
-        sessao = self._criar_sessao(self.tipo_online)
-        esperado = f"https://meet.jit.si/psicobem-{sessao.sala_uuid.hex}"
-        self.assertEqual(sessao.sala_url, esperado)
-
-    @override_settings(JITSI_BASE_URL='https://jitsi.exemplo.com/')
-    def test_sala_url_com_barra_final_nao_duplica_barra(self):
-        sessao = self._criar_sessao(self.tipo_online)
-        self.assertNotIn('//psicobem-', sessao.sala_url.replace('https://', ''))
-        self.assertTrue(sessao.sala_url.startswith('https://jitsi.exemplo.com/psicobem-'))
-
-    @override_settings(JITSI_ENABLED=False)
-    def test_jitsi_desabilitado_nao_gera_sala(self):
-        sessao = self._criar_sessao(self.tipo_online)
-        self.assertIsNone(sessao.sala_uuid)
-        self.assertIsNone(sessao.sala_url)
+        self.assertEqual(sessao.sala_url, link_original)
 
 
-@override_settings(JITSI_ENABLED=True, JITSI_BASE_URL='https://meet.jit.si')
 class SalaUrlExposicaoEAutorizacaoTests(TestCase):
     """Issue 02 — sala_url/pode_entrar_sala nos serializers, janela e autorização."""
 
@@ -442,7 +420,10 @@ class SalaUrlExposicaoEAutorizacaoTests(TestCase):
         self.user_psicologo = User.objects.create_user(
             username='psi_expo', email='psi_expo@test.com', password='pass', user_type='psicologo'
         )
-        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='55/55555')
+        self.psicologo = Psicologo.objects.create(
+            user=self.user_psicologo, crp='55/55555',
+            link_sala_video='https://meet.google.com/exp-ooor-uge'
+        )
 
         self.user_paciente = User.objects.create_user(
             username='pac_expo', email='pac_expo@test.com', password='pass', user_type='paciente'
@@ -479,8 +460,7 @@ class SalaUrlExposicaoEAutorizacaoTests(TestCase):
         self.client.force_authenticate(user=self.user_paciente)
         res = self.client.get(f'/api/sessoes/{sessao.id}/')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(res.data['sala_url'])
-        self.assertIn(str(sessao.sala_uuid.hex), res.data['sala_url'])
+        self.assertEqual(res.data['sala_url'], self.psicologo.link_sala_video)
 
     def test_nao_participante_recebe_404_e_nunca_ve_campo(self):
         sessao = self._criar_sessao()
@@ -513,8 +493,9 @@ class SalaUrlExposicaoEAutorizacaoTests(TestCase):
         results = res_list.data.get('results', res_list.data)
         self.assertNotIn('sala_uuid', results[0])
 
-    @override_settings(JITSI_ENABLED=False)
-    def test_jitsi_desabilitado_sala_url_null_para_todas(self):
+    def test_sem_link_configurado_sala_url_null_via_api(self):
+        self.psicologo.link_sala_video = None
+        self.psicologo.save()
         sessao = self._criar_sessao()
         self.client.force_authenticate(user=self.psicologo.user)
         res = self.client.get(f'/api/sessoes/{sessao.id}/')
@@ -548,21 +529,19 @@ class SalaUrlExposicaoEAutorizacaoTests(TestCase):
         sessao = self._criar_sessao(data_hora=timezone.now() - timedelta(minutes=81))
         self.assertFalse(sessao.pode_entrar_na_sala())
 
-    def test_janela_usa_fallback_60min_sem_tipo_sessao(self):
-        # 85 min atrás: fora da janela de 50+30=80min do tipo original, mas
-        # dentro do fallback de 60+30=90min usado quando tipo_sessao é nulo.
-        sessao = self._criar_sessao(data_hora=timezone.now() - timedelta(minutes=85))
-        # Simula sessão legada sem tipo_sessao, preservando a sala já gerada
-        # (bypass de save() para não disparar a regra "sem tipo => sem sala").
+    def test_sessao_sem_tipo_sessao_nunca_permite_entrar(self):
+        # Sem link por sessão (diferente do Jitsi): tipo_sessao=None
+        # significa que não há mais como saber se a sessão era online, então
+        # sala_url vira None e pode_entrar_na_sala() também.
+        sessao = self._criar_sessao(data_hora=timezone.now() - timedelta(minutes=10))
         Sessao.objects.filter(pk=sessao.pk).update(tipo_sessao=None)
         sessao.refresh_from_db()
 
         self.assertIsNone(sessao.tipo_sessao)
-        self.assertIsNotNone(sessao.sala_uuid)
-        self.assertTrue(sessao.pode_entrar_na_sala())
+        self.assertIsNone(sessao.sala_url)
+        self.assertFalse(sessao.pode_entrar_na_sala())
 
 
-@override_settings(JITSI_ENABLED=True, JITSI_BASE_URL='https://meet.jit.si')
 class AgendaIcsTests(TestCase):
     """Issue 07 (opcional) — endpoint .ics restrito aos participantes."""
 
@@ -570,7 +549,10 @@ class AgendaIcsTests(TestCase):
         self.user_psicologo = User.objects.create_user(
             username='psi_ics', email='psi_ics@test.com', password='pass', user_type='psicologo'
         )
-        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='11/22333')
+        self.psicologo = Psicologo.objects.create(
+            user=self.user_psicologo, crp='11/22333',
+            link_sala_video='https://meet.google.com/ics-teee-ste'
+        )
 
         self.user_paciente = User.objects.create_user(
             username='pac_ics', email='pac_ics@test.com', password='pass', user_type='paciente'
@@ -651,3 +633,79 @@ class AgendaIcsTests(TestCase):
         self.client.force_authenticate(user=self.outro_user_psicologo)
         res = self.client.get(self._url(self.sessao.id))
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class SalaPendenteEContatoAlternativoTests(TestCase):
+    """Issue 03 — sala_pendente_configuracao e psicologo_contato_alternativo."""
+
+    def setUp(self):
+        self.user_psicologo = User.objects.create_user(
+            username='psi_pendente', email='psi_pendente@test.com', password='pass',
+            user_type='psicologo', phone='11977776666',
+        )
+        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='12/34567')
+
+        self.user_paciente = User.objects.create_user(
+            username='pac_pendente', email='pac_pendente@test.com', password='pass', user_type='paciente'
+        )
+        self.paciente = Paciente.objects.create(user=self.user_paciente, cpf='432.432.432-00')
+
+        VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='ativo'
+        )
+
+        self.tipo_online = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Online Pendente', tipo='online', valor=100.00
+        )
+        self.tipo_presencial = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Presencial Pendente', tipo='presencial', valor=100.00
+        )
+
+        self.client = APIClient()
+
+    def _criar_sessao(self, tipo_sessao):
+        return Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=tipo_sessao,
+            data_hora=timezone.now() + timedelta(days=1), status='agendada', valor=Decimal('100.00'),
+        )
+
+    def test_paciente_ve_contato_quando_sala_pendente(self):
+        sessao = self._criar_sessao(self.tipo_online)  # psicólogo sem link configurado
+        self.client.force_authenticate(user=self.user_paciente)
+        res = self.client.get(f'/api/sessoes/{sessao.id}/')
+        self.assertTrue(res.data['sala_pendente_configuracao'])
+        self.assertEqual(res.data['psicologo_contato_alternativo'], {
+            'telefone': '11977776666',
+            'email': 'psi_pendente@test.com',
+        })
+
+    def test_psicologo_nunca_ve_contato_alternativo(self):
+        sessao = self._criar_sessao(self.tipo_online)
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.get(f'/api/sessoes/{sessao.id}/')
+        self.assertTrue(res.data['sala_pendente_configuracao'])
+        self.assertIsNone(res.data['psicologo_contato_alternativo'])
+
+    def test_sem_pendencia_contato_alternativo_e_none(self):
+        self.psicologo.link_sala_video = 'https://meet.google.com/tem-link-sim'
+        self.psicologo.save()
+        sessao = self._criar_sessao(self.tipo_online)
+        self.client.force_authenticate(user=self.user_paciente)
+        res = self.client.get(f'/api/sessoes/{sessao.id}/')
+        self.assertFalse(res.data['sala_pendente_configuracao'])
+        self.assertIsNone(res.data['psicologo_contato_alternativo'])
+
+    def test_sessao_presencial_nunca_tem_contato_alternativo(self):
+        sessao = self._criar_sessao(self.tipo_presencial)
+        self.client.force_authenticate(user=self.user_paciente)
+        res = self.client.get(f'/api/sessoes/{sessao.id}/')
+        self.assertFalse(res.data['sala_pendente_configuracao'])
+        self.assertIsNone(res.data['psicologo_contato_alternativo'])
+
+    def test_listagem_tambem_expoe_os_campos(self):
+        self._criar_sessao(self.tipo_online)
+        self.client.force_authenticate(user=self.user_paciente)
+        res = self.client.get('/api/sessoes/')
+        results = res.data.get('results', res.data)
+        self.assertTrue(results[0]['sala_pendente_configuracao'])
+        self.assertIsNotNone(results[0]['psicologo_contato_alternativo'])

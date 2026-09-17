@@ -1,5 +1,3 @@
-import uuid
-from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
@@ -215,18 +213,6 @@ class Sessao(models.Model):
         verbose_name='Observações da Sessão'
     )
 
-    # Sessões online (Jitsi Meet) — ver SPEC_SESSOES_ONLINE_JITSI.md.
-    # Guarda-se apenas o identificador, nunca a URL: a URL é derivada em
-    # tempo de leitura a partir de JITSI_BASE_URL, permitindo trocar de
-    # instância do Jitsi sem migração de dados.
-    sala_uuid = models.UUIDField(
-        null=True,
-        blank=True,
-        unique=True,
-        editable=False,
-        verbose_name='Identificador da Sala Online'
-    )
-
     objects = SessaoManager()
 
     # Timestamps
@@ -250,60 +236,25 @@ class Sessao(models.Model):
         # Se o valor não foi definido, usar o valor do tipo de sessão
         if not self.valor:
             self.valor = self.tipo_sessao.valor
-        self._sync_sala_uuid()
         super().save(*args, **kwargs)
-
-    def _sync_sala_uuid(self):
-        """
-        Mantém sala_uuid coerente com a modalidade da sessão.
-
-        - presencial (ou tipo_sessao ausente): nunca tem sala.
-        - online, na criação ou ao sair de presencial: gera sala nova.
-        - online, ao remarcar (data_hora mudou): regenera a sala — limita a
-          janela de exposição de um link possivelmente vazado, a custo zero,
-          já que a remarcação já obriga a atualizar a agenda mesmo assim.
-        - online sem mudança relevante: preserva a sala já existente.
-        """
-        is_online = bool(self.tipo_sessao_id and self.tipo_sessao.tipo == 'online')
-
-        if not is_online:
-            self.sala_uuid = None
-            return
-
-        if not settings.JITSI_ENABLED:
-            # Não gera sala nova, mas não mexe em uma já existente (ex.: a
-            # flag pode voltar a ser ligada sem precisar remarcar tudo).
-            return
-
-        anterior = None
-        if self.pk:
-            anterior = Sessao.objects.filter(pk=self.pk).select_related('tipo_sessao').first()
-
-        era_online = bool(anterior and anterior.tipo_sessao_id and anterior.tipo_sessao.tipo == 'online')
-
-        if not anterior or not era_online:
-            self.sala_uuid = self._gerar_sala_uuid_unica()
-        elif anterior.data_hora != self.data_hora:
-            self.sala_uuid = self._gerar_sala_uuid_unica()
-        elif not self.sala_uuid:
-            self.sala_uuid = self._gerar_sala_uuid_unica()
-
-    @staticmethod
-    def _gerar_sala_uuid_unica():
-        """Gera um UUID de sala, com retry no improvável caso de colisão."""
-        for _ in range(5):
-            candidato = uuid.uuid4()
-            if not Sessao.objects.filter(sala_uuid=candidato).exists():
-                return candidato
-        return uuid.uuid4()
 
     @property
     def sala_url(self):
-        """URL completa da sala, derivada de JITSI_BASE_URL. None se não aplicável."""
-        if not self.sala_uuid or not settings.JITSI_ENABLED:
+        """
+        URL da sala de vídeo: o link pessoal e fixo do Google Meet do
+        psicólogo (SPEC_SESSOES_ONLINE_GOOGLE_MEET.md), não um link
+        derivado/gerado por sessão. None para presencial ou quando o
+        psicólogo ainda não configurou o link no perfil.
+        """
+        if not (self.tipo_sessao_id and self.tipo_sessao.tipo == 'online'):
             return None
-        base_url = settings.JITSI_BASE_URL.rstrip('/')
-        return f"{base_url}/psicobem-{self.sala_uuid.hex}"
+        return self.psicologo.link_sala_video or None
+
+    @property
+    def sala_pendente_configuracao(self):
+        """Verdadeiro quando a sessão é online mas o psicólogo não configurou o link."""
+        is_online = bool(self.tipo_sessao_id and self.tipo_sessao.tipo == 'online')
+        return is_online and not self.psicologo.link_sala_video
 
     def _duracao_sessao_minutos(self, padrao=60):
         if self.tipo_sessao and self.tipo_sessao.duracao_minutos:

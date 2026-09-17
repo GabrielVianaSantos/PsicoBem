@@ -89,6 +89,8 @@ class SessaoListSerializer(serializers.ModelSerializer):
     sala_url = serializers.ReadOnlyField()
     pode_entrar_sala = serializers.SerializerMethodField()
     sala_disponivel_em = serializers.ReadOnlyField()
+    sala_pendente_configuracao = serializers.ReadOnlyField()
+    psicologo_contato_alternativo = serializers.SerializerMethodField()
 
     class Meta:
         model = Sessao
@@ -97,7 +99,8 @@ class SessaoListSerializer(serializers.ModelSerializer):
             'status_pagamento', 'valor', 'data_hora_formatada', 'valor_formatado',
             'status_display', 'status_pagamento_display', 'pode_cancelar',
             'pode_remarcar', 'pode_realizar', 'pode_marcar_falta',
-            'sala_url', 'pode_entrar_sala', 'sala_disponivel_em'
+            'sala_url', 'pode_entrar_sala', 'sala_disponivel_em',
+            'sala_pendente_configuracao', 'psicologo_contato_alternativo'
         ]
 
     def get_valor_formatado(self, obj):
@@ -117,6 +120,24 @@ class SessaoListSerializer(serializers.ModelSerializer):
 
     def get_pode_marcar_falta(self, obj):
         return obj.pode_ser_marcada_falta()
+
+    def get_psicologo_contato_alternativo(self, obj):
+        """
+        Só exposto quando a sala está pendente de configuração e quem
+        pergunta é o paciente da própria sessão — nunca ao psicólogo (já são
+        os dados dele mesmo) nem em nenhum outro cenário.
+        """
+        if not obj.sala_pendente_configuracao:
+            return None
+        request = self.context.get('request')
+        if not request or not hasattr(request.user, 'paciente_profile'):
+            return None
+        if request.user.paciente_profile.id != obj.paciente_id:
+            return None
+        return {
+            'telefone': obj.psicologo.user.phone,
+            'email': obj.psicologo.user.email,
+        }
 
     def get_pode_entrar_sala(self, obj):
         return obj.pode_entrar_na_sala()
@@ -137,6 +158,8 @@ class SessaoDetailSerializer(serializers.ModelSerializer):
     sala_url = serializers.ReadOnlyField()
     pode_entrar_sala = serializers.SerializerMethodField()
     sala_disponivel_em = serializers.ReadOnlyField()
+    sala_pendente_configuracao = serializers.ReadOnlyField()
+    psicologo_contato_alternativo = serializers.SerializerMethodField()
 
     class Meta:
         model = Sessao
@@ -146,7 +169,8 @@ class SessaoDetailSerializer(serializers.ModelSerializer):
             'data_pagamento', 'created_at', 'updated_at', 'data_hora_formatada',
             'valor_formatado', 'status_display', 'status_pagamento_display',
             'pode_cancelar', 'pode_remarcar', 'pode_realizar', 'pode_marcar_falta',
-            'sala_url', 'pode_entrar_sala', 'sala_disponivel_em'
+            'sala_url', 'pode_entrar_sala', 'sala_disponivel_em',
+            'sala_pendente_configuracao', 'psicologo_contato_alternativo'
         ]
         read_only_fields = ['created_at', 'updated_at', 'data_pagamento']
 
@@ -167,6 +191,24 @@ class SessaoDetailSerializer(serializers.ModelSerializer):
 
     def get_pode_marcar_falta(self, obj):
         return obj.pode_ser_marcada_falta()
+
+    def get_psicologo_contato_alternativo(self, obj):
+        """
+        Só exposto quando a sala está pendente de configuração e quem
+        pergunta é o paciente da própria sessão — nunca ao psicólogo (já são
+        os dados dele mesmo) nem em nenhum outro cenário.
+        """
+        if not obj.sala_pendente_configuracao:
+            return None
+        request = self.context.get('request')
+        if not request or not hasattr(request.user, 'paciente_profile'):
+            return None
+        if request.user.paciente_profile.id != obj.paciente_id:
+            return None
+        return {
+            'telefone': obj.psicologo.user.phone,
+            'email': obj.psicologo.user.email,
+        }
 
     def get_pode_entrar_sala(self, obj):
         return obj.pode_entrar_na_sala()

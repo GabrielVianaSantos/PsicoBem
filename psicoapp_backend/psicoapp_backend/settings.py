@@ -213,10 +213,6 @@ else:
 # TTL do token de recuperação de senha (reaproveita issue_purpose_token)
 PASSWORD_RESET_TOKEN_TTL = int(os.getenv("PASSWORD_RESET_TOKEN_TTL", "900"))
 
-# Sessões online (Jitsi Meet) — ver SPEC_SESSOES_ONLINE_JITSI.md
-JITSI_BASE_URL = os.getenv("JITSI_BASE_URL", "https://meet.jit.si").rstrip("/")
-JITSI_ENABLED = env_bool("JITSI_ENABLED", "True")
-
 # CORS settings
 CORS_ALLOWED_ORIGINS = env_list(
     "CORS_ALLOWED_ORIGINS",

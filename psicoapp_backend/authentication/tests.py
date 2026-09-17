@@ -268,10 +268,12 @@ class GoogleCompleteRegistrationViewTests(TestCase):
             'phone': '11988888888',
             'crp': '06/12345',
             'specialization': 'Clínica',
+            'link_sala_video': 'https://meet.google.com/psi-goog-lee',
         }, format='json')
         self.assertEqual(response.status_code, 201)
         user = CustomUser.objects.get(email='psi@gmail.com')
-        self.assertTrue(Psicologo.objects.filter(user=user, crp='06/12345').exists())
+        psicologo = Psicologo.objects.get(user=user, crp='06/12345')
+        self.assertEqual(psicologo.link_sala_video, 'https://meet.google.com/psi-goog-lee')
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn('Psicólogo', mail.outbox[0].body)
 
@@ -341,6 +343,41 @@ class GoogleCompleteRegistrationViewTests(TestCase):
         }, format='json')
         self.assertEqual(response.status_code, 400)
         self.assertIn('crp', response.data)
+
+    def test_psicologo_sem_link_meet_retorna_400(self):
+        token = self._registration_token(sub='sub-complete-semlink', email='semlink@gmail.com')
+        response = self.client.post('/api/auth/google/complete/', {
+            'registration_token': token,
+            'user_type': 'psicologo',
+            'first_name': 'Semlink',
+            'crp': '07/11111',
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('link_sala_video', response.data)
+        self.assertFalse(CustomUser.objects.filter(email='semlink@gmail.com').exists())
+
+    def test_psicologo_com_link_invalido_retorna_400(self):
+        token = self._registration_token(sub='sub-complete-linkinvalido', email='linkinvalido@gmail.com')
+        response = self.client.post('/api/auth/google/complete/', {
+            'registration_token': token,
+            'user_type': 'psicologo',
+            'first_name': 'Linkinvalido',
+            'crp': '07/22222',
+            'link_sala_video': 'https://zoom.us/j/12345',
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('link_sala_video', response.data)
+
+    def test_paciente_nao_exige_link_meet(self):
+        token = self._registration_token(sub='sub-complete-paciente-semlink', email='pacsemlink@gmail.com')
+        response = self.client.post('/api/auth/google/complete/', {
+            'registration_token': token,
+            'user_type': 'paciente',
+            'first_name': 'Pac',
+            'cpf': '444.555.666-77',
+            'gender': 'F',
+        }, format='json')
+        self.assertEqual(response.status_code, 201)
 
     def test_expired_or_invalid_token_returns_401(self):
         response = self.client.post('/api/auth/google/complete/', {
@@ -729,9 +766,121 @@ class PsicologoRegistrationWelcomeEmailTests(TestCase):
             },
             'crp': '02/54321',
             'specialization': 'Clínica',
+            'link_sala_video': 'https://meet.google.com/wlc-omee-mai',
         }, format='json')
         self.assertEqual(response.status_code, 201)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ['novopsi@gmail.com'])
         self.assertIn('Bem-vindo', mail.outbox[0].subject)
         self.assertIn('Psicólogo', mail.outbox[0].body)
+
+
+class PsicologoRegistrationLinkSalaVideoTests(TestCase):
+    """Issue 02 (SPEC_SESSOES_ONLINE_GOOGLE_MEET) — cadastro nativo exige link do Meet."""
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def _payload(self, **overrides):
+        payload = {
+            'user': {
+                'email': 'psilink@gmail.com',
+                'username': 'psilink',
+                'first_name': 'Psi',
+                'last_name': 'Link',
+                'password': 'senhaSegura1',
+                'password_confirm': 'senhaSegura1',
+                'user_type': 'psicologo',
+            },
+            'crp': '03/11122',
+            'specialization': 'Clínica',
+            'link_sala_video': 'https://meet.google.com/psi-link-abc',
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_sem_link_retorna_400(self):
+        payload = self._payload()
+        del payload['link_sala_video']
+        response = self.client.post('/api/auth/register/psicologo/', payload, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('link_sala_video', response.data)
+
+    def test_link_invalido_retorna_400(self):
+        response = self.client.post(
+            '/api/auth/register/psicologo/',
+            self._payload(link_sala_video='https://zoom.us/j/12345'),
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('link_sala_video', response.data)
+
+    def test_link_valido_e_salvo(self):
+        response = self.client.post('/api/auth/register/psicologo/', self._payload(), format='json')
+        self.assertEqual(response.status_code, 201)
+        psicologo = Psicologo.objects.get(crp='03/11122')
+        self.assertEqual(psicologo.link_sala_video, 'https://meet.google.com/psi-link-abc')
+
+    def test_cadastro_paciente_nao_exige_link(self):
+        response = self.client.post('/api/auth/register/paciente/', {
+            'user': {
+                'email': 'pacsemlink2@gmail.com',
+                'username': 'pacsemlink2',
+                'first_name': 'Pac',
+                'last_name': 'Sem Link',
+                'password': 'senhaSegura1',
+                'password_confirm': 'senhaSegura1',
+                'user_type': 'paciente',
+            },
+            'cpf': '555.666.777-88',
+            'gender': 'F',
+        }, format='json')
+        self.assertEqual(response.status_code, 201)
+
+
+class LinkSalaVideoPerfilTests(TestCase):
+    """Issue 03 (SPEC_SESSOES_ONLINE_GOOGLE_MEET) — edição do link via perfil."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user_psicologo = CustomUser.objects.create_user(
+            username='psi_perfil_link', email='psi_perfil_link@test.com', password='pass',
+            user_type='psicologo',
+        )
+        self.psicologo = Psicologo.objects.create(
+            user=self.user_psicologo, crp='09/55566',
+            link_sala_video='https://meet.google.com/original-link'
+        )
+
+        self.user_paciente = CustomUser.objects.create_user(
+            username='pac_perfil_link', email='pac_perfil_link@test.com', password='pass',
+            user_type='paciente',
+        )
+        self.paciente = Paciente.objects.create(user=self.user_paciente, cpf='321.321.321-00')
+
+    def test_psicologo_atualiza_link_pelo_perfil(self):
+        self.client.force_authenticate(user=self.user_psicologo)
+        response = self.client.put('/api/auth/profile/update/', {
+            'link_sala_video': 'https://meet.google.com/novo-link-abc'
+        }, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.psicologo.refresh_from_db()
+        self.assertEqual(self.psicologo.link_sala_video, 'https://meet.google.com/novo-link-abc')
+
+    def test_rejeita_link_com_formato_invalido(self):
+        self.client.force_authenticate(user=self.user_psicologo)
+        response = self.client.put('/api/auth/profile/update/', {
+            'link_sala_video': 'https://zoom.us/j/999'
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('link_sala_video', response.data)
+        self.psicologo.refresh_from_db()
+        self.assertEqual(self.psicologo.link_sala_video, 'https://meet.google.com/original-link')
+
+    def test_paciente_nao_e_afetado_pelo_campo(self):
+        self.client.force_authenticate(user=self.user_paciente)
+        response = self.client.put('/api/auth/profile/update/', {
+            'first_name': 'Novo Nome'
+        }, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['user']['link_sala_video'], None)

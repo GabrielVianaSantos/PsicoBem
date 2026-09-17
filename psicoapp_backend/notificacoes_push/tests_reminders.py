@@ -2,7 +2,7 @@ from decimal import Decimal
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.utils import timezone
 
 from authentication.models import Paciente, Psicologo
@@ -15,7 +15,6 @@ from .tasks import _build_reminder_message, dispatch_session_reminders, dispatch
 User = get_user_model()
 
 
-@override_settings(JITSI_ENABLED=True, JITSI_BASE_URL='https://meet.jit.si')
 class ReminderOnlineMessageTests(TestCase):
     """Issue 03 — mensagem do lembrete_15m diferenciada para sessão online."""
 
@@ -23,7 +22,10 @@ class ReminderOnlineMessageTests(TestCase):
         self.user_psicologo = User.objects.create_user(
             username='psi_lembrete', email='psi_lembrete@test.com', password='pass', user_type='psicologo'
         )
-        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='77/77777')
+        self.psicologo = Psicologo.objects.create(
+            user=self.user_psicologo, crp='77/77777',
+            link_sala_video='https://meet.google.com/lem-brte-abc'
+        )
 
         self.user_paciente = User.objects.create_user(
             username='pac_lembrete', email='pac_lembrete@test.com', password='pass', user_type='paciente'
@@ -86,7 +88,6 @@ class ReminderOnlineMessageTests(TestCase):
             self.assertNotIn(sessao.sala_url, notificacao.mensagem)
             payload_str = str(notificacao.dados_extras)
             self.assertNotIn(sessao.sala_url, payload_str)
-            self.assertNotIn(str(sessao.sala_uuid), payload_str)
             self.assertEqual(notificacao.dados_extras.get('screen'), 'DetalhesSessao')
             self.assertEqual(notificacao.dados_extras.get('params'), {'sessaoId': sessao.pk})
             self.assertEqual(notificacao.dados_extras.get('modalidade'), 'online')

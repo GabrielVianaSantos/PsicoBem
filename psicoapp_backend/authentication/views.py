@@ -593,7 +593,8 @@ def google_complete_registration_view(request):
             Paciente.objects.create(user=user, cpf=data['cpf'], gender=data['gender'])
         else:
             Psicologo.objects.create(
-                user=user, crp=data['crp'], specialization=data.get('specialization', '')
+                user=user, crp=data['crp'], specialization=data.get('specialization', ''),
+                link_sala_video=data['link_sala_video'],
             )
 
     send_welcome_email(user)

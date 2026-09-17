@@ -45,16 +45,28 @@ class PacienteRegistrationSerializer(serializers.ModelSerializer):
         paciente = Paciente.objects.create(user=user, **validated_data)
         return paciente
 
+LINK_MEET_PREFIX = 'https://meet.google.com/'
+
+
+def validar_link_sala_video(value):
+    if not value or not value.startswith(LINK_MEET_PREFIX):
+        raise serializers.ValidationError(
+            'Informe o link da sua sala do Google Meet (crie uma em meet.google.com/new).'
+        )
+    return value
+
+
 class PsicologoRegistrationSerializer(serializers.ModelSerializer):
     """
     Serializer específico para registro de psicólogos
     """
     user = UserRegistrationSerializer()
-    
+    link_sala_video = serializers.URLField(validators=[validar_link_sala_video])
+
     class Meta:
         model = Psicologo
-        fields = ('user', 'crp', 'specialization')
-    
+        fields = ('user', 'crp', 'specialization', 'link_sala_video')
+
     def create(self, validated_data):
         user_data = validated_data.pop('user')
         user_data['user_type'] = 'psicologo'
@@ -106,6 +118,7 @@ class GoogleCompleteRegistrationSerializer(serializers.Serializer):
     gender = serializers.CharField(required=False, allow_blank=True)
     crp = serializers.CharField(required=False, allow_blank=True)
     specialization = serializers.CharField(required=False, allow_blank=True, allow_null=True, default='')
+    link_sala_video = serializers.CharField(required=False, allow_blank=True, default='')
 
     def validate(self, attrs):
         user_type = attrs.get('user_type')
@@ -128,6 +141,12 @@ class GoogleCompleteRegistrationSerializer(serializers.Serializer):
                 errors['crp'] = ['Informe um CRP válido no formato XX/XXXXX.']
             elif Psicologo.objects.filter(crp=crp).exists():
                 errors['crp'] = ['Psicólogo com este CRP já existe.']
+
+            link_sala_video = attrs.get('link_sala_video', '')
+            if not link_sala_video.startswith('https://meet.google.com/'):
+                errors['link_sala_video'] = [
+                    'Informe o link da sua sala do Google Meet (crie uma em meet.google.com/new).'
+                ]
 
         if errors:
             raise serializers.ValidationError(errors)
@@ -168,6 +187,12 @@ class UserSerializer(serializers.ModelSerializer):
         allow_blank=True,
         allow_null=True,
     )
+    link_sala_video = serializers.CharField(
+        source='psicologo_profile.link_sala_video',
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
     has_password = serializers.SerializerMethodField()
 
     class Meta:
@@ -176,7 +201,7 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'email', 'username', 'first_name', 'last_name',
             'user_type', 'phone', 'created_at',
             'paciente_id', 'psicologo_id', 'vinculo_ativo',
-            'crp', 'cpf', 'specialization', 'biography',
+            'crp', 'cpf', 'specialization', 'biography', 'link_sala_video',
             'auth_provider', 'email_verified', 'avatar_url', 'has_password',
         )
         read_only_fields = (
@@ -215,6 +240,13 @@ class UserSerializer(serializers.ModelSerializer):
             return PsicologoVinculadoSerializer(vinculo.psicologo).data
         return None
 
+    def validate_link_sala_video(self, value):
+        if value and not value.startswith('https://meet.google.com/'):
+            raise serializers.ValidationError(
+                'Informe o link da sua sala do Google Meet (crie uma em meet.google.com/new).'
+            )
+        return value
+
     def update(self, instance, validated_data):
         psicologo_data = validated_data.pop('psicologo_profile', {})
 
@@ -228,6 +260,8 @@ class UserSerializer(serializers.ModelSerializer):
                 psicologo.specialization = psicologo_data.get('specialization')
             if 'biography' in psicologo_data:
                 psicologo.biography = psicologo_data.get('biography')
+            if 'link_sala_video' in psicologo_data:
+                psicologo.link_sala_video = psicologo_data.get('link_sala_video')
             psicologo.save()
 
         return instance
