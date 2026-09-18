@@ -7,7 +7,8 @@ import {
     StyleSheet,
     ScrollView,
     ActivityIndicator,
-    TouchableOpacity
+    TouchableOpacity,
+    Linking
 } from "react-native";
 import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -23,6 +24,7 @@ export default function DetalhesSessao() {
     const [sessao, setSessao] = useState(null);
     const [loading, setLoading] = useState(true);
     const [compartilhandoIcs, setCompartilhandoIcs] = useState(false);
+    const [erroAbrirSalaDireto, setErroAbrirSalaDireto] = useState(false);
 
     useEffect(() => {
         carregarSessao();
@@ -48,8 +50,28 @@ export default function DetalhesSessao() {
         }
     };
 
-    const irParaSalaDeEspera = () => {
-        navigation.navigate('SalaDeEspera', { sessaoId, salaUrl: sessao.sala_url });
+    // Tela de preparo (respiração guiada) só faz sentido para o paciente —
+    // o psicólogo é o anfitrião e deve entrar direto, sem esse passo extra
+    // (o push de "entrar primeiro" já cumpre o papel de prepará-lo).
+    const entrarNaSessao = () => {
+        if (userType === 'psicologo') {
+            abrirSalaDireto();
+        } else {
+            navigation.navigate('SalaDeEspera', { sessaoId, salaUrl: sessao.sala_url });
+        }
+    };
+
+    const abrirSalaDireto = async () => {
+        setErroAbrirSalaDireto(false);
+        try {
+            // canOpenURL() é pouco confiável no Android para links https
+            // (falso negativo por causa das regras de visibilidade de
+            // pacotes) — abrir direto é o caminho recomendado.
+            await Linking.openURL(sessao.sala_url);
+        } catch (error) {
+            console.error('Erro ao abrir a sala:', error);
+            setErroAbrirSalaDireto(true);
+        }
     };
 
     const irConfigurarLink = () => {
@@ -313,10 +335,20 @@ export default function DetalhesSessao() {
                             <View style={estilos.buttonContainer}>
                                 <Botao
                                     texto="Entrar na sessão"
-                                    onPress={irParaSalaDeEspera}
+                                    onPress={entrarNaSessao}
                                     iconName="videocam-outline"
                                     backgroundColor="#11B5A4"
                                 />
+                                {erroAbrirSalaDireto && (
+                                    <View style={estilos.salaAvisoBox}>
+                                        <Text style={estilos.salaAvisoTexto}>
+                                            Não foi possível abrir a sala automaticamente. Copie o link abaixo (toque e segure para copiar) e cole no navegador:
+                                        </Text>
+                                        <Text selectable style={estilos.salaLinkTexto}>
+                                            {sessao.sala_url}
+                                        </Text>
+                                    </View>
+                                )}
                             </View>
                         ) : (
                             <View style={estilos.salaAvisoBox}>

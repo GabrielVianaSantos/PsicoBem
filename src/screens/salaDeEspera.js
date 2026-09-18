@@ -53,10 +53,10 @@ export default function SalaDeEspera() {
     const entrarNoMeet = async () => {
         setErroAbrirSala(false);
         try {
-            const suportado = await Linking.canOpenURL(salaUrl);
-            if (!suportado) {
-                throw new Error('URL da sala não suportada pelo dispositivo.');
-            }
+            // canOpenURL() é pouco confiável no Android para links https
+            // (falso negativo por causa das regras de visibilidade de
+            // pacotes desde o Android 11) — abrir direto é o caminho
+            // recomendado, sem a checagem prévia.
             await Linking.openURL(salaUrl);
         } catch (error) {
             console.error('Erro ao abrir a sala:', error);

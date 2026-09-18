@@ -108,17 +108,29 @@ export default function MinhasSessoes() {
           <>
             {/* PRÓXIMA SESSÃO */}
             {proxima && (
-              <View style={styles.cardProxima}>
+              <TouchableOpacity
+                style={styles.cardProxima}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('DetalhesSessao', { sessaoId: proxima.id })}
+              >
                 <View style={styles.proximaHeader}>
                   <Ionicons name="time-outline" size={18} color="rgba(255,255,255,0.9)" />
                   <Text style={styles.proximaHeaderText}>Próxima Sessão</Text>
                 </View>
                 <Text style={styles.proximaData}>{proxima.data_hora_formatada || new Date(proxima.data_hora).toLocaleString('pt-BR')}</Text>
                 <Text style={styles.proximaTipo}>{proxima.tipo_sessao_nome || 'Sessão'}</Text>
-                <View style={styles.proximaStatusBadge}>
-                  <Text style={styles.proximaStatusText}>{proxima.status}</Text>
+                <View style={styles.proximaRodape}>
+                  <View style={styles.proximaStatusBadge}>
+                    <Text style={styles.proximaStatusText}>{proxima.status}</Text>
+                  </View>
+                  {proxima.pode_entrar_sala && (
+                    <View style={styles.proximaEntrarBadge}>
+                      <Ionicons name="videocam" size={13} color="#11B5A4" />
+                      <Text style={styles.proximaEntrarTexto}>Entrar disponível</Text>
+                    </View>
+                  )}
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
 
             {/* FILTROS */}
@@ -149,7 +161,12 @@ export default function MinhasSessoes() {
                 const dt = new Date(sessao.data_hora);
                 const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 return (
-                  <View key={i} style={styles.card}>
+                  <TouchableOpacity
+                    key={i}
+                    style={styles.card}
+                    activeOpacity={0.8}
+                    onPress={() => navigation.navigate('DetalhesSessao', { sessaoId: sessao.id })}
+                  >
                     <View style={styles.cardLeft}>
                       <View style={styles.cardDiaBox}>
                         <Text style={styles.cardDia}>{dt.toLocaleDateString('pt-BR', { weekday: 'short' }).toUpperCase()}</Text>
@@ -158,7 +175,12 @@ export default function MinhasSessoes() {
                       </View>
                     </View>
                     <View style={styles.cardMid}>
-                      <Text style={styles.cardHora}>{hora}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={styles.cardHora}>{hora}</Text>
+                        {sessao.pode_entrar_sala && (
+                          <Ionicons name="videocam" size={16} color="#11B5A4" />
+                        )}
+                      </View>
                       <Text style={styles.cardTipo}>{sessao.tipo_sessao_nome || 'Sessão'}</Text>
                       {sessao.psicologo_nome && (
                         <Text style={styles.cardPsicologo}>{sessao.psicologo_nome}</Text>
@@ -167,7 +189,7 @@ export default function MinhasSessoes() {
                     <View style={[styles.statusTag, { backgroundColor: cfg.cor }]}>
                       <Text style={[styles.statusTagText, { color: cfg.textoCor }]}>{cfg.label}</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })
             )}
@@ -192,11 +214,17 @@ const styles = StyleSheet.create({
   proximaHeaderText: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontFamily: 'RalewayBold' },
   proximaData: { color: '#fff', fontFamily: 'RalewayBold', fontSize: 22, marginBottom: 4 },
   proximaTipo: { color: 'rgba(255,255,255,0.85)', fontSize: 15 },
+  proximaRodape: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8 },
   proximaStatusBadge: {
-    alignSelf: 'flex-start', marginTop: 10,
+    alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20,
   },
   proximaStatusText: { color: '#fff', fontSize: 12, fontFamily: 'RalewayBold', textTransform: 'capitalize' },
+  proximaEntrarBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#fff', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
+  },
+  proximaEntrarTexto: { color: '#0B7A6E', fontSize: 11, fontFamily: 'RalewayBold' },
 
   // Filtros
   filtrosScroll: { marginBottom: 16 },
