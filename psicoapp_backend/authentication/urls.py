@@ -23,6 +23,7 @@ urlpatterns = [
     path('password/reset/', views.password_reset_request_view, name='password-reset-request'),
     path('password/reset/confirm/', views.password_reset_confirm_view, name='password-reset-confirm'),
     path('password/change/', views.password_change_view, name='password-change'),
+    path('account/', views.delete_account_view, name='account-delete'),
     path('paciente/conecta-psicologo/', conecta_psicologo_view, name='conecta-psicologo'),
     path('paciente/dashboard/', paciente_dashboard_view, name='paciente-dashboard'),
 ]

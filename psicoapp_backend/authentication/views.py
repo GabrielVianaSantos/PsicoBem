@@ -379,6 +379,33 @@ def password_change_view(request):
     return Response({'message': 'Senha alterada com sucesso!'}, status=status.HTTP_200_OK)
 
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_account_view(request):
+    """
+    Exclusão definitiva da própria conta (SPEC_EXCLUSAO_CONTA.md).
+
+    Opera exclusivamente sobre request.user — nunca recebe um usuário-alvo.
+    O CASCADE já existente a partir de CustomUser cuida do resto (sessões,
+    vínculos, notificações etc.); a única exceção é Prontuario.paciente,
+    que é SET_NULL (ver core/models.py) para sobreviver à exclusão do
+    paciente.
+    """
+    user = request.user
+
+    if user.has_usable_password():
+        password = request.data.get('password')
+        if not password or not authenticate(email=user.email, password=password):
+            return Response({'error': 'Senha incorreta.'}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        confirmacao = (request.data.get('confirmacao') or '').strip().upper()
+        if confirmacao != 'EXCLUIR':
+            return Response({'error': 'Confirmação inválida.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.delete()
+    return Response({'message': 'Conta excluída com sucesso.'}, status=status.HTTP_200_OK)
+
+
 def _google_auth_not_configured_response():
     return Response(
         {'detail': 'Login com Google não está configurado.', 'code': 'google_auth_not_configured'},

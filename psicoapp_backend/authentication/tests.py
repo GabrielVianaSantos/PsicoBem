@@ -579,6 +579,239 @@ class PacienteDashboardDataHoraTimezoneTests(TestCase):
         self.assertNotIn('14:00', response.data['proxima_sessao']['data_hora_formatada'])
 
 
+class DeleteAccountViewTests(TestCase):
+    """
+    SPEC_EXCLUSAO_CONTA.md: exclusão definitiva da própria conta, com
+    confirmação obrigatória (senha ou frase "EXCLUIR" para conta sem senha).
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_nao_autenticado_recebe_401(self):
+        response = self.client.delete('/api/auth/account/', {'password': 'qualquer'}, format='json')
+        self.assertEqual(response.status_code, 401)
+
+    def test_senha_incorreta_nao_exclui_a_conta(self):
+        user = CustomUser.objects.create_user(
+            email='excluir-senha-errada@gmail.com', username='excluirsenhaerrada',
+            user_type='paciente', password='senhaCorreta1',
+        )
+        self.client.force_authenticate(user=user)
+        response = self.client.delete('/api/auth/account/', {'password': 'senhaErrada'}, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(CustomUser.objects.filter(pk=user.pk).exists())
+
+    def test_sem_senha_no_payload_nao_exclui_a_conta(self):
+        user = CustomUser.objects.create_user(
+            email='excluir-sem-senha-payload@gmail.com', username='excluirsemsenhapayload',
+            user_type='paciente', password='senhaCorreta1',
+        )
+        self.client.force_authenticate(user=user)
+        response = self.client.delete('/api/auth/account/', {}, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(CustomUser.objects.filter(pk=user.pk).exists())
+
+    def test_senha_correta_exclui_a_conta_paciente(self):
+        user = CustomUser.objects.create_user(
+            email='excluir-paciente@gmail.com', username='excluirpaciente',
+            user_type='paciente', password='senhaCorreta1',
+        )
+        Paciente.objects.create(user=user, cpf='111.222.333-44', gender='F')
+
+        self.client.force_authenticate(user=user)
+        response = self.client.delete('/api/auth/account/', {'password': 'senhaCorreta1'}, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(CustomUser.objects.filter(pk=user.pk).exists())
+
+    def test_senha_correta_exclui_a_conta_psicologo(self):
+        user = CustomUser.objects.create_user(
+            email='excluir-psicologo@gmail.com', username='excluirpsicologo',
+            user_type='psicologo', password='senhaCorreta1',
+        )
+        Psicologo.objects.create(user=user, crp='08/33333')
+
+        self.client.force_authenticate(user=user)
+        response = self.client.delete('/api/auth/account/', {'password': 'senhaCorreta1'}, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(CustomUser.objects.filter(pk=user.pk).exists())
+
+    def test_conta_google_only_exige_frase_exato_excluir(self):
+        user = CustomUser.objects.create_user(
+            email='excluir-google@gmail.com', username='excluirgoogle',
+            user_type='paciente', password='x',
+        )
+        user.set_unusable_password()
+        user.save()
+
+        self.client.force_authenticate(user=user)
+
+        errada = self.client.delete('/api/auth/account/', {'confirmacao': 'excluir minha conta'}, format='json')
+        self.assertEqual(errada.status_code, 400)
+        self.assertTrue(CustomUser.objects.filter(pk=user.pk).exists())
+
+        vazia = self.client.delete('/api/auth/account/', {}, format='json')
+        self.assertEqual(vazia.status_code, 400)
+
+        # Case-insensitive: "excluir" em minúsculo também é aceito.
+        correta = self.client.delete('/api/auth/account/', {'confirmacao': 'excluir'}, format='json')
+        self.assertEqual(correta.status_code, 200)
+        self.assertFalse(CustomUser.objects.filter(pk=user.pk).exists())
+
+    def test_conta_google_only_com_senha_no_payload_nao_e_aceita_como_confirmacao(self):
+        user = CustomUser.objects.create_user(
+            email='excluir-google-senha@gmail.com', username='excluirgooglesenha',
+            user_type='paciente', password='x',
+        )
+        user.set_unusable_password()
+        user.save()
+
+        self.client.force_authenticate(user=user)
+        response = self.client.delete('/api/auth/account/', {'password': 'qualquercoisa'}, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(CustomUser.objects.filter(pk=user.pk).exists())
+
+    def test_login_falha_apos_exclusao_e_reset_de_senha_nao_envia_email(self):
+        from django.core import mail
+
+        user = CustomUser.objects.create_user(
+            email='excluir-login@gmail.com', username='excluirlogin',
+            user_type='paciente', password='senhaCorreta1',
+        )
+        self.client.force_authenticate(user=user)
+        self.client.delete('/api/auth/account/', {'password': 'senhaCorreta1'}, format='json')
+
+        anon = APIClient()
+        login = anon.post('/api/auth/login/', {'email': 'excluir-login@gmail.com', 'password': 'senhaCorreta1'}, format='json')
+        self.assertNotEqual(login.status_code, 200)
+
+        reset = anon.post('/api/auth/password/reset/', {'email': 'excluir-login@gmail.com'}, format='json')
+        self.assertEqual(reset.status_code, 200)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_cascata_paciente_apaga_sessoes_vinculo_e_diario_mas_preserva_prontuario(self):
+        from datetime import date, time, timedelta
+        from django.utils import timezone
+        from core.models import NotificacaoSistema, Prontuario, VinculoPacientePsicologo
+        from engajamentos.models import MetaOdisseia, RegistroOdisseia
+        from notificacoes_push.models import DispositivoPush
+        from sessoes.models import Sessao
+
+        psicologo_user = CustomUser.objects.create_user(
+            email='cascata-psi@gmail.com', username='cascatapsi', user_type='psicologo', password='x',
+        )
+        psicologo = Psicologo.objects.create(user=psicologo_user, crp='08/44444')
+
+        paciente_user = CustomUser.objects.create_user(
+            email='cascata-pac@gmail.com', username='cascatapac', user_type='paciente',
+            password='senhaCorreta1', first_name='Cascata', last_name='Paciente',
+        )
+        paciente = Paciente.objects.create(user=paciente_user, cpf='555.666.777-88', gender='F')
+
+        vinculo = VinculoPacientePsicologo.objects.create(paciente=paciente, psicologo=psicologo, status='ativo')
+        sessao = Sessao.objects.create(
+            paciente=paciente, psicologo=psicologo, valor=100,
+            data_hora=timezone.now() + timedelta(days=3), status='agendada',
+        )
+        prontuario = Prontuario.objects.create(
+            psicologo=psicologo, paciente=paciente, titulo='Nota', anotacao='Conteúdo clínico.',
+        )
+        registro = RegistroOdisseia.objects.create(
+            paciente=paciente, data_registro=date(2026, 8, 1), hora_registro=time(9, 0),
+            situacao='Situação', pensamentos='Pensamentos',
+        )
+        meta = MetaOdisseia.objects.create(
+            paciente=paciente, titulo='Meta', descricao='Descrição da meta',
+            data_prevista=date(2026, 12, 31),
+        )
+        notificacao = NotificacaoSistema.objects.create(
+            paciente=paciente, tipo='sistema', titulo='Aviso', mensagem='Mensagem',
+        )
+        dispositivo = DispositivoPush.objects.create(
+            user=paciente_user, push_token='ExponentPushToken[xxx]', platform='android', device_id='device-1',
+        )
+
+        self.client.force_authenticate(user=paciente_user)
+        response = self.client.delete('/api/auth/account/', {'password': 'senhaCorreta1'}, format='json')
+        self.assertEqual(response.status_code, 200)
+
+        self.assertFalse(CustomUser.objects.filter(pk=paciente_user.pk).exists())
+        self.assertFalse(Paciente.objects.filter(pk=paciente.pk).exists())
+        self.assertFalse(Sessao.objects.filter(pk=sessao.pk).exists())
+        self.assertFalse(VinculoPacientePsicologo.objects.filter(pk=vinculo.pk).exists())
+        self.assertFalse(RegistroOdisseia.objects.filter(pk=registro.pk).exists())
+        self.assertFalse(MetaOdisseia.objects.filter(pk=meta.pk).exists())
+        self.assertFalse(NotificacaoSistema.objects.filter(pk=notificacao.pk).exists())
+        self.assertFalse(DispositivoPush.objects.filter(pk=dispositivo.pk).exists())
+
+        # A exceção: o prontuário sobrevive, órfão, com o nome preservado.
+        prontuario.refresh_from_db()
+        self.assertIsNone(prontuario.paciente_id)
+        self.assertEqual(prontuario.paciente_nome_snapshot, 'Cascata Paciente')
+        self.assertTrue(Psicologo.objects.filter(pk=psicologo.pk).exists())
+
+    def test_cascata_psicologo_apaga_tudo_inclusive_prontuario_e_dados_do_paciente_vinculado(self):
+        from core.models import Prontuario, VinculoPacientePsicologo
+        from engajamentos.models import CategoriaMensagem, ComentarioPsicologo, RegistroOdisseia, SementeCuidado
+        from sessoes.models import Sessao, TipoSessao
+        from datetime import date, time, timedelta
+        from django.utils import timezone
+
+        psicologo_user = CustomUser.objects.create_user(
+            email='cascata-psi-total@gmail.com', username='cascatapsitotal',
+            user_type='psicologo', password='senhaCorreta1',
+        )
+        psicologo = Psicologo.objects.create(user=psicologo_user, crp='08/55555')
+
+        paciente_user = CustomUser.objects.create_user(
+            email='cascata-pac-vinculado@gmail.com', username='cascatapacvinculado',
+            user_type='paciente', password='x',
+        )
+        paciente = Paciente.objects.create(user=paciente_user, cpf='999.888.777-66', gender='M')
+
+        vinculo = VinculoPacientePsicologo.objects.create(paciente=paciente, psicologo=psicologo, status='ativo')
+        tipo_sessao = TipoSessao.objects.create(psicologo=psicologo, nome='Consulta', duracao_minutos=50, valor=100)
+        sessao = Sessao.objects.create(
+            paciente=paciente, psicologo=psicologo, valor=100,
+            data_hora=timezone.now() + timedelta(days=3), status='agendada',
+        )
+        prontuario = Prontuario.objects.create(
+            psicologo=psicologo, paciente=paciente, titulo='Nota', anotacao='Conteúdo clínico.',
+        )
+        # 'Motivação' colide com as categorias padrão que o signal de criação
+        # de Psicologo já cria automaticamente — usar um nome exclusivo.
+        categoria = CategoriaMensagem.objects.create(psicologo=psicologo, nome='Categoria de teste exclusão')
+        semente = SementeCuidado.objects.create(
+            psicologo=psicologo, titulo='Semente', conteudo='Conteúdo', tipo='motivacional', status='ativa',
+        )
+        registro = RegistroOdisseia.objects.create(
+            paciente=paciente, data_registro=date(2026, 8, 1), hora_registro=time(9, 0),
+            situacao='Situação', pensamentos='Pensamentos', compartilhar_psicologo=True,
+        )
+        comentario = ComentarioPsicologo.objects.create(registro=registro, psicologo=psicologo, comentario='Comentário')
+
+        self.client.force_authenticate(user=psicologo_user)
+        response = self.client.delete('/api/auth/account/', {'password': 'senhaCorreta1'}, format='json')
+        self.assertEqual(response.status_code, 200)
+
+        self.assertFalse(CustomUser.objects.filter(pk=psicologo_user.pk).exists())
+        self.assertFalse(Psicologo.objects.filter(pk=psicologo.pk).exists())
+        self.assertFalse(VinculoPacientePsicologo.objects.filter(pk=vinculo.pk).exists())
+        self.assertFalse(TipoSessao.objects.filter(pk=tipo_sessao.pk).exists())
+        self.assertFalse(Sessao.objects.filter(pk=sessao.pk).exists())
+        self.assertFalse(Prontuario.objects.filter(pk=prontuario.pk).exists())
+        self.assertFalse(CategoriaMensagem.objects.filter(pk=categoria.pk).exists())
+        self.assertFalse(SementeCuidado.objects.filter(pk=semente.pk).exists())
+        self.assertFalse(ComentarioPsicologo.objects.filter(pk=comentario.pk).exists())
+
+        # Efeito colateral aceito: o paciente continua existindo, e perde
+        # tudo que era compartilhado com este psicólogo (vínculo, sessão,
+        # prontuário) — mas o diário de Odisseia é dele, não do psicólogo,
+        # e sobrevive; só o comentário do psicólogo nele é que some.
+        self.assertTrue(CustomUser.objects.filter(pk=paciente_user.pk).exists())
+        self.assertTrue(RegistroOdisseia.objects.filter(pk=registro.pk).exists())
+
+
 class PasswordResetRequestViewTests(TestCase):
     def setUp(self):
         from django.core.cache import cache
