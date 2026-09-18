@@ -159,7 +159,11 @@ export const notificationService = {
   setupNotificationHandler() {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
-        shouldShowAlert: true,
+        // shouldShowAlert foi descontinuado em favor destes dois campos;
+        // manter os dois como true preserva o mesmo comportamento (banner
+        // + aparece na lista de notificações) que já tínhamos.
+        shouldShowBanner: true,
+        shouldShowList: true,
         shouldPlaySound: true,
         shouldSetBadge: true,
       }),
