@@ -49,7 +49,8 @@ LINK_MEET_PREFIX = 'https://meet.google.com/'
 
 
 def validar_link_sala_video(value):
-    if not value or not value.startswith(LINK_MEET_PREFIX):
+    value = (value or '').strip()
+    if not value.startswith(LINK_MEET_PREFIX):
         raise serializers.ValidationError(
             'Informe o link da sua sala do Google Meet (crie uma em meet.google.com/new).'
         )
@@ -142,11 +143,13 @@ class GoogleCompleteRegistrationSerializer(serializers.Serializer):
             elif Psicologo.objects.filter(crp=crp).exists():
                 errors['crp'] = ['Psicólogo com este CRP já existe.']
 
-            link_sala_video = attrs.get('link_sala_video', '')
+            link_sala_video = (attrs.get('link_sala_video') or '').strip()
             if not link_sala_video.startswith('https://meet.google.com/'):
                 errors['link_sala_video'] = [
                     'Informe o link da sua sala do Google Meet (crie uma em meet.google.com/new).'
                 ]
+            else:
+                attrs['link_sala_video'] = link_sala_video
 
         if errors:
             raise serializers.ValidationError(errors)
@@ -241,6 +244,7 @@ class UserSerializer(serializers.ModelSerializer):
         return None
 
     def validate_link_sala_video(self, value):
+        value = (value or '').strip()
         if value and not value.startswith('https://meet.google.com/'):
             raise serializers.ValidationError(
                 'Informe o link da sua sala do Google Meet (crie uma em meet.google.com/new).'

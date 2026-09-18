@@ -87,7 +87,7 @@ export default function PerfilPsicologo() {
                 first_name: firstName,
                 last_name: lastName,
                 specialization: especialidade,
-                link_sala_video: linkSalaVideo,
+                link_sala_video: linkSalaVideo.trim(),
             });
 
             if (result.success) {

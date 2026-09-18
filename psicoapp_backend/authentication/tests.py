@@ -821,6 +821,16 @@ class PsicologoRegistrationLinkSalaVideoTests(TestCase):
         psicologo = Psicologo.objects.get(crp='03/11122')
         self.assertEqual(psicologo.link_sala_video, 'https://meet.google.com/psi-link-abc')
 
+    def test_aceita_link_com_espacos_e_salva_limpo(self):
+        response = self.client.post(
+            '/api/auth/register/psicologo/',
+            self._payload(link_sala_video='  https://meet.google.com/psi-link-abc  '),
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201)
+        psicologo = Psicologo.objects.get(crp='03/11122')
+        self.assertEqual(psicologo.link_sala_video, 'https://meet.google.com/psi-link-abc')
+
     def test_cadastro_paciente_nao_exige_link(self):
         response = self.client.post('/api/auth/register/paciente/', {
             'user': {
@@ -884,3 +894,14 @@ class LinkSalaVideoPerfilTests(TestCase):
         }, format='json')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['user']['link_sala_video'], None)
+
+    def test_aceita_link_com_espacos_e_salva_limpo(self):
+        # Bug real: link copiado com espaço/quebra de linha ao redor (comum
+        # em copiar/colar) não pode ser rejeitado nem salvo sujo.
+        self.client.force_authenticate(user=self.user_psicologo)
+        response = self.client.put('/api/auth/profile/update/', {
+            'link_sala_video': '  https://meet.google.com/com-espaco-abc \n'
+        }, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.psicologo.refresh_from_db()
+        self.assertEqual(self.psicologo.link_sala_video, 'https://meet.google.com/com-espaco-abc')

@@ -69,7 +69,7 @@ export const authService = {
         },
         crp: userData.crp,
         specialization: userData.especialidade || '',
-        link_sala_video: userData.linkSalaVideo,
+        link_sala_video: (userData.linkSalaVideo || '').trim(),
       });
       return response.data;
     } catch (error) {
@@ -232,12 +232,18 @@ export const authService = {
       // Erro da API (Backend respondeu com erro)
       console.log('📡 Erro da API:', error.response.status, error.response.data);
       
-      let message = 'Erro no servidor';
-      
+      let message = null;
+
       // Tratar diferentes tipos de resposta do Django
       if (error.response.data) {
 
-        if (error.response.data.crp) {
+        if (error.response.data.link_sala_video) {
+          message = Array.isArray(error.response.data.link_sala_video)
+            ? error.response.data.link_sala_video[0]
+            : error.response.data.link_sala_video;
+        }
+
+        else if (error.response.data.crp) {
           if (Array.isArray(error.response.data.crp)) {
             const crpError = error.response.data.crp[0];
             if (crpError.includes('já existe') || crpError.includes('already exists')) {
@@ -356,6 +362,8 @@ export const authService = {
         message = message || 'Dados inválidos. Verifique as informações.';
       } else if (error.response.status === 500) {
         message = 'Erro interno do servidor. Tente novamente.';
+      } else {
+        message = message || 'Erro no servidor';
       }
 
       return {

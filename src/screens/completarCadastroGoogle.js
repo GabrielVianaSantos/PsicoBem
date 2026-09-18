@@ -121,7 +121,7 @@ export default function CompletarCadastroGoogle() {
             } else {
                 campos.crp = crp;
                 campos.specialization = especialidade || '';
-                campos.link_sala_video = linkSalaVideo;
+                campos.link_sala_video = linkSalaVideo.trim();
             }
 
             const result = await completeGoogleSignUp({
