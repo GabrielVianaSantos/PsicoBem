@@ -19,6 +19,15 @@
         {
           "calendarPermission": "O PsicoBem usa a agenda do seu aparelho para lembrar você das suas sessões, com alarme de 15 minutos antes."
         }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/notification-icon.png",
+          "imageWidth": 120,
+          "resizeMode": "contain",
+          "backgroundColor": "#11B5A4"
+        }
       ]
     ],
     "notification": {
