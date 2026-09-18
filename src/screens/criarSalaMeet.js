@@ -30,6 +30,17 @@ export default function CriarSalaMeet() {
         }
     };
 
+    // A página do Meet tenta redirecionar para o app nativo via um link
+    // intent:// (mecanismo específico do Android) — o WebView não sabe
+    // processar esse esquema e trava. Bloqueando aqui, a página segue no
+    // fluxo web normal dentro do próprio WebView, sem tentar abrir o app.
+    const handleShouldStartLoad = (request) => {
+        if (request.url.startsWith('intent://') || request.url.startsWith('android-app://')) {
+            return false;
+        }
+        return true;
+    };
+
     const abrirNoNavegador = () => {
         Linking.openURL('https://meet.google.com/new');
     };
@@ -47,6 +58,7 @@ export default function CriarSalaMeet() {
             <WebView
                 source={{ uri: 'https://meet.google.com/new' }}
                 onNavigationStateChange={handleNavigationStateChange}
+                onShouldStartLoadWithRequest={handleShouldStartLoad}
                 onLoadStart={() => setCarregando(true)}
                 onLoadEnd={() => setCarregando(false)}
                 userAgent={USER_AGENT}
