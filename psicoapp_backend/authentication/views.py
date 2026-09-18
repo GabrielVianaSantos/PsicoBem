@@ -390,6 +390,10 @@ def delete_account_view(request):
     vínculos, prontuários, notificações etc.) — sem exceção, para paciente
     e para psicólogo.
     """
+    from django.db.models.signals import pre_delete
+    from core.signals import validar_delecao_sessao
+    from sessoes.models import Sessao
+
     user = request.user
 
     if user.has_usable_password():
@@ -401,7 +405,18 @@ def delete_account_view(request):
         if confirmacao != 'EXCLUIR':
             return Response({'error': 'Confirmação inválida.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    user.delete()
+    # validar_delecao_sessao (core/signals.py) impede apagar UMA sessão já
+    # paga via DELETE /sessoes/{id}/ — proteção correta ali, mas incompatível
+    # com a exclusão de conta (cascata apaga tudo, de propósito, sem exceção;
+    # ver SPEC_EXCLUSAO_CONTA.md). Sem isso, qualquer conta com pelo menos
+    # uma sessão paga nunca conseguiria se excluir (ValidationError não
+    # tratada -> 500). Desconectado só durante esta chamada.
+    pre_delete.disconnect(validar_delecao_sessao, sender=Sessao)
+    try:
+        user.delete()
+    finally:
+        pre_delete.connect(validar_delecao_sessao, sender=Sessao)
+
     return Response({'message': 'Conta excluída com sucesso.'}, status=status.HTTP_200_OK)
 
 

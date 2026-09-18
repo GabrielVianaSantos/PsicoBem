@@ -624,6 +624,65 @@ class DeleteAccountViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(CustomUser.objects.filter(pk=user.pk).exists())
 
+    def test_exclui_conta_mesmo_com_sessao_de_pagamento_confirmado(self):
+        # Regressão: core/signals.py tem um pre_delete em Sessao que impede
+        # apagar UMA sessão paga via DELETE /sessoes/{id}/ — mas esse mesmo
+        # signal disparava também na cascata da exclusão de conta, e a
+        # ValidationError não tratada virava 500 para qualquer conta (de
+        # paciente ou psicólogo) com pelo menos uma sessão paga.
+        from datetime import timedelta
+        from django.utils import timezone
+        from sessoes.models import Sessao
+
+        psicologo_user = CustomUser.objects.create_user(
+            email='excluir-com-pago-psi@gmail.com', username='excluircompagopsi',
+            user_type='psicologo', password='x',
+        )
+        psicologo = Psicologo.objects.create(user=psicologo_user, crp='08/66666')
+
+        paciente_user = CustomUser.objects.create_user(
+            email='excluir-com-pago-pac@gmail.com', username='excluircompagopac',
+            user_type='paciente', password='senhaCorreta1',
+        )
+        paciente = Paciente.objects.create(user=paciente_user, cpf='321.321.321-33', gender='F')
+
+        sessao = Sessao.objects.create(
+            paciente=paciente, psicologo=psicologo, valor=100, status_pagamento='pago',
+            data_hora=timezone.now() + timedelta(days=3), status='agendada',
+        )
+
+        self.client.force_authenticate(user=paciente_user)
+        response = self.client.delete('/api/auth/account/', {'password': 'senhaCorreta1'}, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(CustomUser.objects.filter(pk=paciente_user.pk).exists())
+        self.assertFalse(Sessao.objects.filter(pk=sessao.pk).exists())
+
+    def test_signal_de_protecao_continua_ativo_para_delete_avulso_de_sessao(self):
+        # Garante que desconectar o signal durante a exclusão de conta não o
+        # deixa desligado para o uso normal do endpoint de sessões.
+        from datetime import timedelta
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+        from sessoes.models import Sessao
+
+        psicologo_user = CustomUser.objects.create_user(
+            email='protecao-signal-psi@gmail.com', username='protecaosignalpsi',
+            user_type='psicologo', password='x',
+        )
+        psicologo = Psicologo.objects.create(user=psicologo_user, crp='08/77777')
+        paciente_user = CustomUser.objects.create_user(
+            email='protecao-signal-pac@gmail.com', username='protecaosignalpac',
+            user_type='paciente', password='x',
+        )
+        paciente = Paciente.objects.create(user=paciente_user, cpf='456.456.456-45', gender='F')
+        sessao = Sessao.objects.create(
+            paciente=paciente, psicologo=psicologo, valor=100, status_pagamento='pago',
+            data_hora=timezone.now() + timedelta(days=3), status='agendada',
+        )
+
+        with self.assertRaises(ValidationError):
+            sessao.delete()
+
     def test_senha_correta_exclui_a_conta_psicologo(self):
         user = CustomUser.objects.create_user(
             email='excluir-psicologo@gmail.com', username='excluirpsicologo',
