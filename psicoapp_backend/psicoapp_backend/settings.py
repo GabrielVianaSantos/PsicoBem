@@ -250,6 +250,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "notificacoes_push.tasks.dispatch_post_session_confirmations",
         "schedule": crontab(minute="*/5"),
     },
+    "disparar_lembrete_entrar_primeiro_periodico": {
+        "task": "notificacoes_push.tasks.dispatch_pre_session_host_reminder",
+        "schedule": crontab(minute="*/5"),
+    },
     "reconcile-push-receipts": {
         "task": "notificacoes_push.tasks.reconcile_push_receipts",
         "schedule": 900.0,  # a cada 15 minutos

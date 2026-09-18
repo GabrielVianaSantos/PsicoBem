@@ -10,7 +10,12 @@ from core.models import NotificacaoSistema, VinculoPacientePsicologo
 from sessoes.models import Sessao, TipoSessao
 
 from .models import ReminderDispatch
-from .tasks import _build_reminder_message, dispatch_session_reminders, dispatch_post_session_confirmations
+from .tasks import (
+    _build_reminder_message,
+    dispatch_session_reminders,
+    dispatch_post_session_confirmations,
+    dispatch_pre_session_host_reminder,
+)
 
 User = get_user_model()
 
@@ -210,3 +215,101 @@ class PosSessaoConfirmacaoTests(TestCase):
         sessao = self._criar_sessao(timezone.now() + timedelta(minutes=15))
         dispatch_session_reminders()
         self.assertEqual(NotificacaoSistema.objects.filter(tipo='sessao_lembrete').count(), 2)
+
+
+class LembreteEntrarPrimeiroTests(TestCase):
+    """Issue 07 (SPEC_SESSOES_ONLINE_GOOGLE_MEET) — psicólogo avisado a entrar primeiro."""
+
+    def setUp(self):
+        self.user_psicologo = User.objects.create_user(
+            username='psi_1o', email='psi_1o@test.com', password='pass', user_type='psicologo'
+        )
+        self.psicologo = Psicologo.objects.create(
+            user=self.user_psicologo, crp='13/13131',
+            link_sala_video='https://meet.google.com/pri-meir-oab'
+        )
+
+        self.user_paciente = User.objects.create_user(
+            username='pac_1o', email='pac_1o@test.com', password='pass', user_type='paciente'
+        )
+        self.paciente = Paciente.objects.create(user=self.user_paciente, cpf='131.313.131-31')
+
+        VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='ativo'
+        )
+
+        self.tipo_online = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Online 1o', tipo='online', valor=100.00
+        )
+        self.tipo_presencial = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Presencial 1o', tipo='presencial', valor=100.00
+        )
+
+    def _criar_sessao(self, data_hora, tipo_sessao=None, status_sessao='agendada'):
+        return Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo,
+            tipo_sessao=tipo_sessao or self.tipo_online,
+            data_hora=data_hora, status=status_sessao, valor=Decimal('100.00'),
+        )
+
+    def _notificacoes_entrar_primeiro(self):
+        # post_save de Sessao já dispara notificações de "sessão agendada"
+        # (core/signals.py); filtrar pelo evento desta issue evita
+        # contabilizar esse ruído pré-existente.
+        return NotificacaoSistema.objects.filter(dados_extras__event='entrar_primeiro')
+
+    def test_dispara_apenas_para_psicologo_de_sessao_online(self):
+        self._criar_sessao(timezone.now() + timedelta(minutes=7))
+
+        dispatch_pre_session_host_reminder()
+
+        notificacoes = self._notificacoes_entrar_primeiro()
+        self.assertEqual(notificacoes.count(), 1)
+        notificacao = notificacoes.first()
+        self.assertEqual(notificacao.psicologo, self.psicologo)
+        self.assertIsNone(notificacao.paciente)
+        self.assertIn('Entre primeiro', notificacao.mensagem)
+
+    def test_nao_dispara_para_sessao_presencial(self):
+        self._criar_sessao(timezone.now() + timedelta(minutes=7), tipo_sessao=self.tipo_presencial)
+
+        dispatch_pre_session_host_reminder()
+
+        self.assertEqual(self._notificacoes_entrar_primeiro().count(), 0)
+
+    def test_nao_dispara_fora_da_janela(self):
+        self._criar_sessao(timezone.now() + timedelta(minutes=20))
+        self._criar_sessao(timezone.now() - timedelta(minutes=5))
+
+        dispatch_pre_session_host_reminder()
+
+        self.assertEqual(self._notificacoes_entrar_primeiro().count(), 0)
+
+    def test_nao_dispara_para_status_resolvido(self):
+        for status_sessao in ('realizada', 'cancelada', 'faltou'):
+            self._criar_sessao(timezone.now() + timedelta(minutes=7), status_sessao=status_sessao)
+
+        dispatch_pre_session_host_reminder()
+
+        self.assertEqual(self._notificacoes_entrar_primeiro().count(), 0)
+
+    def test_nao_duplica_em_duas_execucoes_na_mesma_janela(self):
+        self._criar_sessao(timezone.now() + timedelta(minutes=7))
+
+        dispatch_pre_session_host_reminder()
+        primeira = self._notificacoes_entrar_primeiro().count()
+
+        dispatch_pre_session_host_reminder()
+        segunda = self._notificacoes_entrar_primeiro().count()
+
+        self.assertEqual(primeira, 1)
+        self.assertEqual(segunda, 1)
+
+    def test_payload_sem_url_de_sala(self):
+        sessao = self._criar_sessao(timezone.now() + timedelta(minutes=7))
+
+        dispatch_pre_session_host_reminder()
+
+        notificacao = self._notificacoes_entrar_primeiro().get()
+        self.assertNotIn(sessao.sala_url, notificacao.mensagem)
+        self.assertNotIn(sessao.sala_url, str(notificacao.dados_extras))

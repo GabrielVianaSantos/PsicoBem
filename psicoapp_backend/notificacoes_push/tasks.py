@@ -418,3 +418,65 @@ def dispatch_post_session_confirmations():
 
     logger.info("push.pos_sessao.finish", extra=results)
     return results
+
+
+@shared_task
+def dispatch_pre_session_host_reminder():
+    """
+    Avisa só o psicólogo, ~7min antes de uma sessão online, para que ele
+    entre primeiro na sala (SPEC_SESSOES_ONLINE_GOOGLE_MEET.md) — evita que
+    o paciente chegue sozinho e fique sem entender o motivo da espera.
+    """
+    now = timezone.now()
+    minutos_antes = 7
+    margem = timedelta(minutes=2)
+    start = now + timedelta(minutes=minutos_antes) + margem
+    end = now + timedelta(minutes=minutos_antes) - margem
+
+    sessoes = Sessao.objects.filter(
+        status__in=["agendada", "confirmada", "remarcada"],
+        data_hora__range=(end, start),
+    ).select_related("psicologo__user", "tipo_sessao")
+
+    results = {"processed": 0, "criados": 0, "skipped": 0}
+    logger.info("push.entrar_primeiro.start", extra={"now": now.isoformat()})
+
+    for sessao in sessoes:
+        if not (sessao.tipo_sessao and sessao.tipo_sessao.tipo == "online"):
+            continue
+
+        results["processed"] += 1
+        try:
+            # Savepoint dedicado (mesmo motivo das demais tarefas de sessão).
+            with transaction.atomic():
+                ReminderDispatch.objects.create(
+                    session_id=sessao.id,
+                    reminder_type="entrar_primeiro",
+                    destinatario_user=sessao.psicologo.user,
+                )
+        except IntegrityError:
+            results["skipped"] += 1
+            continue
+
+        NotificationDomainService.emit(
+            target=sessao.psicologo.user,
+            tipo="sessao_lembrete",
+            titulo="Sua sessão está quase começando",
+            mensagem="Sua sessão online começa em breve. Entre primeiro para receber seu paciente.",
+            link_relacionado=f"/sessoes/{sessao.pk}",
+            dados_extras=NotificationDomainService._routing_payload(
+                screen="DetalhesSessao",
+                params={"sessaoId": sessao.pk},
+                event="entrar_primeiro",
+                entity_type="sessao",
+                entity_id=sessao.pk,
+            ),
+        )
+        results["criados"] += 1
+        logger.info(
+            "push.entrar_primeiro.created",
+            extra={"session_id": sessao.id, "psicologo_user_id": sessao.psicologo.user_id},
+        )
+
+    logger.info("push.entrar_primeiro.finish", extra=results)
+    return results
