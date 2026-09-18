@@ -132,9 +132,10 @@ export const authService = {
   },
 
   // Confirmar redefinição de senha
-  async confirmPasswordReset(token, newPassword) {
+  async confirmPasswordReset(email, token, newPassword) {
     try {
       const response = await api.post('/auth/password/reset/confirm/', {
+        email,
         token,
         new_password: newPassword
       });

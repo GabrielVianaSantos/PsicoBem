@@ -52,7 +52,7 @@ export default function RedefinirSenha() {
 
         setLoading(true);
         try {
-            await authService.confirmPasswordReset(token, newPassword);
+            await authService.confirmPasswordReset(email.trim(), token.trim(), newPassword);
             Alert.alert(
                 "Sucesso",
                 "Sua senha foi alterada com sucesso!",
@@ -122,9 +122,11 @@ export default function RedefinirSenha() {
                             <TextInputCustom
                                 texto="Código de Recuperação"
                                 value={token}
-                                onChangeText={setToken}
+                                onChangeText={(texto) => setToken(texto.replace(/\D/g, ''))}
                                 iconName="key"
-                                texto_placeholder="Digite o código (Token)"
+                                texto_placeholder="Digite o código de 6 dígitos"
+                                keyboardType="number-pad"
+                                maxLength={6}
                             />
 
                             <TextInputCustom
