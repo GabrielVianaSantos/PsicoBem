@@ -1,9 +1,9 @@
-import React, { useState } from "react";
-import { View, StyleSheet, Text, KeyboardAvoidingView, ScrollView, Platform } from "react-native";
+import React, { useState, useCallback } from "react";
+import { View, StyleSheet, Text, KeyboardAvoidingView, ScrollView, Platform, TouchableOpacity } from "react-native";
 import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import Topo from "./components/topo";
 import Botao from "../components/common/Button";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import CustomScrollView from "./components/customScrollView";
 import TextInputCustom from "../components/common/TextInputField";
 import { useAuth } from "../hooks/useAuth";
@@ -19,9 +19,20 @@ export default function CadastroPsicologos () {
     const [confirmaSenha, setConfirmaSenha] = useState('');
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
-    
+
     const navigation = useNavigation();
+    const route = useRoute();
     const { registerPsicologo } = useAuth();
+
+    // Recebe de volta o link capturado automaticamente em CriarSalaMeet.
+    useFocusEffect(
+        useCallback(() => {
+            if (route.params?.linkMeetCapturado) {
+                setLinkSalaVideo(route.params.linkMeetCapturado);
+                navigation.setParams({ linkMeetCapturado: undefined });
+            }
+        }, [route.params?.linkMeetCapturado])
+    );
 
     // Validation functions
     const validateEmail = (email) => {
@@ -223,6 +234,12 @@ export default function CadastroPsicologos () {
                         keyboardType="url"
                         error={!!errors.linkSalaVideo}
                         />
+                    <TouchableOpacity
+                        style={estilos.criarSalaBtn}
+                        onPress={() => navigation.navigate('CriarSalaMeet', { origem: 'CadastroPsicologos' })}
+                    >
+                        <Text style={estilos.criarSalaTexto}>Criar minha sala agora</Text>
+                    </TouchableOpacity>
                     <Text style={estilos.helperText}>
                         Não tem um? Crie em meet.google.com/new e cole o link aqui.
                     </Text>
@@ -338,5 +355,20 @@ const estilos = StyleSheet.create ({
         marginTop: 5,
         marginLeft: 10,
         fontFamily: "Raleway",
+    },
+
+    criarSalaBtn: {
+        marginTop: 10,
+        paddingVertical: 10,
+        borderRadius: 8,
+        borderWidth: 1.5,
+        borderColor: "#11B5A4",
+        alignItems: "center",
+    },
+
+    criarSalaTexto: {
+        color: "#11B5A4",
+        fontFamily: "RalewayBold",
+        fontSize: 13,
     },
 })

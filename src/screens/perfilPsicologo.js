@@ -45,8 +45,18 @@ export default function PerfilPsicologo() {
 
     useFocusEffect(
         useCallback(() => {
-            sincronizarPerfil();
-        }, [sincronizarPerfil])
+            (async () => {
+                // Sincroniza com o servidor primeiro; só depois aplica um
+                // link recém-capturado em CriarSalaMeet — nessa ordem,
+                // porque o valor do servidor ainda não inclui o link até
+                // o usuário salvar, e não pode sobrescrever a captura.
+                await sincronizarPerfil();
+                if (route.params?.linkMeetCapturado) {
+                    setLinkSalaVideo(route.params.linkMeetCapturado);
+                    navigation.setParams({ linkMeetCapturado: undefined });
+                }
+            })();
+        }, [sincronizarPerfil, route.params?.linkMeetCapturado])
     );
 
     // Deep link do card "Minha Sala Virtual" (issue 05): leva o scroll até o
@@ -197,6 +207,12 @@ export default function PerfilPsicologo() {
                                         autoCapitalize="none"
                                         keyboardType="url"
                                     />
+                                    <TouchableOpacity
+                                        style={estilos.criarSalaBtn}
+                                        onPress={() => navigation.navigate('CriarSalaMeet', { origem: 'PerfilPsicologo' })}
+                                    >
+                                        <Text style={estilos.criarSalaTexto}>Criar minha sala agora</Text>
+                                    </TouchableOpacity>
                                     <Text style={estilos.helperText}>
                                         Não tem um? Crie em meet.google.com/new e cole o link aqui.
                                     </Text>
@@ -356,6 +372,19 @@ const estilos = StyleSheet.create({
         marginTop: 5,
         marginLeft: 10,
         fontFamily: "Raleway",
+    },
+    criarSalaBtn: {
+        marginTop: 10,
+        paddingVertical: 10,
+        borderRadius: 8,
+        borderWidth: 1.5,
+        borderColor: "#11B5A4",
+        alignItems: "center",
+    },
+    criarSalaTexto: {
+        color: "#11B5A4",
+        fontFamily: "RalewayBold",
+        fontSize: 13,
     },
     labelReadOnly: {
         color: "#888",

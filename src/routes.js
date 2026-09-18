@@ -15,6 +15,7 @@ import CadastroPsicologos from "./screens/cadastroPsicologos";
 import RedefinirSenha from "./screens/redefinirSenha";
 import CompletarCadastroGoogle from "./screens/completarCadastroGoogle";
 import ConfirmarVinculoGoogle from "./screens/confirmarVinculoGoogle";
+import CriarSalaMeet from "./screens/criarSalaMeet";
 
 // ─── TELAS DO PSICÓLOGO ─────────────────────────────────────
 import Home from "./screens/home";
@@ -90,6 +91,7 @@ export default function Routes() {
             <AppStack.Screen name="RedefinirSenha" component={RedefinirSenha} />
             <AppStack.Screen name="CompletarCadastroGoogle" component={CompletarCadastroGoogle} />
             <AppStack.Screen name="ConfirmarVinculoGoogle" component={ConfirmarVinculoGoogle} />
+            <AppStack.Screen name="CriarSalaMeet" component={CriarSalaMeet} />
           </>
         ) : userType === "psicologo" ? (
           // ─── Fluxo do Psicólogo ───
@@ -102,6 +104,7 @@ export default function Routes() {
             <AppStack.Screen name="SalaDeEspera" component={SalaDeEspera} />
             <AppStack.Screen name="TipoSessao" component={TipoSessao} />
             <AppStack.Screen name="PerfilPsicologo" component={PerfilPsicologo} />
+            <AppStack.Screen name="CriarSalaMeet" component={CriarSalaMeet} />
             <AppStack.Screen name="Prontuarios" component={Prontuarios} />
             <AppStack.Screen name="SementesCuidado" component={SementesCuidado} />
             <AppStack.Screen name="GuiasApoio" component={GuiasApoio} />
