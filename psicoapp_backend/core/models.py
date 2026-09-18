@@ -279,10 +279,9 @@ class Prontuario(models.Model):
     """
     Relatórios e notas clínicas feitas pelo psicólogo sobre um paciente (Guias de Apoio).
 
-    `paciente` é SET_NULL (não CASCADE) de propósito: se o paciente excluir a
-    própria conta (SPEC_EXCLUSAO_CONTA.md), o prontuário — documentação
-    profissional do psicólogo — continua existindo, órfão. `paciente_nome_snapshot`
-    guarda o nome do paciente independente do vínculo ainda existir.
+    `paciente` é CASCADE: se o paciente excluir a própria conta
+    (SPEC_EXCLUSAO_CONTA.md), os prontuários dele são apagados junto —
+    mesma regra de cascata total já aplicada do lado do psicólogo.
     """
     psicologo = models.ForeignKey(
         Psicologo,
@@ -291,12 +290,9 @@ class Prontuario(models.Model):
     )
     paciente = models.ForeignKey(
         Paciente,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.CASCADE,
         related_name='prontuarios'
     )
-    paciente_nome_snapshot = models.CharField(max_length=255, blank=True, default='')
     titulo = models.CharField(
         max_length=255,
         blank=True,
@@ -315,15 +311,5 @@ class Prontuario(models.Model):
         verbose_name_plural = 'Prontuários'
         ordering = ['-created_at']
 
-    def save(self, *args, **kwargs):
-        if self.paciente_id and not self.paciente_nome_snapshot:
-            nome = f"{self.paciente.user.first_name} {self.paciente.user.last_name}".strip()
-            self.paciente_nome_snapshot = nome or self.paciente_nome_snapshot
-        super().save(*args, **kwargs)
-
     def __str__(self):
-        nome_paciente = (
-            self.paciente.user.first_name if self.paciente_id
-            else (self.paciente_nome_snapshot or 'paciente removido')
-        )
-        return f"Prontuário de {nome_paciente} por {self.psicologo.user.first_name}"
+        return f"Prontuário de {self.paciente.user.first_name} por {self.psicologo.user.first_name}"

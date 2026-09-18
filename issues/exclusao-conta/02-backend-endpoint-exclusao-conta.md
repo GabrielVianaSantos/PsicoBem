@@ -39,7 +39,7 @@ def delete_account_view(request):
 - Mesmo padrão de `password_change_view` para `authenticate(email=..., password=...)`.
 - Sem parâmetro de usuário-alvo no payload/URL — sempre `request.user`. Não adicionar nenhuma forma de um usuário excluir a conta de outro (nem staff/admin através desta rota).
 - Não há nenhuma etapa extra de "preparação" antes do `.delete()` para o caso do psicólogo — a cascata total já é o comportamento nativo desejado (seção 3.4 da SPEC).
-- Para o caso do paciente, nenhuma ação extra é necessária além do `.delete()` **desde que a issue 01 já tenha sido implementada** (é ela que garante que os prontuários sobrevivem).
+- Para o caso do paciente, nenhuma ação extra é necessária além do `.delete()` — a cascata natural do banco apaga tudo, incluindo os prontuários (issue 01 previa uma exceção aqui; foi implementada e depois revertida — ver nota no arquivo da issue 01).
 
 ### Rota (`authentication/urls.py`)
 

@@ -689,7 +689,7 @@ class DeleteAccountViewTests(TestCase):
         self.assertEqual(reset.status_code, 200)
         self.assertEqual(len(mail.outbox), 0)
 
-    def test_cascata_paciente_apaga_sessoes_vinculo_e_diario_mas_preserva_prontuario(self):
+    def test_cascata_paciente_apaga_sessoes_vinculo_diario_e_prontuario(self):
         from datetime import date, time, timedelta
         from django.utils import timezone
         from core.models import NotificacaoSistema, Prontuario, VinculoPacientePsicologo
@@ -744,10 +744,9 @@ class DeleteAccountViewTests(TestCase):
         self.assertFalse(NotificacaoSistema.objects.filter(pk=notificacao.pk).exists())
         self.assertFalse(DispositivoPush.objects.filter(pk=dispositivo.pk).exists())
 
-        # A exceção: o prontuário sobrevive, órfão, com o nome preservado.
-        prontuario.refresh_from_db()
-        self.assertIsNone(prontuario.paciente_id)
-        self.assertEqual(prontuario.paciente_nome_snapshot, 'Cascata Paciente')
+        # Sem exceção: o prontuário também é apagado, igual ao lado do
+        # psicólogo — só a conta do psicólogo em si continua existindo.
+        self.assertFalse(Prontuario.objects.filter(pk=prontuario.pk).exists())
         self.assertTrue(Psicologo.objects.filter(pk=psicologo.pk).exists())
 
     def test_cascata_psicologo_apaga_tudo_inclusive_prontuario_e_dados_do_paciente_vinculado(self):

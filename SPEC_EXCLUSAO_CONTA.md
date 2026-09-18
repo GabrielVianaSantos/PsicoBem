@@ -1,14 +1,16 @@
 # SPEC — Exclusão de Conta (Paciente e Psicólogo)
 
-Data: 2026-09-18
-Status: planejamento
-Escopo: backend Django (novo endpoint + um ajuste de modelo) e app Expo (nova ação na tela de perfil de paciente e de psicólogo). Nenhum fluxo de autenticação existente é alterado — apenas um novo endpoint autenticado é adicionado.
+Data: 2026-09-18 (revisada em 2026-09-18: decisão da seção 3.3 revertida — ver nota abaixo)
+Status: implementado
+Escopo: backend Django (novo endpoint) e app Expo (nova ação na tela de perfil de paciente e de psicólogo). Nenhum fluxo de autenticação existente é alterado — apenas um novo endpoint autenticado é adicionado.
+
+> **Nota de revisão:** a versão original desta SPEC previa uma exceção — prontuários sobreviverem à exclusão da conta do paciente (`Prontuario.paciente` como `SET_NULL` + snapshot do nome). Essa exceção foi implementada, testada e deployada, e em seguida **revertida a pedido do usuário**: "caso o usuário de fato delete a conta, pode apagar os prontuários dele sim, como fizemos no do psicólogo." A partir desta revisão, a exclusão é **simétrica e sem exceções** para os dois perfis — `Prontuario.paciente` voltou a ser `CASCADE`. Este documento já reflete o estado final.
 
 ---
 
 ## 1. Objetivo
 
-Permitir que o próprio usuário (paciente ou psicólogo) exclua permanentemente sua conta a partir da tela de perfil do app, sem precisar de suporte manual. A exclusão deve remover login, senha, vínculo(s), dados de perfil e todo o histórico de uso associado àquele usuário específico — com uma única exceção deliberada (seção 3.3).
+Permitir que o próprio usuário (paciente ou psicólogo) exclua permanentemente sua conta a partir da tela de perfil do app, sem precisar de suporte manual. A exclusão remove login, senha, vínculo(s), dados de perfil e **todo** o histórico de uso associado àquele usuário específico — sem exceções, para os dois perfis.
 
 ---
 
@@ -17,9 +19,8 @@ Permitir que o próprio usuário (paciente ou psicólogo) exclua permanentemente
 | Tema | Estado atual | Impacto |
 |---|---|---|
 | Não existe nenhum endpoint de auto-exclusão | `authentication/urls.py` tem `register/`, `login/`, `password/reset/`, `password/change/`, mas nenhuma rota de exclusão de conta. `CustomUser` só é apagado hoje via Django Admin. | Precisa de endpoint novo — não há nada para reaproveitar. |
-| O grafo de dados já é 100% CASCADE a partir de `CustomUser` | `Paciente.user` e `Psicologo.user` são `OneToOneField(CustomUser, on_delete=CASCADE)`. A partir daí, **todas** as FKs relevantes também são CASCADE: `Sessao.paciente`/`Sessao.psicologo`, `VinculoPacientePsicologo.paciente`/`.psicologo`, `Prontuario.paciente`/`.psicologo`, `TipoSessao.psicologo`, `CategoriaMensagem.psicologo`, `SementeCuidado.psicologo`, `EnvioSemente.paciente`, `RegistroOdisseia.paciente`, `RegistroOdisseiaComentario.psicologo`, `MetaOdisseia.paciente`, `NotificacaoSistema.paciente`/`.psicologo`, `DispositivoPush.user`, `HistoricoEnvioPush.destinatario_user`, `ReminderLog.destinatario_user`, `PasswordResetCode.user`. | **`user.delete()` sozinho já apaga tudo em uma única transação atômica**, sem precisar de nenhuma limpeza manual por app. O trabalho real desta feature é o endpoint (autorização + confirmação) e a exceção da seção 3.3, não a exclusão em si. |
-| Efeito colateral: excluir o psicólogo apaga o histórico dos pacientes dele | Como `Sessao.psicologo`, `VinculoPacientePsicologo.psicologo` e `Prontuario.psicologo` são CASCADE, se um **psicólogo** excluir a própria conta, todas as sessões, vínculos e prontuários dele com **todos os pacientes** desaparecem — mesmo pacientes que continuam ativos no app. **Decisão confirmada com o usuário: aceitar esse efeito em cascata como está** (ver seção 3.4) — nenhuma anonimização/preservação do lado do paciente nesse caso. | Documentado explicitamente aqui para não ser uma surpresa depois — é uma escolha deliberada, não um descuido. |
-| `Prontuario` não tem nenhum dado "congelado" do paciente | `Prontuario.paciente_nome` (no serializer) e `Prontuario.__str__` leem `self.paciente.user.first_name` ao vivo, via FK. Não existe nenhum campo que sobrevive independente do registro `Paciente`/`CustomUser`. | Se `Prontuario.paciente` virar `SET_NULL` (necessário para a regra da seção 3.3) sem mais nada, a serialização quebra com `AttributeError` assim que `paciente` for `None`. Precisa de um campo de snapshot do nome (seção 3.3). |
+| O grafo de dados já é 100% CASCADE a partir de `CustomUser` | `Paciente.user` e `Psicologo.user` são `OneToOneField(CustomUser, on_delete=CASCADE)`. A partir daí, **todas** as FKs relevantes também são CASCADE: `Sessao.paciente`/`Sessao.psicologo`, `VinculoPacientePsicologo.paciente`/`.psicologo`, `Prontuario.paciente`/`.psicologo`, `TipoSessao.psicologo`, `CategoriaMensagem.psicologo`, `SementeCuidado.psicologo`, `MensagemPaciente.paciente`, `RegistroOdisseia.paciente`, `ComentarioPsicologo.psicologo`, `MetaOdisseia.paciente`, `NotificacaoSistema.paciente`/`.psicologo`, `DispositivoPush.user`, `HistoricoEnvioPush.destinatario_user`, `ReminderLog.destinatario_user`, `PasswordResetCode.user`. | **`user.delete()` sozinho já apaga tudo em uma única transação atômica**, sem precisar de nenhuma limpeza manual por app e sem nenhuma exceção de modelo. O trabalho real desta feature é só o endpoint (autorização + confirmação), não a exclusão em si. |
+| Efeito colateral: excluir uma conta apaga o histórico compartilhado com a outra parte | Como as FKs de `Sessao`, `VinculoPacientePsicologo` e `Prontuario` (nos dois sentidos) são CASCADE, excluir **qualquer um dos dois lados** de um vínculo apaga as sessões, o vínculo e os prontuários compartilhados — mesmo que a outra parte continue com conta ativa. **Decisão confirmada com o usuário para os dois perfis: aceitar esse efeito em cascata como está**, sem preservar nada do lado de quem não pediu a exclusão. | Documentado explicitamente aqui para não ser uma surpresa depois — é uma escolha deliberada e simétrica, não um descuido. |
 | `UserSerializer.has_password` já existe | `GET /auth/profile/` já devolve `has_password` (`obj.has_usable_password()`), usado hoje por `meuPerfil.js`/`perfilPsicologo.js` para decidir se pedem "Senha Atual" na troca de senha. Contas Google-only (criadas via Google, nunca definiram senha local) têm `has_password: false`. | Mesmo campo resolve a mesma decisão para a confirmação de exclusão — não precisa de nada novo no backend para saber qual fluxo de confirmação mostrar. |
 | Padrão de verificação de senha já estabelecido | `password_change_view` (`authentication/views.py:350`) usa `authenticate(email=request.user.email, password=old_password)` para validar a senha atual antes de uma ação sensível, e trata separadamente o caso `has_usable_password() == False`. | Reaproveitar exatamente esse padrão para a confirmação de exclusão (seção 3.2), em vez de inventar um mecanismo novo. |
 | Não há blacklist de tokens JWT | `SIMPLE_JWT` não tem `rest_framework_simplejwt.token_blacklist` instalado (`INSTALLED_APPS` não lista o app). Um access token emitido antes da exclusão continua *criptograficamente válido* até expirar (60 min) — mas toda requisição autenticada consulta `request.user` no banco, e como o `CustomUser` já não existe mais, o Django/SimpleJWT retorna 401 ("Usuário não encontrado") no próximo request. | Não há uma janela real de acesso pós-exclusão com dados — só o próprio request de exclusão ainda enxerga `request.user` (porque já foi resolvido antes do `.delete()`). Registrar essa limitação (impossível revogar o token *imediatamente* em outros dispositivos logados) como aceitável e fora de escopo endurecer agora. |
@@ -34,13 +35,11 @@ Permitir que o próprio usuário (paciente ou psicólogo) exclua permanentemente
 
 **Backend — `authentication/views.py` + `authentication/urls.py`**
 
-- Novo endpoint `DELETE /api/auth/account/`, autenticado (`IsAuthenticated`), sem restrição de `user_type` (serve tanto paciente quanto psicólogo — cada um só pode excluir a própria conta, nunca a de outro usuário; não existe parâmetro de "qual conta excluir", é sempre `request.user`).
+- Endpoint `DELETE /api/auth/account/`, autenticado (`IsAuthenticated`), sem restrição de `user_type` (serve tanto paciente quanto psicólogo — cada um só pode excluir a própria conta, nunca a de outro usuário; não existe parâmetro de "qual conta excluir", é sempre `request.user`).
 - Fluxo:
   1. Validar a confirmação (seção 3.2). Se inválida, `400`.
-  2. Se o usuário é psicólogo: nenhuma etapa extra — a cascata natural do banco cuida do resto (seção 3.4).
-  3. Se o usuário é paciente: antes de apagar, garantir que os prontuários que o psicólogo escreveu sobre ele tenham o snapshot do nome preenchido (deve já estar preenchido desde a criação — ver 3.3 — isso é só uma garantia defensiva, não uma ação nova).
-  4. `request.user.delete()`.
-  5. Responder `200` com uma mensagem de confirmação.
+  2. `request.user.delete()` — a cascata natural do banco cuida de tudo, para paciente e para psicólogo, sem nenhuma etapa extra de preparação.
+  3. Responder `200` com uma mensagem de confirmação.
 - **Não** envolve nenhuma chamada a serviços externos (Google, Expo push) para "desfazer" nada — não há o que desfazer do lado deles (ver linha da tabela sobre blacklist/push acima).
 
 ### 3.2 Confirmação antes de excluir
@@ -54,33 +53,15 @@ Permitir que o próprio usuário (paciente ou psicólogo) exclua permanentemente
      - Conta Google-only sem senha (`has_password: false`): não há senha para pedir. Exigir que o usuário digite a palavra **"EXCLUIR"** em um campo de texto como confirmação — barreira proporcional (a sessão autenticada já prova identidade; a frase evita apenas toque acidental), sem introduzir um novo fluxo de reautenticação Google só para isso.
 - Resposta de erro de confirmação inválida: `400`, mensagem específica (`{'error': 'Senha incorreta.'}` ou `{'error': 'Confirmação inválida.'}`), sem revelar mais que isso.
 
-### 3.3 Exceção: prontuários sobrevivem à exclusão do paciente
+### 3.3 Exclusão do paciente: cascata total, incluindo prontuários
 
-Decisão confirmada com o usuário: quando é o **paciente** que exclui a própria conta, os prontuários que o **psicólogo** escreveu sobre ele devem continuar existindo do lado do psicólogo — mesmo depois que a conta do paciente já não existir mais.
+Decisão final confirmada com o usuário: quando é o **paciente** que exclui a própria conta, os prontuários que o **psicólogo** escreveu sobre ele são apagados junto, na mesma cascata — **sem exceção**. Nenhuma alteração de modelo é necessária: `Prontuario.paciente` é `CASCADE` (comportamento nativo).
 
-#### Alterações previstas
-
-**Backend — `core/models.py` (`Prontuario`)**
-
-- Alterar `paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, ...)` para `on_delete=models.SET_NULL, null=True, blank=True` — assim, ao excluir o `Paciente` (via cascata da exclusão do `CustomUser`), o Django automaticamente zera `Prontuario.paciente_id` em vez de apagar a linha, na mesma transação do `.delete()`. Não precisa de nenhuma lógica manual adicional para isso — é o próprio collector de exclusão do Django que faz o trabalho.
-- Adicionar `paciente_nome_snapshot = models.CharField(max_length=255, blank=True, default='')`, preenchido automaticamente (ex.: em `save()`, só quando ainda vazio e `paciente_id` existir) com o nome completo do paciente no momento da criação/primeira gravação do prontuário — garante que o nome sobrevive independente do que aconteça depois com a conta do paciente.
-- Ajustar `__str__` para usar o snapshot quando `paciente_id` for `None` (evitar `AttributeError` ao tentar acessar `self.paciente.user`).
-- Nova migração de dados (`RunPython`, opcional mas recomendado): preencher `paciente_nome_snapshot` para os prontuários já existentes antes desta feature, lendo `paciente.user.first_name/last_name` enquanto o vínculo ainda existe.
-
-**Backend — `core/serializers.py` (`ProntuarioSerializer`)**
-
-- Trocar `paciente_nome = serializers.CharField(source='paciente.user.first_name', read_only=True)` (quebra com `paciente=None`) por um `SerializerMethodField` que devolve `obj.paciente.user.first_name` se `obj.paciente_id` existir, senão `obj.paciente_nome_snapshot` (ou um texto padrão tipo "Paciente removido" se nem o snapshot existir, para registros antigos sem backfill).
-- Adicionar um campo `paciente_removido` (booleano, `obj.paciente_id is None`) para o app conseguir exibir um aviso visual claro ("Este paciente excluiu a conta") sem ter que inferir isso de outro jeito.
-
-**App — tela de prontuários do psicólogo (`guiasApoio.js` ou equivalente)**
-
-- Exibir o aviso "Paciente removido" quando `paciente_removido: true`, no lugar de qualquer ação que dependa de navegar para o perfil do paciente (que não existe mais).
-
-**Fora do escopo desta exceção, por decisão explícita do usuário:** `RegistroOdisseia` (o diário do próprio paciente) e `RegistroOdisseiaComentario` (comentários do psicólogo *nesse* diário) continuam `CASCADE` normalmente — são conteúdo do paciente, diferente do prontuário, que é documentação profissional do psicólogo. Perguntado especificamente sobre "prontuários", não sobre todo o histórico de Odisseia.
+`RegistroOdisseia` (o diário do próprio paciente) e `ComentarioPsicologo` (comentários do psicólogo *nesse* diário) também seguem `CASCADE` normalmente, como já documentado.
 
 ### 3.4 Exclusão do psicólogo: cascata total (sem exceções)
 
-Decisão confirmada com o usuário: ao contrário do caso do paciente, quando é o **psicólogo** que exclui a própria conta, **nenhum dado é preservado** do lado dos pacientes dele — sessões, vínculos e prontuários (como psicólogo autor) são todos apagados em cascata, mesmo para pacientes que continuam ativos no app.
+Mesma regra, no outro sentido: quando é o **psicólogo** que exclui a própria conta, **nenhum dado é preservado** do lado dos pacientes dele — sessões, vínculos e prontuários (como psicólogo autor) são todos apagados em cascata, mesmo para pacientes que continuam ativos no app.
 
 - Nenhuma alteração de modelo é necessária para isso — já é o comportamento nativo do CASCADE hoje.
 - Único requisito: deixar isso **muito claro** no texto de confirmação que o psicólogo vê no app antes de excluir (seção 3.5), para que a irreversibilidade e o alcance real da ação (não é só a conta dele, é o histórico dos pacientes também) sejam explícitos — evita reclamação por surpresa depois.
@@ -89,14 +70,14 @@ Decisão confirmada com o usuário: ao contrário do caso do paciente, quando é
 
 **App — `src/screens/meuPerfil.js` (paciente) e `src/screens/perfilPsicologo.js` (psicólogo)**
 
-- Novo botão "Excluir Conta" logo abaixo do já existente "Sair da Conta", com destaque visual mais forte (ex.: fundo vermelho sólido em vez de só ícone vermelho, já que é irreversível — diferente de logout).
+- Botão "Excluir Conta" logo abaixo do já existente "Sair da Conta", com destaque visual mais forte (fundo vermelho sólido, já que é irreversível — diferente de logout).
 - Ao tocar, primeiro um `Alert` de confirmação destrutivo com o texto de aviso apropriado ao perfil:
-  - Paciente: menciona que sessões, vínculo com o psicólogo e histórico do app serão apagados permanentemente (sem mencionar prontuário — isso é interno, não é uma informação que o paciente precisa/deveria ver como "preservado").
+  - Paciente: menciona que sessões, vínculo com o psicólogo e todo o histórico do app serão apagados permanentemente.
   - Psicólogo: menciona explicitamente que sessões, vínculos e prontuários **de todos os pacientes vinculados** também serão apagados, não só os dados dele.
 - Confirmado o primeiro `Alert`, abre um formulário (reaproveitando o `Modal`/`TextInputCustom` já usados no fluxo de troca de senha e no de cancelamento tardio de sessão em `detalhesSessao.js`):
   - Se `hasPassword`: campo "Senha Atual".
   - Senão: campo de texto pedindo para digitar "EXCLUIR".
-- Chama um novo `authService.deleteAccount({ password } | { confirmacao })`.
+- Chama `authService.deleteAccount({ password } | { confirmacao })`.
 - Em caso de sucesso: chama `logout()` do `AuthProvider` (reaproveitando toda a limpeza local já existente) e navega para `Login`, com uma mensagem final de confirmação.
 - Em caso de erro (senha incorreta, confirmação errada): exibe a mensagem de erro, mantém a conta intacta, não faz logout algum.
 
@@ -104,7 +85,7 @@ Decisão confirmada com o usuário: ao contrário do caso do paciente, quando é
 
 **App — `src/services/authService.js`**
 
-- Novo método `deleteAccount(payload)` fazendo `api.delete('/auth/account/', { data: payload })` (Axios exige a chave `data` para enviar corpo em requisições `DELETE`), seguindo o mesmo padrão de tratamento de erro (`handleError`) já usado pelos outros métodos deste serviço.
+- `deleteAccount(payload)` fazendo `api.delete('/auth/account/', { data: payload })` (Axios exige a chave `data` para enviar corpo em requisições `DELETE`), seguindo o mesmo padrão de tratamento de erro (`handleError`) já usado pelos outros métodos deste serviço.
 
 ---
 
@@ -112,16 +93,12 @@ Decisão confirmada com o usuário: ao contrário do caso do paciente, quando é
 
 | Arquivo | Alteração |
 |---|---|
-| `psicoapp_backend/core/models.py` | `Prontuario.paciente` → `SET_NULL`; novo campo `paciente_nome_snapshot`; ajuste em `__str__`; nova migração (schema + `RunPython` de backfill). |
-| `psicoapp_backend/core/serializers.py` | `ProntuarioSerializer`: `paciente_nome` vira `SerializerMethodField` com fallback; novo campo `paciente_removido`. |
-| `psicoapp_backend/authentication/views.py` | Novo `delete_account_view` (`DELETE`, `IsAuthenticated`). |
-| `psicoapp_backend/authentication/urls.py` | Nova rota `account/` → `delete_account_view`. |
-| `psicoapp_backend/authentication/tests.py` | Testes do endpoint (senha certa/errada, conta Google-only, cascata do psicólogo, sobrevivência do prontuário do paciente). |
-| `psicoapp_backend/core/tests.py` | Testes de `ProntuarioSerializer`/model com `paciente=None`. |
-| `src/services/authService.js` | Novo `deleteAccount(payload)`. |
+| `psicoapp_backend/authentication/views.py` | `delete_account_view` (`DELETE`, `IsAuthenticated`). |
+| `psicoapp_backend/authentication/urls.py` | Rota `account/` → `delete_account_view`. |
+| `psicoapp_backend/authentication/tests.py` | Testes do endpoint (senha certa/errada, conta Google-only, cascata total nos dois sentidos, incluindo prontuário). |
+| `src/services/authService.js` | `deleteAccount(payload)`. |
 | `src/screens/meuPerfil.js` | Botão "Excluir Conta", modal de confirmação (senha ou frase), chamada ao serviço, logout + navegação em caso de sucesso. |
 | `src/screens/perfilPsicologo.js` | Mesma ação, com o texto de aviso específico do psicólogo (seção 3.4). |
-| `src/screens/guiasApoio.js` (ou tela de prontuários equivalente) | Exibir "Paciente removido" quando `paciente_removido: true`. |
 
 ---
 
@@ -136,23 +113,22 @@ Decisão confirmada com o usuário: ao contrário do caso do paciente, quando é
 
 ## 6. Critérios de aceite
 
-- [ ] Paciente autenticado consegue excluir a própria conta informando a senha atual correta; senha errada bloqueia com `400` e a conta permanece intacta.
-- [ ] Psicólogo autenticado consegue excluir a própria conta com o mesmo fluxo.
-- [ ] Conta Google-only (sem senha) exclui a própria conta digitando "EXCLUIR"; qualquer outro texto bloqueia com `400`.
-- [ ] Após excluir a conta de um **paciente**: `CustomUser`, `Paciente`, `Sessao`, `VinculoPacientePsicologo`, `RegistroOdisseia` (e seus comentários), `MetaOdisseia`, `EnvioSemente`, `NotificacaoSistema` e `DispositivoPush` relacionados deixam de existir; os `Prontuario` que o psicólogo escreveu sobre esse paciente **continuam existindo**, com `paciente=None` e `paciente_nome_snapshot` preenchido com o nome que o paciente tinha.
-- [ ] Após excluir a conta de um **psicólogo**: `CustomUser`, `Psicologo`, `TipoSessao`, `Sessao`, `VinculoPacientePsicologo`, `Prontuario` (como autor), `CategoriaMensagem`, `SementeCuidado` e `RegistroOdisseiaComentario` relacionados deixam de existir — inclusive para pacientes que continuam com conta ativa.
-- [ ] `ProntuarioSerializer` não gera erro 500 ao serializar um prontuário com `paciente=None`; devolve `paciente_removido: true` e um nome utilizável em `paciente_nome`.
-- [ ] Login com o e-mail da conta excluída falha (`CustomUser` não existe mais) — inclusive tentativa de recuperação de senha para esse e-mail (resposta genérica de sempre, sem enviar e-mail, pois não há usuário correspondente).
-- [ ] No app, após exclusão bem-sucedida, o usuário é deslogado localmente (mesma limpeza do `logout()`) e redirecionado para a tela de Login com uma mensagem de confirmação.
+- [x] Paciente autenticado consegue excluir a própria conta informando a senha atual correta; senha errada bloqueia com `400` e a conta permanece intacta.
+- [x] Psicólogo autenticado consegue excluir a própria conta com o mesmo fluxo.
+- [x] Conta Google-only (sem senha) exclui a própria conta digitando "EXCLUIR"; qualquer outro texto bloqueia com `400`.
+- [x] Após excluir a conta de um **paciente**: `CustomUser`, `Paciente`, `Sessao`, `VinculoPacientePsicologo`, `Prontuario` (como o psicólogo escreveu sobre ele), `RegistroOdisseia` (e seus comentários), `MetaOdisseia`, `NotificacaoSistema` e `DispositivoPush` relacionados deixam de existir — sem exceção.
+- [x] Após excluir a conta de um **psicólogo**: `CustomUser`, `Psicologo`, `TipoSessao`, `Sessao`, `VinculoPacientePsicologo`, `Prontuario` (como autor), `CategoriaMensagem`, `SementeCuidado` e `ComentarioPsicologo` relacionados deixam de existir — inclusive para pacientes que continuam com conta ativa (o diário de Odisseia do próprio paciente, que não pertence ao psicólogo, sobrevive).
+- [x] Login com o e-mail da conta excluída falha (`CustomUser` não existe mais) — inclusive tentativa de recuperação de senha para esse e-mail (resposta genérica de sempre, sem enviar e-mail, pois não há usuário correspondente).
+- [x] No app, após exclusão bem-sucedida, o usuário é deslogado localmente (mesma limpeza do `logout()`) e redirecionado para a tela de Login com uma mensagem de confirmação.
 
 ---
 
 ## 7. Testes e validação
 
-- Testes de backend (`authentication/tests.py`): endpoint de exclusão — paciente com senha correta/incorreta; psicólogo com senha correta/incorreta; conta Google-only com frase correta/incorreta; usuário não autenticado recebe `401`; verificação pós-exclusão de que as tabelas relacionadas realmente ficaram vazias (paciente) ou vazias em cascata total (psicólogo).
-- Testes de backend (`core/tests.py`): `Prontuario` sobrevive após `paciente.user.delete()`, com `paciente_id IS NULL` e `paciente_nome_snapshot` preenchido; serializer não quebra.
+- Testes de backend (`authentication/tests.py`): endpoint de exclusão — paciente com senha correta/incorreta; psicólogo com senha correta/incorreta; conta Google-only com frase correta/incorreta; usuário não autenticado recebe `401`; verificação pós-exclusão de que as tabelas relacionadas realmente ficaram vazias em cascata total, nos dois sentidos (incluindo o prontuário do lado do paciente).
+- Testes de backend (`core/tests.py`): `Prontuario` é apagado junto com `paciente.user.delete()`.
 - Suíte completa (`python manage.py test`) rodando localmente e, após deploy, no servidor — mesmo padrão já seguido nas features anteriores desta sessão.
-- Validação manual em dispositivo: criar uma conta de teste (paciente e psicólogo), excluir, confirmar que login subsequente falha e que a tela de perfil correspondente do outro lado (psicólogo vendo prontuário do paciente excluído, ou paciente tentando ver psicólogo excluído) se comporta como esperado.
+- Validação manual em dispositivo: criar uma conta de teste (paciente e psicólogo), excluir, confirmar que login subsequente falha e que o histórico compartilhado desaparece dos dois lados.
 
 ---
 
@@ -160,20 +136,18 @@ Decisão confirmada com o usuário: ao contrário do caso do paciente, quando é
 
 - Exportar/baixar uma cópia dos próprios dados antes de excluir ("portabilidade de dados").
 - Período de carência/"soft delete" com possibilidade de desistência (ex.: conta marcada para exclusão em N dias, cancelável) — a exclusão é imediata e definitiva, como pedido.
-- Notificar o psicólogo quando um paciente dele excluir a própria conta, ou notificar os pacientes quando o psicólogo deles excluir a própria conta — nenhuma notificação automática é criada para os efeitos colaterais das seções 3.3/3.4.
+- Notificar a outra parte quando alguém excluir a própria conta — nenhuma notificação automática é criada para o efeito colateral das seções 3.3/3.4.
 - Blacklist de JWT / invalidação imediata de tokens em outros dispositivos já logados (ver seção 5).
 - Qualquer alteração ao fluxo de exclusão de conta pelo Django Admin (continua existindo e não muda).
 - Reautenticação via Google como mecanismo de confirmação para contas Google-only (optou-se pela frase de confirmação, mais simples).
+- Preservar prontuários (ou qualquer outro dado) do lado de quem não pediu a exclusão — decisão explícita e final: cascata total e simétrica para os dois perfis.
 
 ---
 
 ## 9. Ordem recomendada de implementação
 
-1. Backend: alteração de modelo do `Prontuario` (`SET_NULL` + snapshot) e migração, com testes de que o prontuário sobrevive à exclusão do paciente.
-2. Backend: ajuste do `ProntuarioSerializer` (novo campo, fallback de nome) e seus testes.
-3. Backend: endpoint `delete_account_view` + rota, com todos os cenários de confirmação testados.
-4. App: `authService.deleteAccount()`.
-5. App: ação "Excluir Conta" em `meuPerfil.js` (paciente) — fluxo completo, incluindo o `Alert` de aviso e o `logout()` pós-sucesso.
-6. App: mesma ação em `perfilPsicologo.js`, com o texto de aviso específico da cascata total.
-7. App: ajuste em `guiasApoio.js` para exibir "Paciente removido" quando aplicável.
-8. Deploy (migração + restart) e validação end-to-end em dispositivo.
+1. Backend: endpoint `delete_account_view` + rota, com todos os cenários de confirmação e de cascata testados.
+2. App: `authService.deleteAccount()`.
+3. App: ação "Excluir Conta" em `meuPerfil.js` (paciente) — fluxo completo, incluindo o `Alert` de aviso e o `logout()` pós-sucesso.
+4. App: mesma ação em `perfilPsicologo.js`, com o texto de aviso específico da cascata total.
+5. Deploy (restart) e validação end-to-end em dispositivo.

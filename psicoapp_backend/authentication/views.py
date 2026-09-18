@@ -386,10 +386,9 @@ def delete_account_view(request):
     Exclusão definitiva da própria conta (SPEC_EXCLUSAO_CONTA.md).
 
     Opera exclusivamente sobre request.user — nunca recebe um usuário-alvo.
-    O CASCADE já existente a partir de CustomUser cuida do resto (sessões,
-    vínculos, notificações etc.); a única exceção é Prontuario.paciente,
-    que é SET_NULL (ver core/models.py) para sobreviver à exclusão do
-    paciente.
+    O CASCADE já existente a partir de CustomUser cuida de tudo (sessões,
+    vínculos, prontuários, notificações etc.) — sem exceção, para paciente
+    e para psicólogo.
     """
     user = request.user
 

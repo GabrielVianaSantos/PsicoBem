@@ -37,7 +37,7 @@ async deleteAccount(payload) {
 ### `src/screens/meuPerfil.js`
 
 - Novo botão "Excluir Conta" logo abaixo de "Sair da Conta" (`btnSair`), com destaque visual mais forte (ex.: fundo vermelho sólido `#EF5350` com texto branco, em vez de só ícone vermelho — sinaliza que é irreversível, diferente de logout).
-- Ao tocar: `Alert` de confirmação destrutivo (mesmo padrão de `limparNotificacoes()` em `notificacoes.js`), texto explicando que sessões, vínculo com o psicólogo e todo o histórico do paciente no app serão apagados permanentemente. **Não mencionar prontuário** — a preservação do lado do psicólogo é um detalhe interno, não uma informação relevante para o paciente decidir.
+- Ao tocar: `Alert` de confirmação destrutivo (mesmo padrão de `limparNotificacoes()` em `notificacoes.js`), texto explicando que sessões, vínculo com o psicólogo e todo o histórico do paciente no app serão apagados permanentemente (isso já cobre genericamente os prontuários — cascata total, sem exceção, ver seção 3.3 da SPEC atualizada).
 - Confirmado o `Alert`, abrir um `Modal` (reaproveitando o padrão visual já usado no cancelamento tardio de sessão em `detalhesSessao.js`: `modalFundo`/`modalCard`/`modalTitulo`/`modalBotoes`) com:
   - Se `hasPassword`: `TextInputCustom` "Senha Atual" (`secureTextEntry`).
   - Senão: `TextInputCustom` pedindo para digitar "EXCLUIR", com validação local (botão de confirmar só habilita se o texto digitado, em maiúsculas, for exatamente `"EXCLUIR"`) antes mesmo de chamar a API — feedback mais rápido que esperar o 400 do backend.
