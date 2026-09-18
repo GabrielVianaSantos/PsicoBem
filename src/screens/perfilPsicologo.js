@@ -138,8 +138,11 @@ export default function PerfilPsicologo() {
     };
 
     const handleLogout = async () => {
+        // Não navegar manualmente: isAuthenticated vira false, e o Navigator
+        // (src/routes.js) já troca sozinho para o fluxo de Login — chamar
+        // navigate("Login") aqui daria "not handled by any navigator", pois
+        // essa rota não existe no stack autenticado atual.
         await logout();
-        navigation.navigate("Login");
     };
 
     // Estados para exclusão de conta (SPEC_EXCLUSAO_CONTA.md)
@@ -177,8 +180,9 @@ export default function PerfilPsicologo() {
         try {
             await authService.deleteAccount(payload);
             setMostrarModalExcluir(false);
+            // Idem handleLogout: isAuthenticated vira false e o Navigator
+            // troca sozinho para o fluxo de Login, sem navigate manual.
             await logout();
-            navigation.navigate("Login");
             Alert.alert("Conta excluída", "Sua conta foi excluída com sucesso.");
         } catch (error) {
             Alert.alert("Erro", error.message || "Não foi possível excluir a conta.");
