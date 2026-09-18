@@ -153,10 +153,22 @@ export const authService = {
   // Alterar senha (conectado)
   async changePassword(oldPassword, newPassword) {
     try {
-      const response = await api.post('/auth/password/change/', { 
-        old_password: oldPassword, 
-        new_password: newPassword 
+      const response = await api.post('/auth/password/change/', {
+        old_password: oldPassword,
+        new_password: newPassword
       });
+      return response.data;
+    } catch (error) {
+      const errorInfo = this.handleError(error);
+      throw new Error(errorInfo.message);
+    }
+  },
+
+  // Excluir a própria conta (SPEC_EXCLUSAO_CONTA.md).
+  // payload é { password } (conta com senha) ou { confirmacao: 'EXCLUIR' } (Google-only).
+  async deleteAccount(payload) {
+    try {
+      const response = await api.delete('/auth/account/', { data: payload });
       return response.data;
     } catch (error) {
       const errorInfo = this.handleError(error);
@@ -341,6 +353,8 @@ export const authService = {
         // Erros gerais
         else if (typeof error.response.data === 'string') {
           message = error.response.data;
+        } else if (error.response.data.error) {
+          message = error.response.data.error;
         } else if (error.response.data.detail) {
           message = error.response.data.detail;
         } else if (error.response.data.message) {
