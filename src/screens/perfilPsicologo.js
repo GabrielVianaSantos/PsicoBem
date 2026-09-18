@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Linking } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Linking, Modal } from "react-native";
 import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useNavigation, useFocusEffect, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -140,6 +140,51 @@ export default function PerfilPsicologo() {
     const handleLogout = async () => {
         await logout();
         navigation.navigate("Login");
+    };
+
+    // Estados para exclusão de conta (SPEC_EXCLUSAO_CONTA.md)
+    const [mostrarModalExcluir, setMostrarModalExcluir] = useState(false);
+    const [senhaExclusao, setSenhaExclusao] = useState("");
+    const [confirmacaoExclusao, setConfirmacaoExclusao] = useState("");
+    const [excluindo, setExcluindo] = useState(false);
+
+    const iniciarExclusaoConta = () => {
+        Alert.alert(
+            "Excluir conta",
+            "Isso vai apagar permanentemente sua conta e todos os dados compartilhados com seus pacientes vinculados — sessões, vínculos e prontuários também serão apagados, não só os seus dados. Essa ação não pode ser desfeita. Deseja continuar?",
+            [
+                { text: "Cancelar", style: "cancel" },
+                { text: "Continuar", style: "destructive", onPress: () => setMostrarModalExcluir(true) },
+            ]
+        );
+    };
+
+    const confirmarExclusaoConta = async () => {
+        if (hasPassword && !senhaExclusao) {
+            Alert.alert("Erro", "Informe sua senha atual.");
+            return;
+        }
+        if (!hasPassword && confirmacaoExclusao.trim().toUpperCase() !== 'EXCLUIR') {
+            Alert.alert("Erro", 'Digite "EXCLUIR" para confirmar.');
+            return;
+        }
+
+        const payload = hasPassword
+            ? { password: senhaExclusao }
+            : { confirmacao: confirmacaoExclusao };
+
+        setExcluindo(true);
+        try {
+            await authService.deleteAccount(payload);
+            setMostrarModalExcluir(false);
+            await logout();
+            navigation.navigate("Login");
+            Alert.alert("Conta excluída", "Sua conta foi excluída com sucesso.");
+        } catch (error) {
+            Alert.alert("Erro", error.message || "Não foi possível excluir a conta.");
+        } finally {
+            setExcluindo(false);
+        }
     };
 
     return (
@@ -290,16 +335,80 @@ export default function PerfilPsicologo() {
                             </View>
                         )}
 
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={estilos.btnSair}
                             onPress={handleLogout}
                         >
                             <Ionicons name="log-out-outline" size={20} color="#EF5350" />
                             <Text style={estilos.btnSairText}>Sair da Conta</Text>
                         </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={estilos.btnExcluir}
+                            onPress={iniciarExclusaoConta}
+                        >
+                            <Ionicons name="trash-outline" size={20} color="white" />
+                            <Text style={estilos.btnExcluirText}>Excluir Conta</Text>
+                        </TouchableOpacity>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            <Modal
+                visible={mostrarModalExcluir}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setMostrarModalExcluir(false)}
+            >
+                <View style={estilos.modalFundo}>
+                    <View style={estilos.modalCard}>
+                        <Text style={estilos.modalTitulo}>Confirmar exclusão</Text>
+                        {hasPassword ? (
+                            <>
+                                <Text style={estilos.modalAviso}>
+                                    Digite sua senha atual para confirmar a exclusão definitiva da conta.
+                                </Text>
+                                <TextInputCustom
+                                    texto="Senha Atual"
+                                    value={senhaExclusao}
+                                    onChangeText={setSenhaExclusao}
+                                    iconName="lock-closed"
+                                    secureTextEntry={true}
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <Text style={estilos.modalAviso}>
+                                    Digite "EXCLUIR" para confirmar a exclusão definitiva da conta.
+                                </Text>
+                                <TextInputCustom
+                                    texto='Digite "EXCLUIR"'
+                                    value={confirmacaoExclusao}
+                                    onChangeText={setConfirmacaoExclusao}
+                                    iconName="warning"
+                                />
+                            </>
+                        )}
+                        <View style={estilos.modalBotoes}>
+                            <TouchableOpacity
+                                style={estilos.modalBotaoSecundario}
+                                onPress={() => setMostrarModalExcluir(false)}
+                                disabled={excluindo}
+                            >
+                                <Text style={estilos.modalBotaoSecundarioTexto}>Voltar</Text>
+                            </TouchableOpacity>
+                            <View style={{ flex: 1 }}>
+                                <Botao
+                                    texto={excluindo ? "Excluindo..." : "Excluir definitivamente"}
+                                    onPress={confirmarExclusaoConta}
+                                    backgroundColor="#EF5350"
+                                    disabled={excluindo}
+                                />
+                            </View>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -446,5 +555,62 @@ const estilos = StyleSheet.create({
         color: '#666',
         fontFamily: 'RalewayBold',
         fontSize: 16,
+    },
+    btnExcluir: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 15,
+        padding: 15,
+        backgroundColor: '#EF5350',
+        borderRadius: 10,
+    },
+    btnExcluirText: {
+        color: 'white',
+        fontFamily: 'RalewayBold',
+        fontSize: 16,
+        marginLeft: 8,
+    },
+    modalFundo: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        padding: 25,
+    },
+    modalCard: {
+        backgroundColor: 'white',
+        borderRadius: 14,
+        padding: 22,
+    },
+    modalTitulo: {
+        color: '#11B5A4',
+        fontFamily: 'RalewayBold',
+        fontSize: 19,
+        marginBottom: 10,
+    },
+    modalAviso: {
+        color: '#333',
+        fontFamily: 'Raleway',
+        fontSize: 14,
+        lineHeight: 20,
+        marginBottom: 14,
+    },
+    modalBotoes: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 18,
+        alignItems: 'center',
+    },
+    modalBotaoSecundario: {
+        paddingVertical: 13,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        borderWidth: 1.5,
+        borderColor: '#CCC',
+    },
+    modalBotaoSecundarioTexto: {
+        color: '#666',
+        fontFamily: 'RalewayBold',
+        fontSize: 14,
     },
 });
