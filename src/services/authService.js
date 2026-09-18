@@ -69,6 +69,7 @@ export const authService = {
         },
         crp: userData.crp,
         specialization: userData.especialidade || '',
+        link_sala_video: userData.linkSalaVideo,
       });
       return response.data;
     } catch (error) {

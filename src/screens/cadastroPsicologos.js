@@ -14,6 +14,7 @@ export default function CadastroPsicologos () {
     const [email, setEmail] = useState('');
     const [crp, setCrp] = useState('');
     const [especialidade, setEspecialidade] = useState('');
+    const [linkSalaVideo, setLinkSalaVideo] = useState('');
     const [senha, setSenha] = useState('');
     const [confirmaSenha, setConfirmaSenha] = useState('');
     const [errors, setErrors] = useState({});
@@ -32,6 +33,10 @@ export default function CadastroPsicologos () {
         // CRP: 2 dígitos da região + até 6 dígitos de registro (XX/XXXXXX)
         const crpRegex = /^\d{2}\/\d{4,6}$/;
         return crpRegex.test(crp);
+    };
+
+    const validateLinkSalaVideo = (link) => {
+        return link.trim().startsWith('https://meet.google.com/');
     };
 
     const formatCRP = (value) => {
@@ -67,6 +72,12 @@ export default function CadastroPsicologos () {
             newErrors.crp = 'CRP inválido (Ex: 06/12345)';
         }
 
+        if (!linkSalaVideo.trim()) {
+            newErrors.linkSalaVideo = 'Link da sala de vídeo é obrigatório';
+        } else if (!validateLinkSalaVideo(linkSalaVideo)) {
+            newErrors.linkSalaVideo = 'Informe um link válido do Google Meet (https://meet.google.com/...)';
+        }
+
         if (!senha.trim()) {
             newErrors.senha = 'Senha é obrigatória';
         } else if (senha.length < 6) {
@@ -96,6 +107,7 @@ export default function CadastroPsicologos () {
                 email,
                 crp,
                 especialidade,
+                linkSalaVideo,
                 senha,
                 confirmaSenha
             };
@@ -112,6 +124,9 @@ export default function CadastroPsicologos () {
                     const erroServidor = {};
                     if (data.crp) {
                         erroServidor.crp = Array.isArray(data.crp) ? data.crp[0] : data.crp;
+                    }
+                    if (data.link_sala_video) {
+                        erroServidor.linkSalaVideo = Array.isArray(data.link_sala_video) ? data.link_sala_video[0] : data.link_sala_video;
                     }
                     if (data.user?.email) {
                         erroServidor.email = Array.isArray(data.user.email) ? data.user.email[0] : data.user.email;
@@ -193,8 +208,25 @@ export default function CadastroPsicologos () {
                         error={!!errors.crp}
                         />
                     {errors.crp && <Text style={estilos.errorText}>{errors.crp}</Text>}
-                    
-                    <TextInputCustom                    
+
+                    <TextInputCustom
+                        texto="Link da Sala de Vídeo (Google Meet)"
+                        iconName="videocam"
+                        iconColor="#11B5A4"
+                        iconSize={20}
+                        value={linkSalaVideo}
+                        onChangeText={setLinkSalaVideo}
+                        texto_placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                        autoCapitalize="none"
+                        keyboardType="url"
+                        error={!!errors.linkSalaVideo}
+                        />
+                    <Text style={estilos.helperText}>
+                        Não tem um? Crie em meet.google.com/new e cole o link aqui.
+                    </Text>
+                    {errors.linkSalaVideo && <Text style={estilos.errorText}>{errors.linkSalaVideo}</Text>}
+
+                    <TextInputCustom
                         texto="Especialidade (Opcional)"
                         iconName="school"
                         iconColor="#11B5A4"
@@ -296,5 +328,13 @@ const estilos = StyleSheet.create ({
         marginTop: 5,
         marginLeft: 10,
         fontFamily: "RalewayBold",
+    },
+
+    helperText: {
+        color: "#999",
+        fontSize: 12,
+        marginTop: 5,
+        marginLeft: 10,
+        fontFamily: "Raleway",
     },
 })

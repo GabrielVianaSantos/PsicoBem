@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import { CustomAlert as Alert } from "../components/common/CustomAlert";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useNavigation, useFocusEffect, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Topo from "./components/topo";
 import { useAuth } from "../hooks/useAuth";
@@ -11,14 +11,20 @@ import { authService } from "../services/authService";
 
 export default function PerfilPsicologo() {
     const navigation = useNavigation();
+    const route = useRoute();
     const { user, updateProfile, logout } = useAuth();
-    
+
     const [nome, setNome] = useState(user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : "");
     const [email, setEmail] = useState(user?.email || "");
     const [crp, setCrp] = useState(user?.crp || "Não informado");
     const [especialidade, setEspecialidade] = useState(user?.specialization || "");
+    const [linkSalaVideo, setLinkSalaVideo] = useState(user?.link_sala_video || "");
     const [hasPassword, setHasPassword] = useState(user?.has_password !== false);
     const [loading, setLoading] = useState(false);
+
+    const scrollRef = useRef(null);
+    const linkFieldY = useRef(0);
+    const [destaqueLink, setDestaqueLink] = useState(false);
 
     const sincronizarPerfil = useCallback(async () => {
         try {
@@ -30,6 +36,7 @@ export default function PerfilPsicologo() {
             setEmail(perfil?.email || "");
             setCrp(perfil?.crp || "Não informado");
             setEspecialidade(perfil?.specialization || "");
+            setLinkSalaVideo(perfil?.link_sala_video || "");
             setHasPassword(perfil?.has_password !== false);
         } catch (error) {
             console.error("Erro ao carregar perfil do psicólogo:", error);
@@ -40,6 +47,23 @@ export default function PerfilPsicologo() {
         useCallback(() => {
             sincronizarPerfil();
         }, [sincronizarPerfil])
+    );
+
+    // Deep link do card "Minha Sala Virtual" (issue 05): leva o scroll até o
+    // campo do link e destaca por alguns segundos.
+    useFocusEffect(
+        useCallback(() => {
+            if (route.params?.focarCampo !== 'linkSalaVideo') return;
+            setDestaqueLink(true);
+            const scrollTimer = setTimeout(() => {
+                scrollRef.current?.scrollTo({ y: Math.max(linkFieldY.current - 20, 0), animated: true });
+            }, 250);
+            const highlightTimer = setTimeout(() => setDestaqueLink(false), 3000);
+            return () => {
+                clearTimeout(scrollTimer);
+                clearTimeout(highlightTimer);
+            };
+        }, [route.params?.focarCampo])
     );
 
     // Estados para mudança de senha
@@ -62,12 +86,14 @@ export default function PerfilPsicologo() {
             const result = await updateProfile({
                 first_name: firstName,
                 last_name: lastName,
-                specialization: especialidade
+                specialization: especialidade,
+                link_sala_video: linkSalaVideo,
             });
 
             if (result.success) {
                 setNome(result.user?.nome_completo || `${firstName} ${lastName}`.trim());
                 setEspecialidade(result.user?.specialization || especialidade);
+                setLinkSalaVideo(result.user?.link_sala_video || linkSalaVideo);
                 Alert.alert("Sucesso", "Perfil atualizado com sucesso!");
             } else {
                 Alert.alert("Erro", result.message || "Erro ao atualizar perfil.");
@@ -124,7 +150,8 @@ export default function PerfilPsicologo() {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
             >
-                <ScrollView 
+                <ScrollView
+                    ref={scrollRef}
                     style={estilos.container}
                     contentContainerStyle={{ paddingBottom: 40 }}
                 >
@@ -149,13 +176,31 @@ export default function PerfilPsicologo() {
                                     iconName="person"
                                 />
 
-                                <TextInputCustom 
+                                <TextInputCustom
                                     texto="Especialidade"
                                     value={especialidade}
                                     onChangeText={setEspecialidade}
                                     iconName="school"
                                     texto_placeholder="Ex: Terapia Cognitivo-Comportamental"
                                 />
+
+                                <View
+                                    onLayout={(e) => { linkFieldY.current = e.nativeEvent.layout.y; }}
+                                    style={[estilos.campoDestacavel, destaqueLink && estilos.campoDestacado]}
+                                >
+                                    <TextInputCustom
+                                        texto="Link da Sala de Vídeo (Google Meet)"
+                                        value={linkSalaVideo}
+                                        onChangeText={setLinkSalaVideo}
+                                        iconName="videocam"
+                                        texto_placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                                        autoCapitalize="none"
+                                        keyboardType="url"
+                                    />
+                                    <Text style={estilos.helperText}>
+                                        Não tem um? Crie em meet.google.com/new e cole o link aqui.
+                                    </Text>
+                                </View>
 
                                 <View style={estilos.infoReadOnly}>
                                     <Text style={estilos.labelReadOnly}>E-mail (Não editável)</Text>
@@ -296,6 +341,21 @@ const estilos = StyleSheet.create({
     },
     infoReadOnly: {
         marginTop: 15,
+    },
+    campoDestacavel: {
+        borderRadius: 10,
+        padding: 4,
+        marginHorizontal: -4,
+    },
+    campoDestacado: {
+        backgroundColor: '#E1F1EE',
+    },
+    helperText: {
+        color: "#999",
+        fontSize: 12,
+        marginTop: 5,
+        marginLeft: 10,
+        fontFamily: "Raleway",
     },
     labelReadOnly: {
         color: "#888",

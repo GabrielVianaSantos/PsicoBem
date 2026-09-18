@@ -7,8 +7,7 @@ import {
     StyleSheet,
     ScrollView,
     ActivityIndicator,
-    TouchableOpacity,
-    Linking
+    TouchableOpacity
 } from "react-native";
 import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -23,7 +22,6 @@ export default function DetalhesSessao() {
 
     const [sessao, setSessao] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [erroAbrirSala, setErroAbrirSala] = useState(false);
     const [compartilhandoIcs, setCompartilhandoIcs] = useState(false);
 
     useEffect(() => {
@@ -50,18 +48,12 @@ export default function DetalhesSessao() {
         }
     };
 
-    const entrarNaSala = async () => {
-        setErroAbrirSala(false);
-        try {
-            const suportado = await Linking.canOpenURL(sessao.sala_url);
-            if (!suportado) {
-                throw new Error('URL da sala não suportada pelo dispositivo.');
-            }
-            await Linking.openURL(sessao.sala_url);
-        } catch (error) {
-            console.error('Erro ao abrir a sala:', error);
-            setErroAbrirSala(true);
-        }
+    const irParaSalaDeEspera = () => {
+        navigation.navigate('SalaDeEspera', { sessaoId, salaUrl: sessao.sala_url });
+    };
+
+    const irConfigurarLink = () => {
+        navigation.navigate('PerfilPsicologo', { focarCampo: 'linkSalaVideo' });
     };
 
     const adicionarNaAgenda = async () => {
@@ -283,27 +275,48 @@ export default function DetalhesSessao() {
                     </View>
                 )}
 
-                {/* Sala online (Jitsi) */}
-                {sessao.sala_url && (
+                {/* Sala online (Google Meet — link fixo do psicólogo) */}
+                {sessao.sala_pendente_configuracao ? (
+                    <View style={estilos.actionsContainer}>
+                        <View style={estilos.salaAvisoBox}>
+                            {userType === 'psicologo' ? (
+                                <>
+                                    <Text style={estilos.salaAvisoTexto}>
+                                        Você ainda não configurou o link da sua sala de vídeo. Configure agora para liberar a entrada nesta sessão.
+                                    </Text>
+                                    <TouchableOpacity onPress={irConfigurarLink} style={{ marginTop: 8 }}>
+                                        <Text style={estilos.salaLinkTexto}>Configurar minha sala de vídeo</Text>
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                <>
+                                    <Text style={estilos.salaAvisoTexto}>
+                                        O profissional ainda não configurou a sala de vídeo desta sessão. Entre em contato por outro meio:
+                                    </Text>
+                                    {sessao.psicologo_contato_alternativo?.telefone && (
+                                        <Text style={estilos.salaLinkTexto}>
+                                            Telefone: {sessao.psicologo_contato_alternativo.telefone}
+                                        </Text>
+                                    )}
+                                    {sessao.psicologo_contato_alternativo?.email && (
+                                        <Text style={estilos.salaLinkTexto}>
+                                            E-mail: {sessao.psicologo_contato_alternativo.email}
+                                        </Text>
+                                    )}
+                                </>
+                            )}
+                        </View>
+                    </View>
+                ) : sessao.sala_url && (
                     <View style={estilos.actionsContainer}>
                         {sessao.pode_entrar_sala ? (
                             <View style={estilos.buttonContainer}>
                                 <Botao
                                     texto="Entrar na sessão"
-                                    onPress={entrarNaSala}
+                                    onPress={irParaSalaDeEspera}
                                     iconName="videocam-outline"
                                     backgroundColor="#11B5A4"
                                 />
-                                {erroAbrirSala && (
-                                    <View style={estilos.salaAvisoBox}>
-                                        <Text style={estilos.salaAvisoTexto}>
-                                            Não foi possível abrir a sala automaticamente. Copie o link abaixo (toque e segure para copiar) e cole no navegador:
-                                        </Text>
-                                        <Text selectable style={estilos.salaLinkTexto}>
-                                            {sessao.sala_url}
-                                        </Text>
-                                    </View>
-                                )}
                             </View>
                         ) : (
                             <View style={estilos.salaAvisoBox}>

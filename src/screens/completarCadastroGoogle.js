@@ -27,6 +27,7 @@ export default function CompletarCadastroGoogle() {
     const [sexo, setSexo] = useState(null);
     const [crp, setCrp] = useState('');
     const [especialidade, setEspecialidade] = useState('');
+    const [linkSalaVideo, setLinkSalaVideo] = useState('');
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
 
@@ -86,6 +87,11 @@ export default function CompletarCadastroGoogle() {
             } else if (!validateCRP(crp)) {
                 newErrors.crp = 'CRP inválido (Ex: 06/12345)';
             }
+            if (!linkSalaVideo.trim()) {
+                newErrors.linkSalaVideo = 'Link da sala de vídeo é obrigatório';
+            } else if (!linkSalaVideo.trim().startsWith('https://meet.google.com/')) {
+                newErrors.linkSalaVideo = 'Informe um link válido do Google Meet (https://meet.google.com/...)';
+            }
         }
 
         setErrors(newErrors);
@@ -115,6 +121,7 @@ export default function CompletarCadastroGoogle() {
             } else {
                 campos.crp = crp;
                 campos.specialization = especialidade || '';
+                campos.link_sala_video = linkSalaVideo;
             }
 
             const result = await completeGoogleSignUp({
@@ -144,6 +151,7 @@ export default function CompletarCadastroGoogle() {
                 const erroServidor = {};
                 if (data.cpf) erroServidor.cpf = Array.isArray(data.cpf) ? data.cpf[0] : data.cpf;
                 if (data.crp) erroServidor.crp = Array.isArray(data.crp) ? data.crp[0] : data.crp;
+                if (data.link_sala_video) erroServidor.linkSalaVideo = Array.isArray(data.link_sala_video) ? data.link_sala_video[0] : data.link_sala_video;
                 if (data.gender) erroServidor.sexo = Array.isArray(data.gender) ? data.gender[0] : data.gender;
                 if (data.user_type) erroServidor.userType = Array.isArray(data.user_type) ? data.user_type[0] : data.user_type;
                 if (Object.keys(erroServidor).length > 0) {
@@ -315,6 +323,23 @@ export default function CompletarCadastroGoogle() {
                                         onChangeText={setEspecialidade}
                                         texto_placeholder="Ex: Psicologia Clínica"
                                     />
+
+                                    <TextInputCustom
+                                        texto="Link da Sala de Vídeo (Google Meet)"
+                                        iconName="videocam"
+                                        iconColor="#11B5A4"
+                                        iconSize={20}
+                                        value={linkSalaVideo}
+                                        onChangeText={setLinkSalaVideo}
+                                        texto_placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                                        autoCapitalize="none"
+                                        keyboardType="url"
+                                        error={!!errors.linkSalaVideo}
+                                    />
+                                    <Text style={estilos.helperText}>
+                                        Não tem um? Crie em meet.google.com/new e cole o link aqui.
+                                    </Text>
+                                    {errors.linkSalaVideo && <Text style={estilos.errorText}>{errors.linkSalaVideo}</Text>}
                                 </>
                             )}
 
@@ -484,6 +509,14 @@ const estilos = StyleSheet.create({
 
     containerBotao: {
         marginTop: 20,
+    },
+
+    helperText: {
+        color: "#999",
+        fontSize: 12,
+        marginTop: 5,
+        marginLeft: 10,
+        fontFamily: "Raleway",
     },
 
     errorText: {

@@ -23,6 +23,7 @@ import TipoSessao from "./screens/tipoSessao";
 import Sessoes from "./screens/sessoes";
 import AgendarSessao from "./screens/agendarSessao";
 import DetalhesSessao from "./screens/detalhesSessao";
+import SalaDeEspera from "./screens/salaDeEspera";
 import PerfilPsicologo from "./screens/perfilPsicologo";
 import Prontuarios from "./screens/prontuarios";
 import SementesCuidado from "./screens/sementesCuidado";
@@ -98,6 +99,7 @@ export default function Routes() {
             <AppStack.Screen name="Sessoes" component={Sessoes} />
             <AppStack.Screen name="AgendarSessao" component={AgendarSessao} />
             <AppStack.Screen name="DetalhesSessao" component={DetalhesSessao} />
+            <AppStack.Screen name="SalaDeEspera" component={SalaDeEspera} />
             <AppStack.Screen name="TipoSessao" component={TipoSessao} />
             <AppStack.Screen name="PerfilPsicologo" component={PerfilPsicologo} />
             <AppStack.Screen name="Prontuarios" component={Prontuarios} />
@@ -119,6 +121,7 @@ export default function Routes() {
             <AppStack.Screen name="PerfilPaciente" component={PerfilPaciente} />
             {/* DetalhesSessao: disponível ao paciente via MinhasSessoes e notificações de sessão */}
             <AppStack.Screen name="DetalhesSessao" component={DetalhesSessao} />
+            <AppStack.Screen name="SalaDeEspera" component={SalaDeEspera} />
             <AppStack.Screen name="MinhasSessoes" component={MinhasSessoes} />
             <AppStack.Screen name="MeuPsicologo" component={MeuPsicologo} />
             <AppStack.Screen name="SementesPaciente" component={SementesPaciente} />

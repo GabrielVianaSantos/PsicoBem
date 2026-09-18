@@ -157,6 +157,24 @@ const Home = () => {
               <Image source={SectionPaciente} style={styles.cardIcon} />
             </View>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => navigation.navigate('PerfilPsicologo', { focarCampo: 'linkSalaVideo' })}
+          >
+            {!profile?.link_sala_video && <View style={styles.badgeDot} />}
+            <View style={styles.cardContent}>
+              <View style={{flex: 1}}>
+                <Text style={styles.cardTitle}>Minha Sala Virtual</Text>
+                <Text style={styles.cardSubtitle}>
+                  {profile?.link_sala_video ? 'Sua sala está disponível' : 'Configure sua sala de vídeo'}
+                </Text>
+              </View>
+              <View style={styles.salaVirtualIconContainer}>
+                <Ionicons name="videocam" size={28} color="#0B7A6E" />
+              </View>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Hoje Section */}
@@ -324,6 +342,14 @@ const styles = StyleSheet.create ({
         width: 60,
         height: 60,
         resizeMode: 'contain',
+    },
+    salaVirtualIconContainer: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'white',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     sectionHeaderCont: {
         flexDirection: 'row',
