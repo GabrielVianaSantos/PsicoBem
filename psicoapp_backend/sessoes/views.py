@@ -291,6 +291,10 @@ class SessaoViewSet(viewsets.ModelViewSet):
             )
 
         sessao.status = 'faltou'
+        # Falta não gera cobrança neste app — mesma regra do cancelamento:
+        # sem isso, a sessão ficava com pagamento "pendente" para sempre.
+        if sessao.status_pagamento != 'pago':
+            sessao.status_pagamento = 'cancelado'
         sessao.save()
 
         from core.services import NotificationDomainService

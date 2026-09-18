@@ -293,7 +293,16 @@ class MarcarNaoRealizadaActionTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         sessao.refresh_from_db()
         self.assertEqual(sessao.status, 'faltou')
-        self.assertEqual(sessao.status_pagamento, 'pendente')  # não alterado
+        # Falta não gera cobrança: pagamento pendente vira "cancelado".
+        self.assertEqual(sessao.status_pagamento, 'cancelado')
+
+    def test_nao_realizada_nao_sobrescreve_pagamento_ja_confirmado(self):
+        sessao = self._criar_sessao(status_inicial='confirmada', status_pagamento='pago')
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.post(f'/api/sessoes/{sessao.id}/nao-realizada/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        sessao.refresh_from_db()
+        self.assertEqual(sessao.status_pagamento, 'pago')
 
     def test_paciente_nao_pode_marcar_falta(self):
         sessao = self._criar_sessao()
