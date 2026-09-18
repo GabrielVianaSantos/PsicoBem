@@ -89,7 +89,7 @@ export default function CompletarCadastroGoogle() {
             }
             if (!linkSalaVideo.trim()) {
                 newErrors.linkSalaVideo = 'Link da sala de vídeo é obrigatório';
-            } else if (!linkSalaVideo.trim().startsWith('https://meet.google.com/')) {
+            } else if (!/^(https?:\/\/)?(www\.)?meet\.google\.com\/\S+$/i.test(linkSalaVideo.trim())) {
                 newErrors.linkSalaVideo = 'Informe um link válido do Google Meet (https://meet.google.com/...)';
             }
         }

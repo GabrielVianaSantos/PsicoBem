@@ -831,6 +831,27 @@ class PsicologoRegistrationLinkSalaVideoTests(TestCase):
         psicologo = Psicologo.objects.get(crp='03/11122')
         self.assertEqual(psicologo.link_sala_video, 'https://meet.google.com/psi-link-abc')
 
+    def test_aceita_link_sem_esquema_https(self):
+        # Apps de compartilhamento no celular costumam colar só o domínio,
+        # sem "https://" na frente — deve ser aceito e normalizado.
+        response = self.client.post(
+            '/api/auth/register/psicologo/',
+            self._payload(link_sala_video='meet.google.com/psi-link-abc'),
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201)
+        psicologo = Psicologo.objects.get(crp='03/11122')
+        self.assertEqual(psicologo.link_sala_video, 'https://meet.google.com/psi-link-abc')
+
+    def test_rejeita_dominio_sem_codigo_de_sala(self):
+        response = self.client.post(
+            '/api/auth/register/psicologo/',
+            self._payload(link_sala_video='https://meet.google.com/'),
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('link_sala_video', response.data)
+
     def test_cadastro_paciente_nao_exige_link(self):
         response = self.client.post('/api/auth/register/paciente/', {
             'user': {
@@ -905,3 +926,12 @@ class LinkSalaVideoPerfilTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.psicologo.refresh_from_db()
         self.assertEqual(self.psicologo.link_sala_video, 'https://meet.google.com/com-espaco-abc')
+
+    def test_aceita_link_sem_esquema_https(self):
+        self.client.force_authenticate(user=self.user_psicologo)
+        response = self.client.put('/api/auth/profile/update/', {
+            'link_sala_video': 'meet.google.com/sem-esquema-xyz'
+        }, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.psicologo.refresh_from_db()
+        self.assertEqual(self.psicologo.link_sala_video, 'https://meet.google.com/sem-esquema-xyz')

@@ -36,7 +36,9 @@ export default function CadastroPsicologos () {
     };
 
     const validateLinkSalaVideo = (link) => {
-        return link.trim().startsWith('https://meet.google.com/');
+        // Aceita com ou sem "https://"/"www." — apps de compartilhamento no
+        // celular costumam colar só o domínio. O backend normaliza igual.
+        return /^(https?:\/\/)?(www\.)?meet\.google\.com\/\S+$/i.test(link.trim());
     };
 
     const formatCRP = (value) => {

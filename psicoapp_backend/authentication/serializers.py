@@ -45,16 +45,29 @@ class PacienteRegistrationSerializer(serializers.ModelSerializer):
         paciente = Paciente.objects.create(user=user, **validated_data)
         return paciente
 
-LINK_MEET_PREFIX = 'https://meet.google.com/'
+# Aceita com ou sem esquema/www — apps de compartilhamento (principalmente
+# no celular) costumam colar só "meet.google.com/xxx-yyyy-zzz", sem
+# "https://" na frente.
+MEET_LINK_REGEX = re.compile(r'^(?:https?://)?(?:www\.)?meet\.google\.com(/\S+)$', re.IGNORECASE)
+
+
+def normalizar_link_meet(value):
+    """Retorna a URL normalizada (sempre com https://) ou None se não for um link do Meet
+    com um código de sala (exige algo depois de "meet.google.com/")."""
+    value = (value or '').strip()
+    match = MEET_LINK_REGEX.match(value)
+    if not match:
+        return None
+    return f'https://meet.google.com{match.group(1)}'
 
 
 def validar_link_sala_video(value):
-    value = (value or '').strip()
-    if not value.startswith(LINK_MEET_PREFIX):
+    normalizado = normalizar_link_meet(value)
+    if not normalizado:
         raise serializers.ValidationError(
             'Informe o link da sua sala do Google Meet (crie uma em meet.google.com/new).'
         )
-    return value
+    return normalizado
 
 
 class PsicologoRegistrationSerializer(serializers.ModelSerializer):
@@ -62,11 +75,14 @@ class PsicologoRegistrationSerializer(serializers.ModelSerializer):
     Serializer específico para registro de psicólogos
     """
     user = UserRegistrationSerializer()
-    link_sala_video = serializers.URLField(validators=[validar_link_sala_video])
+    link_sala_video = serializers.CharField()
 
     class Meta:
         model = Psicologo
         fields = ('user', 'crp', 'specialization', 'link_sala_video')
+
+    def validate_link_sala_video(self, value):
+        return validar_link_sala_video(value)
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')
@@ -143,13 +159,13 @@ class GoogleCompleteRegistrationSerializer(serializers.Serializer):
             elif Psicologo.objects.filter(crp=crp).exists():
                 errors['crp'] = ['Psicólogo com este CRP já existe.']
 
-            link_sala_video = (attrs.get('link_sala_video') or '').strip()
-            if not link_sala_video.startswith('https://meet.google.com/'):
+            link_normalizado = normalizar_link_meet(attrs.get('link_sala_video'))
+            if not link_normalizado:
                 errors['link_sala_video'] = [
                     'Informe o link da sua sala do Google Meet (crie uma em meet.google.com/new).'
                 ]
             else:
-                attrs['link_sala_video'] = link_sala_video
+                attrs['link_sala_video'] = link_normalizado
 
         if errors:
             raise serializers.ValidationError(errors)
@@ -245,11 +261,14 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate_link_sala_video(self, value):
         value = (value or '').strip()
-        if value and not value.startswith('https://meet.google.com/'):
+        if not value:
+            return value
+        normalizado = normalizar_link_meet(value)
+        if not normalizado:
             raise serializers.ValidationError(
                 'Informe o link da sua sala do Google Meet (crie uma em meet.google.com/new).'
             )
-        return value
+        return normalizado
 
     def update(self, instance, validated_data):
         psicologo_data = validated_data.pop('psicologo_profile', {})
