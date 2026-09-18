@@ -25,7 +25,7 @@ class SementeCuidadoManager(models.Manager):
     
     def programadas_para_hoje(self):
         """Retorna sementes programadas para hoje"""
-        hoje = timezone.now().date()
+        hoje = timezone.localdate()
         return self.filter(
             status='programada',
             data_programada__date=hoje

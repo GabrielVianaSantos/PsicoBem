@@ -190,3 +190,25 @@ class NotificacaoResumoPorCategoriaTests(APITestCase):
 
         nao_lidas_depois = self.client.get(reverse('notificacoes-nao-lidas'))
         self.assertEqual(nao_lidas_depois.data['nao_lidas'], 0)
+
+    def test_limpar_todas_remove_todo_o_historico_do_usuario(self):
+        self._criar(alvo='paciente', tipo='nova_semente', lida=True)
+        self._criar(alvo='paciente', tipo='sistema', lida=False)
+        self.client.force_authenticate(self.paciente_user)
+
+        response = self.client.delete(reverse('notificacoes-limpar-todas'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        listagem = self.client.get(reverse('notificacoes-list'))
+        resultados = listagem.data.get('results', listagem.data)
+        self.assertEqual(len(resultados), 0)
+
+    def test_limpar_todas_nao_afeta_outro_usuario(self):
+        notif_paciente = self._criar(alvo='paciente', tipo='nova_semente')
+        notif_psicologo = self._criar(alvo='psicologo', tipo='sistema')
+
+        self.client.force_authenticate(self.paciente_user)
+        self.client.delete(reverse('notificacoes-limpar-todas'))
+
+        self.assertFalse(NotificacaoSistema.objects.filter(pk=notif_paciente.pk).exists())
+        self.assertTrue(NotificacaoSistema.objects.filter(pk=notif_psicologo.pk).exists())

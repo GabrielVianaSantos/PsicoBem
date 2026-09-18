@@ -90,6 +90,7 @@ class SessaoListSerializer(serializers.ModelSerializer):
     pode_entrar_sala = serializers.SerializerMethodField()
     sala_disponivel_em = serializers.ReadOnlyField()
     sala_pendente_configuracao = serializers.ReadOnlyField()
+    sala_encerrada = serializers.ReadOnlyField()
     psicologo_contato_alternativo = serializers.SerializerMethodField()
 
     class Meta:
@@ -100,7 +101,7 @@ class SessaoListSerializer(serializers.ModelSerializer):
             'status_display', 'status_pagamento_display', 'pode_cancelar',
             'pode_remarcar', 'pode_realizar', 'pode_marcar_falta',
             'sala_url', 'pode_entrar_sala', 'sala_disponivel_em',
-            'sala_pendente_configuracao', 'psicologo_contato_alternativo'
+            'sala_pendente_configuracao', 'sala_encerrada', 'psicologo_contato_alternativo'
         ]
 
     def get_valor_formatado(self, obj):
@@ -159,6 +160,7 @@ class SessaoDetailSerializer(serializers.ModelSerializer):
     pode_entrar_sala = serializers.SerializerMethodField()
     sala_disponivel_em = serializers.ReadOnlyField()
     sala_pendente_configuracao = serializers.ReadOnlyField()
+    sala_encerrada = serializers.ReadOnlyField()
     psicologo_contato_alternativo = serializers.SerializerMethodField()
 
     class Meta:
@@ -170,7 +172,7 @@ class SessaoDetailSerializer(serializers.ModelSerializer):
             'valor_formatado', 'status_display', 'status_pagamento_display',
             'pode_cancelar', 'pode_remarcar', 'pode_realizar', 'pode_marcar_falta',
             'sala_url', 'pode_entrar_sala', 'sala_disponivel_em',
-            'sala_pendente_configuracao', 'psicologo_contato_alternativo'
+            'sala_pendente_configuracao', 'sala_encerrada', 'psicologo_contato_alternativo'
         ]
         read_only_fields = ['created_at', 'updated_at', 'data_pagamento']
 

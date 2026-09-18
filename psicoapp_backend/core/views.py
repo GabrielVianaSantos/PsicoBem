@@ -328,6 +328,12 @@ class NotificacaoViewSet(viewsets.ReadOnlyModelViewSet):
         qs.update(lida=True, data_leitura=timezone.now())
         return Response({'message': f'{count} notificação(ões) marcada(s) como lida(s).'})
 
+    @action(detail=False, methods=['delete'], url_path='limpar-todas')
+    def limpar_todas(self, request):
+        """Remove todo o histórico de notificações do usuário logado."""
+        count, _ = self.get_queryset().delete()
+        return Response({'message': f'{count} notificação(ões) removida(s).'})
+
     @action(detail=False, methods=['get'], url_path='resumo-por-categoria')
     def resumo_por_categoria(self, request):
         """Indica, por assunto, se há notificação não lida — para acender os badges dos cards de menu."""

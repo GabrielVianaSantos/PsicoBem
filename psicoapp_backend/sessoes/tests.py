@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -506,12 +507,15 @@ class SalaUrlExposicaoEAutorizacaoTests(TestCase):
             sessao = self._criar_sessao(status_sessao=status_sessao)
             self.assertFalse(sessao.pode_entrar_na_sala(), f"status={status_sessao}")
 
-    # ---- Janela de entrada: cinco pontos de fronteira ----
-    # duracao_minutos=50; janela = [inicio-15min, inicio+50min+30min] = [-15, +80] em relação a data_hora.
+    # ---- Janela de entrada ----
+    # duracao_minutos=50; janela = [inicio-15min, inicio+50min] em relação a
+    # data_hora — sem margem de tolerância após o fim (removida a pedido:
+    # a sala deve fechar exatamente no horário previsto de término).
 
     def test_janela_antes_do_inicio(self):
         sessao = self._criar_sessao(data_hora=timezone.now() + timedelta(minutes=20))
         self.assertFalse(sessao.pode_entrar_na_sala())
+        self.assertFalse(sessao.sala_encerrada)
 
     def test_janela_exatamente_no_inicio(self):
         sessao = self._criar_sessao(data_hora=timezone.now() + timedelta(minutes=15))
@@ -520,14 +524,31 @@ class SalaUrlExposicaoEAutorizacaoTests(TestCase):
     def test_janela_durante_a_sessao(self):
         sessao = self._criar_sessao(data_hora=timezone.now() - timedelta(minutes=10))
         self.assertTrue(sessao.pode_entrar_na_sala())
+        self.assertFalse(sessao.sala_encerrada)
 
-    def test_janela_dentro_da_margem_posterior(self):
-        sessao = self._criar_sessao(data_hora=timezone.now() - timedelta(minutes=79))
+    def test_janela_pouco_antes_do_horario_de_encerramento(self):
+        # data_hora ~50 min atrás == muito perto do fim previsto (duracao=50).
+        # Uma folga de alguns segundos evita flakiness pelo tempo real
+        # decorrido entre montar a sessão e checar pode_entrar_na_sala().
+        sessao = self._criar_sessao(data_hora=timezone.now() - timedelta(minutes=50) + timedelta(seconds=5))
         self.assertTrue(sessao.pode_entrar_na_sala())
+        self.assertFalse(sessao.sala_encerrada)
 
-    def test_janela_depois_da_margem_posterior(self):
-        sessao = self._criar_sessao(data_hora=timezone.now() - timedelta(minutes=81))
+    def test_janela_fecha_logo_apos_o_horario_previsto_de_termino(self):
+        # 51 min atrás: 1 min depois do fim previsto (duracao=50) — sem
+        # margem de tolerância, a sala já deve estar encerrada.
+        sessao = self._criar_sessao(data_hora=timezone.now() - timedelta(minutes=51))
         self.assertFalse(sessao.pode_entrar_na_sala())
+        self.assertTrue(sessao.sala_encerrada)
+
+    def test_sala_encerrada_falso_para_sessao_ja_resolvida(self):
+        # Sessão que já foi marcada (realizada/cancelada/faltou) não deve
+        # mostrar "sala encerrada" — o assunto já está resolvido.
+        for status_sessao in ('realizada', 'cancelada', 'faltou'):
+            sessao = self._criar_sessao(
+                data_hora=timezone.now() - timedelta(minutes=100), status_sessao=status_sessao
+            )
+            self.assertFalse(sessao.sala_encerrada, f"status={status_sessao}")
 
     def test_sessao_sem_tipo_sessao_nunca_permite_entrar(self):
         # Sem link por sessão (diferente do Jitsi): tipo_sessao=None
@@ -709,3 +730,116 @@ class SalaPendenteEContatoAlternativoTests(TestCase):
         results = res.data.get('results', res.data)
         self.assertTrue(results[0]['sala_pendente_configuracao'])
         self.assertIsNotNone(results[0]['psicologo_contato_alternativo'])
+
+
+class SessoesHojeTimezoneTests(TestCase):
+    """
+    Regressão: /sessoes/hoje/ e /sessoes/semana/ usavam timezone.now().date(),
+    que extrai a data em UTC. Em America/Sao_Paulo (UTC-3), a partir das
+    21h locais o relógio já virou o dia seguinte em UTC, então uma sessão
+    marcada para "hoje" às 22h sumia do filtro. localdate() corrige isso.
+    """
+
+    def setUp(self):
+        self.user_psicologo = User.objects.create_user(
+            username='psi_hoje_tz', email='psi_hoje_tz@test.com', password='pass', user_type='psicologo'
+        )
+        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='44/55666')
+
+        self.user_paciente = User.objects.create_user(
+            username='pac_hoje_tz', email='pac_hoje_tz@test.com', password='pass', user_type='paciente'
+        )
+        self.paciente = Paciente.objects.create(user=self.user_paciente, cpf='222.444.666-88')
+
+        VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='ativo'
+        )
+        self.tipo_sessao = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Noturna', tipo='online', valor=100.00
+        )
+        self.client = APIClient()
+
+    @patch('django.utils.timezone.now')
+    def test_sessao_das_22h_locais_aparece_no_filtro_hoje(self, mock_now):
+        # 15/06/2026 22:00 em America/Sao_Paulo (UTC-3) == 16/06/2026 01:00 UTC.
+        fuso_menos3 = dt_timezone(timedelta(hours=-3))
+        momento_local = datetime(2026, 6, 15, 22, 0, tzinfo=fuso_menos3)
+        mock_now.return_value = momento_local.astimezone(dt_timezone.utc)
+
+        sessao_hoje = Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=self.tipo_sessao,
+            data_hora=momento_local, status='agendada', valor=Decimal('100.00'),
+        )
+
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.get('/api/sessoes/hoje/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        ids = [item['id'] for item in res.data]
+        self.assertIn(sessao_hoje.id, ids, "sessão de hoje às 22h (local) sumiu do filtro por causa do fuso")
+
+    @patch('django.utils.timezone.now')
+    def test_sessao_de_ontem_nao_aparece_no_filtro_hoje(self, mock_now):
+        fuso_menos3 = dt_timezone(timedelta(hours=-3))
+        momento_local = datetime(2026, 6, 15, 22, 0, tzinfo=fuso_menos3)
+        mock_now.return_value = momento_local.astimezone(dt_timezone.utc)
+
+        sessao_ontem = Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=self.tipo_sessao,
+            data_hora=momento_local - timedelta(days=1), status='agendada', valor=Decimal('100.00'),
+        )
+
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.get('/api/sessoes/hoje/')
+        ids = [item['id'] for item in res.data]
+        self.assertNotIn(sessao_ontem.id, ids)
+
+
+class CancelarSessaoStatusPagamentoTests(TestCase):
+    """Cancelar uma sessão não pode deixá-la com pagamento "pendente"."""
+
+    def setUp(self):
+        self.user_psicologo = User.objects.create_user(
+            username='psi_cancel_pag', email='psi_cancel_pag@test.com', password='pass', user_type='psicologo'
+        )
+        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='15/15151')
+
+        self.user_paciente = User.objects.create_user(
+            username='pac_cancel_pag', email='pac_cancel_pag@test.com', password='pass', user_type='paciente'
+        )
+        self.paciente = Paciente.objects.create(user=self.user_paciente, cpf='515.151.515-15')
+
+        VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='ativo'
+        )
+        self.tipo_sessao = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Cancel', tipo='presencial', valor=100.00
+        )
+        self.client = APIClient()
+
+    def test_cancelar_marca_pagamento_como_cancelado(self):
+        sessao = Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=self.tipo_sessao,
+            data_hora=timezone.now() + timedelta(days=1), status='agendada',
+            status_pagamento='pendente', valor=Decimal('100.00'),
+        )
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.post(f'/api/sessoes/{sessao.id}/cancelar/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        sessao.refresh_from_db()
+        self.assertEqual(sessao.status, 'cancelada')
+        self.assertEqual(sessao.status_pagamento, 'cancelado')
+
+    def test_cancelar_nao_sobrescreve_pagamento_ja_confirmado(self):
+        sessao = Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=self.tipo_sessao,
+            data_hora=timezone.now() + timedelta(days=1), status='confirmada',
+            status_pagamento='pago', valor=Decimal('100.00'),
+        )
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.post(f'/api/sessoes/{sessao.id}/cancelar/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        sessao.refresh_from_db()
+        self.assertEqual(sessao.status, 'cancelada')
+        self.assertEqual(sessao.status_pagamento, 'pago')

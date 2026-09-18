@@ -12,7 +12,7 @@ def notificar_pacientes_inativos():
     """
     from engajamentos.models import RegistroOdisseia
     
-    sete_dias_atras = timezone.now().date() - timedelta(days=7)
+    sete_dias_atras = timezone.localdate() - timedelta(days=7)
     
     # Pegar todos os vínculos ativos
     vinculos = VinculoPacientePsicologo.objects.filter(status='ativo').select_related(

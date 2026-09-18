@@ -93,7 +93,9 @@ class SessaoViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def hoje(self, request):
         """Retorna sessões de hoje"""
-        hoje = timezone.now().date()
+        # timezone.now().date() pegaria a data em UTC, que diverge da data
+        # local (America/Sao_Paulo) à noite — localdate() usa o fuso ativo.
+        hoje = timezone.localdate()
         sessoes_hoje = self.get_queryset().filter(data_hora__date=hoje)
         serializer = self.get_serializer(sessoes_hoje, many=True)
         return Response(serializer.data)
@@ -101,7 +103,7 @@ class SessaoViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def semana(self, request):
         """Retorna sessões da semana atual"""
-        hoje = timezone.now().date()
+        hoje = timezone.localdate()
         inicio_semana = hoje - timezone.timedelta(days=hoje.weekday())
         fim_semana = inicio_semana + timezone.timedelta(days=6)
 
@@ -187,6 +189,10 @@ class SessaoViewSet(viewsets.ModelViewSet):
             )
 
         sessao.status = 'cancelada'
+        # Sessão cancelada não deve seguir com pagamento "pendente" — isso
+        # sugeriria uma cobrança em aberto por algo que não aconteceu.
+        if sessao.status_pagamento != 'pago':
+            sessao.status_pagamento = 'cancelado'
         sessao.save()
 
         # Issue 04: Notificação de cancelamento bidirecional

@@ -18,12 +18,14 @@ class SessaoManager(models.Manager):
 
     def sessoes_hoje(self):
         """Retorna sessões de hoje"""
-        hoje = timezone.now().date()
+        # localdate() usa o fuso ativo (America/Sao_Paulo); now().date()
+        # pegaria a data em UTC, que diverge da local à noite.
+        hoje = timezone.localdate()
         return self.filter(data_hora__date=hoje)
 
     def sessoes_semana(self):
         """Retorna sessões da semana atual"""
-        hoje = timezone.now().date()
+        hoje = timezone.localdate()
         inicio_semana = hoje - timedelta(days=hoje.weekday())
         fim_semana = inicio_semana + timedelta(days=6)
         return self.filter(data_hora__date__range=[inicio_semana, fim_semana])
@@ -31,7 +33,7 @@ class SessaoManager(models.Manager):
     def sessoes_mes(self, ano=None, mes=None):
         """Retorna sessões do mês"""
         if not ano or not mes:
-            hoje = timezone.now().date()
+            hoje = timezone.localdate()
             ano = hoje.year
             mes = hoje.month
         return self.filter(data_hora__year=ano, data_hora__month=mes)
@@ -268,11 +270,15 @@ class Sessao(models.Model):
             return None
         return self.data_hora - timedelta(minutes=15)
 
+    def _fim_previsto(self):
+        return self.data_hora + timedelta(minutes=self._duracao_sessao_minutos())
+
     def pode_entrar_na_sala(self):
         """
         Janela de conveniência de interface (não é controle de segurança —
         quem tem a URL entra a qualquer momento; a mitigação real é a
-        regeneração da sala na remarcação).
+        regeneração da sala na remarcação). Fecha exatamente no horário
+        previsto de término — depois disso, sala_encerrada assume.
         """
         if not self.sala_url:
             return False
@@ -281,8 +287,20 @@ class Sessao(models.Model):
 
         agora = timezone.now()
         inicio = self.data_hora - timedelta(minutes=15)
-        fim = self.data_hora + timedelta(minutes=self._duracao_sessao_minutos()) + timedelta(minutes=30)
-        return inicio <= agora <= fim
+        return inicio <= agora <= self._fim_previsto()
+
+    @property
+    def sala_encerrada(self):
+        """
+        Verdadeiro quando o horário previsto de término já passou e a
+        sessão segue sem desfecho registrado — usado para mostrar "sala
+        encerrada" em vez de simplesmente esconder o botão de entrar.
+        """
+        if not self.sala_url:
+            return False
+        if self.status not in ('agendada', 'confirmada', 'remarcada'):
+            return False
+        return timezone.now() > self._fim_previsto()
 
     @property
     def duracao_formatada(self):

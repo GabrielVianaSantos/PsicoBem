@@ -10,7 +10,7 @@ def notificar_metas_vencendo():
     Verifica metas que vencem nas próximas 24h e notifica o paciente.
     Deduplicação: Evita enviar mais de uma vez a cada 24h usando dados_extras index.
     """
-    amanha = timezone.now().date() + timedelta(days=1)
+    amanha = timezone.localdate() + timedelta(days=1)
     
     # Metas que vencem amanhã e ainda não foram concluídas
     metas = MetaOdisseia.objects.filter(
