@@ -215,6 +215,24 @@ class Sessao(models.Model):
         verbose_name='Observações da Sessão'
     )
 
+    # Política de cancelamento tardio (SPEC_POLITICA_CANCELAMENTO_SESSAO.md).
+    # Só preenchidos no momento do cancelamento; ficam vazios para qualquer
+    # sessão que nunca foi cancelada e para as canceladas antes desta feature
+    # (sem backfill possível/necessário).
+    CANCELADO_POR_CHOICES = [
+        ('paciente', 'Paciente'),
+        ('psicologo', 'Psicólogo'),
+    ]
+    cancelado_por = models.CharField(
+        max_length=10,
+        choices=CANCELADO_POR_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name='Cancelado por',
+    )
+    cancelamento_tardio = models.BooleanField(default=False)
+    motivo_cancelamento = models.TextField(null=True, blank=True)
+
     objects = SessaoManager()
 
     # Timestamps
@@ -353,6 +371,16 @@ class Sessao(models.Model):
     def pode_ser_cancelada(self):
         """Verifica se a sessão pode ser cancelada"""
         return self.status in ['agendada', 'confirmada'] and self.data_hora > timezone.now()
+
+    @property
+    def cancelamento_seria_tardio(self):
+        """
+        Verdadeiro quando faltam menos de 24h para o horário marcado — usado
+        pelo app para avisar antes de cancelar, e pela view para classificar
+        o cancelamento no momento em que ele acontece. Não bloqueia nada,
+        só classifica; vale igual para presencial e online.
+        """
+        return (self.data_hora - timezone.now()) < timedelta(hours=24)
     
     def pode_ser_remarcada(self):
         """Verifica se a sessão pode ser remarcada"""

@@ -188,16 +188,32 @@ class SessaoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Política de cancelamento tardio (SPEC_POLITICA_CANCELAMENTO_SESSAO.md):
+        # classifica, nunca bloqueia. Calculado antes de qualquer alteração,
+        # já que depende só de data_hora e do instante atual.
+        cancelado_por = 'psicologo' if hasattr(request.user, 'psicologo_profile') else 'paciente'
+        cancelamento_tardio = sessao.cancelamento_seria_tardio
+        motivo = (request.data.get('motivo') or '').strip()
+
+        if cancelado_por == 'psicologo' and cancelamento_tardio and not motivo:
+            return Response(
+                {'error': 'Informe o motivo do cancelamento tardio.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         sessao.status = 'cancelada'
         # Sessão cancelada não deve seguir com pagamento "pendente" — isso
         # sugeriria uma cobrança em aberto por algo que não aconteceu.
         if sessao.status_pagamento != 'pago':
             sessao.status_pagamento = 'cancelado'
+        sessao.cancelado_por = cancelado_por
+        sessao.cancelamento_tardio = cancelamento_tardio
+        sessao.motivo_cancelamento = motivo or None
         sessao.save()
 
         # Issue 04: Notificação de cancelamento bidirecional
         from core.services import NotificationDomainService
-        
+
         data_formatada = timezone.localtime(sessao.data_hora).strftime("%d/%m/%Y às %H:%M")
         # Issue 02: parâmetro canônico sessaoId (não mais 'id'), entity_type/entity_id
         route = NotificationDomainService._routing_payload(
@@ -207,14 +223,15 @@ class SessaoViewSet(viewsets.ModelViewSet):
             entity_type='sessao',
             entity_id=sessao.pk,
         )
+        sufixo_motivo = f' Motivo: {motivo}' if motivo else ''
 
-        if hasattr(request.user, 'psicologo_profile'):
+        if cancelado_por == 'psicologo':
             # Psicólogo cancelou → notifica paciente
             NotificationDomainService.emit(
                 target=sessao.paciente.user,
                 tipo='sessao_cancelada',
                 titulo='Sessão Cancelada',
-                mensagem=f'Sua sessão de {data_formatada} foi cancelada pelo psicólogo.',
+                mensagem=f'Sua sessão de {data_formatada} foi cancelada pelo psicólogo.{sufixo_motivo}',
                 link_relacionado=f'/sessoes/{sessao.pk}',
                 dados_extras=route,
             )
@@ -224,7 +241,7 @@ class SessaoViewSet(viewsets.ModelViewSet):
                 target=sessao.psicologo.user,
                 tipo='sessao_cancelada',
                 titulo='Sessão Cancelada',
-                mensagem=f'{sessao.paciente.user.first_name} cancelou a sessão de {data_formatada}.',
+                mensagem=f'{sessao.paciente.user.first_name} cancelou a sessão de {data_formatada}.{sufixo_motivo}',
                 link_relacionado=f'/sessoes/{sessao.pk}',
                 dados_extras=route,
             )

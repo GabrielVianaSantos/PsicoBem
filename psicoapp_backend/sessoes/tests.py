@@ -828,7 +828,7 @@ class CancelarSessaoStatusPagamentoTests(TestCase):
     def test_cancelar_marca_pagamento_como_cancelado(self):
         sessao = Sessao.objects.create(
             paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=self.tipo_sessao,
-            data_hora=timezone.now() + timedelta(days=1), status='agendada',
+            data_hora=timezone.now() + timedelta(days=3), status='agendada',
             status_pagamento='pendente', valor=Decimal('100.00'),
         )
         self.client.force_authenticate(user=self.user_psicologo)
@@ -842,7 +842,7 @@ class CancelarSessaoStatusPagamentoTests(TestCase):
     def test_cancelar_nao_sobrescreve_pagamento_ja_confirmado(self):
         sessao = Sessao.objects.create(
             paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=self.tipo_sessao,
-            data_hora=timezone.now() + timedelta(days=1), status='confirmada',
+            data_hora=timezone.now() + timedelta(days=3), status='confirmada',
             status_pagamento='pago', valor=Decimal('100.00'),
         )
         self.client.force_authenticate(user=self.user_psicologo)
@@ -852,3 +852,154 @@ class CancelarSessaoStatusPagamentoTests(TestCase):
         sessao.refresh_from_db()
         self.assertEqual(sessao.status, 'cancelada')
         self.assertEqual(sessao.status_pagamento, 'pago')
+
+
+class CancelamentoSeriaTardioTests(TestCase):
+    """Issue 01 (SPEC_POLITICA_CANCELAMENTO_SESSAO) — janela de 24h e campos novos."""
+
+    def setUp(self):
+        self.user_psicologo = User.objects.create_user(
+            username='psi_tardio', email='psi_tardio@test.com', password='pass', user_type='psicologo'
+        )
+        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='16/16161')
+
+        self.user_paciente = User.objects.create_user(
+            username='pac_tardio', email='pac_tardio@test.com', password='pass', user_type='paciente'
+        )
+        self.paciente = Paciente.objects.create(user=self.user_paciente, cpf='616.161.616-16')
+
+        VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='ativo'
+        )
+        self.tipo_sessao = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Tardio', tipo='presencial', valor=100.00
+        )
+        self.client = APIClient()
+
+    def _criar_sessao(self, data_hora):
+        return Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=self.tipo_sessao,
+            data_hora=data_hora, status='agendada', valor=Decimal('100.00'),
+        )
+
+    def test_dentro_do_prazo_nao_e_tardio(self):
+        sessao = self._criar_sessao(timezone.now() + timedelta(hours=24, minutes=1))
+        self.assertFalse(sessao.cancelamento_seria_tardio)
+
+    def test_fora_do_prazo_e_tardio(self):
+        sessao = self._criar_sessao(timezone.now() + timedelta(hours=23, minutes=59))
+        self.assertTrue(sessao.cancelamento_seria_tardio)
+
+    def test_campos_novos_vazios_em_sessao_nunca_cancelada(self):
+        sessao = self._criar_sessao(timezone.now() + timedelta(days=3))
+        self.assertIsNone(sessao.cancelado_por)
+        self.assertFalse(sessao.cancelamento_tardio)
+        self.assertIsNone(sessao.motivo_cancelamento)
+
+    def test_serializer_expoe_os_campos_novos(self):
+        sessao = self._criar_sessao(timezone.now() + timedelta(hours=23))
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.get(f'/api/sessoes/{sessao.id}/')
+        self.assertTrue(res.data['cancelamento_seria_tardio'])
+        self.assertIsNone(res.data['cancelado_por'])
+        self.assertFalse(res.data['cancelamento_tardio'])
+        self.assertIsNone(res.data['motivo_cancelamento'])
+
+
+class CancelarComPoliticaTardiaTests(TestCase):
+    """Issue 02 (SPEC_POLITICA_CANCELAMENTO_SESSAO) — motivo obrigatório/opcional."""
+
+    def setUp(self):
+        self.user_psicologo = User.objects.create_user(
+            username='psi_pol_tardio', email='psi_pol_tardio@test.com', password='pass', user_type='psicologo'
+        )
+        self.psicologo = Psicologo.objects.create(user=self.user_psicologo, crp='17/17171')
+
+        self.user_paciente = User.objects.create_user(
+            username='pac_pol_tardio', email='pac_pol_tardio@test.com', password='pass', user_type='paciente',
+            first_name='Fulana'
+        )
+        self.paciente = Paciente.objects.create(user=self.user_paciente, cpf='717.171.717-17')
+
+        VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='ativo'
+        )
+        self.tipo_sessao = TipoSessao.objects.create(
+            psicologo=self.psicologo, nome='Consulta Pol Tardio', tipo='presencial', valor=100.00
+        )
+        self.client = APIClient()
+
+    def _criar_sessao(self, data_hora):
+        return Sessao.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, tipo_sessao=self.tipo_sessao,
+            data_hora=data_hora, status='agendada', status_pagamento='pendente', valor=Decimal('100.00'),
+        )
+
+    def test_cancelamento_dentro_do_prazo_nao_exige_motivo_nem_marca_tardio(self):
+        for user in (self.user_paciente, self.user_psicologo):
+            sessao = self._criar_sessao(timezone.now() + timedelta(days=3))
+            self.client.force_authenticate(user=user)
+            res = self.client.post(f'/api/sessoes/{sessao.id}/cancelar/')
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            sessao.refresh_from_db()
+            self.assertFalse(sessao.cancelamento_tardio)
+            self.assertIsNone(sessao.motivo_cancelamento)
+
+    def test_paciente_cancela_tardio_sem_motivo_e_aceito(self):
+        sessao = self._criar_sessao(timezone.now() + timedelta(hours=2))
+        self.client.force_authenticate(user=self.user_paciente)
+        res = self.client.post(f'/api/sessoes/{sessao.id}/cancelar/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        sessao.refresh_from_db()
+        self.assertEqual(sessao.status, 'cancelada')
+        self.assertEqual(sessao.cancelado_por, 'paciente')
+        self.assertTrue(sessao.cancelamento_tardio)
+        self.assertIsNone(sessao.motivo_cancelamento)
+
+    def test_paciente_cancela_tardio_com_motivo_e_persistido(self):
+        sessao = self._criar_sessao(timezone.now() + timedelta(hours=2))
+        self.client.force_authenticate(user=self.user_paciente)
+        res = self.client.post(f'/api/sessoes/{sessao.id}/cancelar/', {'motivo': 'Caiu a internet'}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        sessao.refresh_from_db()
+        self.assertEqual(sessao.motivo_cancelamento, 'Caiu a internet')
+
+    def test_psicologo_cancela_tardio_sem_motivo_retorna_400(self):
+        sessao = self._criar_sessao(timezone.now() + timedelta(hours=2))
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.post(f'/api/sessoes/{sessao.id}/cancelar/')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        sessao.refresh_from_db()
+        self.assertEqual(sessao.status, 'agendada')
+
+    def test_psicologo_cancela_tardio_com_motivo_e_aceito(self):
+        sessao = self._criar_sessao(timezone.now() + timedelta(hours=2))
+        self.client.force_authenticate(user=self.user_psicologo)
+        res = self.client.post(
+            f'/api/sessoes/{sessao.id}/cancelar/', {'motivo': 'Imprevisto médico'}, format='json'
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        sessao.refresh_from_db()
+        self.assertEqual(sessao.status, 'cancelada')
+        self.assertEqual(sessao.cancelado_por, 'psicologo')
+        self.assertTrue(sessao.cancelamento_tardio)
+        self.assertEqual(sessao.motivo_cancelamento, 'Imprevisto médico')
+
+    def test_notificacao_inclui_motivo_quando_presente(self):
+        from core.models import NotificacaoSistema
+
+        sessao = self._criar_sessao(timezone.now() + timedelta(hours=2))
+        self.client.force_authenticate(user=self.user_psicologo)
+        self.client.post(f'/api/sessoes/{sessao.id}/cancelar/', {'motivo': 'Imprevisto médico'}, format='json')
+
+        notificacao = NotificacaoSistema.objects.filter(tipo='sessao_cancelada', paciente=self.paciente).first()
+        self.assertIsNotNone(notificacao)
+        self.assertIn('Motivo: Imprevisto médico', notificacao.mensagem)
+
+    def test_regra_status_pagamento_cancelado_continua_igual(self):
+        sessao = self._criar_sessao(timezone.now() + timedelta(days=3))
+        self.client.force_authenticate(user=self.user_paciente)
+        res = self.client.post(f'/api/sessoes/{sessao.id}/cancelar/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        sessao.refresh_from_db()
+        self.assertEqual(sessao.status_pagamento, 'cancelado')
