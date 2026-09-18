@@ -112,9 +112,9 @@ export const sessaoService = {
     }
   },
 
-  async cancelarSessao(id) {
+  async cancelarSessao(id, { motivo } = {}) {
     try {
-      const response = await api.post(`/sessoes/${id}/cancelar/`);
+      const response = await api.post(`/sessoes/${id}/cancelar/`, { motivo });
       return { success: true, data: response.data, message: response.data.message || 'Sessão cancelada com sucesso!' };
     } catch (error) {
       return this.buildError(error, 'Erro ao cancelar sessão');
@@ -239,7 +239,7 @@ export const sessaoService = {
   buildError(error, fallbackMessage) {
     return {
       success: false,
-      message: error.response?.data?.detail || error.response?.data?.message || fallbackMessage,
+      message: error.response?.data?.error || error.response?.data?.detail || error.response?.data?.message || fallbackMessage,
       status: error.response?.status || 0,
       errors: error.response?.data,
     };

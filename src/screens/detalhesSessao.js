@@ -8,12 +8,14 @@ import {
     ScrollView,
     ActivityIndicator,
     TouchableOpacity,
-    Linking
+    Linking,
+    Modal
 } from "react-native";
 import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import { sessaoService } from "../services/sessaoService";
 import { useAuth } from "../hooks/useAuth";
+import TextInputCustom from "../components/common/TextInputField";
 
 export default function DetalhesSessao() {
     const navigation = useNavigation();
@@ -25,6 +27,9 @@ export default function DetalhesSessao() {
     const [loading, setLoading] = useState(true);
     const [compartilhandoIcs, setCompartilhandoIcs] = useState(false);
     const [erroAbrirSalaDireto, setErroAbrirSalaDireto] = useState(false);
+    const [mostrarModalCancelar, setMostrarModalCancelar] = useState(false);
+    const [motivoCancelamento, setMotivoCancelamento] = useState('');
+    const [cancelando, setCancelando] = useState(false);
 
     const carregarSessao = async ({ silencioso = false } = {}) => {
         try {
@@ -166,7 +171,27 @@ export default function DetalhesSessao() {
         );
     };
 
+    const executarCancelamento = async (motivo) => {
+        const result = await sessaoService.cancelarSessao(sessaoId, { motivo });
+        if (result.success) {
+            Alert.alert('Sucesso', result.message, [
+                { text: 'OK', onPress: () => navigation.goBack() }
+            ]);
+        } else {
+            Alert.alert('Erro', result.message);
+        }
+    };
+
     const cancelarSessao = () => {
+        // Cancelamento tardio (política de 24h): aviso diferenciado com
+        // campo de motivo (obrigatório só para o psicólogo) em vez do
+        // simples "tem certeza?" de sempre.
+        if (sessao.cancelamento_seria_tardio) {
+            setMotivoCancelamento('');
+            setMostrarModalCancelar(true);
+            return;
+        }
+
         Alert.alert(
             'Cancelar Sessão',
             'Tem certeza que deseja cancelar esta sessão?',
@@ -175,19 +200,20 @@ export default function DetalhesSessao() {
                 {
                     text: 'Sim',
                     style: 'destructive',
-                    onPress: async () => {
-                        const result = await sessaoService.cancelarSessao(sessaoId);
-                        if (result.success) {
-                            Alert.alert('Sucesso', result.message, [
-                                { text: 'OK', onPress: () => navigation.goBack() }
-                            ]);
-                        } else {
-                            Alert.alert('Erro', result.message);
-                        }
-                    }
+                    onPress: () => executarCancelamento(''),
                 }
             ]
         );
+    };
+
+    const confirmarCancelamentoTardio = async () => {
+        setCancelando(true);
+        try {
+            await executarCancelamento(motivoCancelamento.trim());
+            setMostrarModalCancelar(false);
+        } finally {
+            setCancelando(false);
+        }
     };
 
     if (loading) {
@@ -313,6 +339,26 @@ export default function DetalhesSessao() {
                         <Text style={estilos.observacoesText}>
                             {sessao.observacoes_sessao}
                         </Text>
+                    </View>
+                )}
+
+                {/* Cancelamento — visível aos dois participantes */}
+                {sessao.status === 'cancelada' && sessao.cancelado_por && (
+                    <View style={estilos.section}>
+                        <Text style={estilos.sectionTitle}>Cancelamento</Text>
+                        <Text style={estilos.infoText}>
+                            Cancelada por {sessao.cancelado_por_display}
+                        </Text>
+                        {sessao.cancelamento_tardio && (
+                            <Text style={estilos.cancelamentoTardioTexto}>
+                                Cancelamento tardio (menos de 24h de antecedência)
+                            </Text>
+                        )}
+                        {sessao.motivo_cancelamento && (
+                            <Text style={estilos.observacoesText}>
+                                Motivo: {sessao.motivo_cancelamento}
+                            </Text>
+                        )}
                     </View>
                 )}
 
@@ -459,6 +505,47 @@ export default function DetalhesSessao() {
                     )}
                 </View>
             </ScrollView>
+
+            <Modal
+                visible={mostrarModalCancelar}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setMostrarModalCancelar(false)}
+            >
+                <View style={estilos.modalFundo}>
+                    <View style={estilos.modalCard}>
+                        <Text style={estilos.modalTitulo}>Cancelar sessão</Text>
+                        <Text style={estilos.modalAviso}>
+                            Isso conta como cancelamento tardio (menos de 24h de antecedência) e ficará registrado.
+                        </Text>
+                        <TextInputCustom
+                            texto={userType === 'psicologo' ? 'Motivo (obrigatório)' : 'Motivo (opcional)'}
+                            iconName="chatbox-ellipses-outline"
+                            value={motivoCancelamento}
+                            onChangeText={setMotivoCancelamento}
+                            texto_placeholder="Conte rapidamente o que aconteceu"
+                            multiline
+                        />
+                        <View style={estilos.modalBotoes}>
+                            <TouchableOpacity
+                                style={estilos.modalBotaoSecundario}
+                                onPress={() => setMostrarModalCancelar(false)}
+                                disabled={cancelando}
+                            >
+                                <Text style={estilos.modalBotaoSecundarioTexto}>Voltar</Text>
+                            </TouchableOpacity>
+                            <View style={{ flex: 1 }}>
+                                <Botao
+                                    texto={cancelando ? 'Cancelando...' : 'Confirmar cancelamento'}
+                                    onPress={confirmarCancelamentoTardio}
+                                    backgroundColor="#EF5350"
+                                    disabled={cancelando || (userType === 'psicologo' && !motivoCancelamento.trim())}
+                                />
+                            </View>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -468,6 +555,63 @@ const estilos = StyleSheet.create({
         flex: 1,
         backgroundColor: 'white',
         padding: 25,
+    },
+
+    modalFundo: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        padding: 25,
+    },
+
+    modalCard: {
+        backgroundColor: 'white',
+        borderRadius: 14,
+        padding: 22,
+    },
+
+    modalTitulo: {
+        color: '#11B5A4',
+        fontFamily: 'RalewayBold',
+        fontSize: 19,
+        marginBottom: 10,
+    },
+
+    modalAviso: {
+        color: '#333',
+        fontFamily: 'Raleway',
+        fontSize: 14,
+        lineHeight: 20,
+        marginBottom: 14,
+    },
+
+    modalBotoes: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 18,
+        alignItems: 'center',
+    },
+
+    modalBotaoSecundario: {
+        paddingVertical: 13,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        borderWidth: 1.5,
+        borderColor: '#CCC',
+    },
+
+    modalBotaoSecundarioTexto: {
+        color: '#666',
+        fontFamily: 'RalewayBold',
+        fontSize: 14,
+    },
+
+    cancelamentoTardioTexto: {
+        color: '#EF5350',
+        fontFamily: 'RalewayBold',
+        fontSize: 13,
+        marginTop: 4,
+        marginBottom: 6,
     },
 
     titulo: {
