@@ -253,12 +253,21 @@ export const notificationService = {
       return { success: false, skipped: true, message: 'Device não registrado localmente.' };
     }
 
-    const response = await api.post('/push/devices/deactivate/', {
-      device_id: deviceId,
-      provider: 'expo',
-    });
-
-    return { success: true, data: response.data };
+    try {
+      const response = await api.post('/push/devices/deactivate/', {
+        device_id: deviceId,
+        provider: 'expo',
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      // 401 aqui é esperado quando a conta já não existe mais (ex.: logout
+      // logo após excluir a conta) — o registro do dispositivo já foi
+      // apagado em cascata no backend, não há nada de fato a desativar.
+      if (error.response?.status === 401) {
+        return { success: false, skipped: true, message: 'Sessão já encerrada.' };
+      }
+      throw error;
+    }
   },
 
   /**
