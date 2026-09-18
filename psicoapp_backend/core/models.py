@@ -278,27 +278,35 @@ class NotificacaoSistema(models.Model):
 class Prontuario(models.Model):
     """
     Relatórios e notas clínicas feitas pelo psicólogo sobre um paciente (Guias de Apoio).
+
+    `paciente` é SET_NULL (não CASCADE) de propósito: se o paciente excluir a
+    própria conta (SPEC_EXCLUSAO_CONTA.md), o prontuário — documentação
+    profissional do psicólogo — continua existindo, órfão. `paciente_nome_snapshot`
+    guarda o nome do paciente independente do vínculo ainda existir.
     """
     psicologo = models.ForeignKey(
-        Psicologo, 
-        on_delete=models.CASCADE, 
+        Psicologo,
+        on_delete=models.CASCADE,
         related_name='prontuarios_criados'
     )
     paciente = models.ForeignKey(
-        Paciente, 
-        on_delete=models.CASCADE, 
+        Paciente,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='prontuarios'
     )
+    paciente_nome_snapshot = models.CharField(max_length=255, blank=True, default='')
     titulo = models.CharField(
-        max_length=255, 
-        blank=True, 
-        default='', 
+        max_length=255,
+        blank=True,
+        default='',
         verbose_name="Título"
     )
     anotacao = models.TextField(
         verbose_name="Anotação / Relatório Clínico"
     )
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -307,5 +315,15 @@ class Prontuario(models.Model):
         verbose_name_plural = 'Prontuários'
         ordering = ['-created_at']
 
+    def save(self, *args, **kwargs):
+        if self.paciente_id and not self.paciente_nome_snapshot:
+            nome = f"{self.paciente.user.first_name} {self.paciente.user.last_name}".strip()
+            self.paciente_nome_snapshot = nome or self.paciente_nome_snapshot
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"Prontuário de {self.paciente.user.first_name} por {self.psicologo.user.first_name}"
+        nome_paciente = (
+            self.paciente.user.first_name if self.paciente_id
+            else (self.paciente_nome_snapshot or 'paciente removido')
+        )
+        return f"Prontuário de {nome_paciente} por {self.psicologo.user.first_name}"

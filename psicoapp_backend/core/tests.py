@@ -84,6 +84,86 @@ class ProntuarioViewSetAccessTests(APITestCase):
         )
 
 
+class ProntuarioSobreviveExclusaoPacienteTests(APITestCase):
+    """
+    SPEC_EXCLUSAO_CONTA.md: se o paciente excluir a própria conta, o
+    prontuário que o psicólogo escreveu sobre ele deve continuar existindo
+    (paciente=None + nome congelado), em vez de cascatear junto.
+    """
+
+    def setUp(self):
+        self.psicologo_user = CustomUser.objects.create_user(
+            username='sobrevive-psi', email='sobrevive-psi@example.com',
+            password='senha-segura', user_type='psicologo',
+        )
+        self.psicologo = Psicologo.objects.create(user=self.psicologo_user, crp='08/22222')
+
+        self.paciente_user = CustomUser.objects.create_user(
+            username='sobrevive-pac', email='sobrevive-pac@example.com',
+            password='senha-segura', user_type='paciente',
+            first_name='Fulana', last_name='Souza',
+        )
+        self.paciente = Paciente.objects.create(user=self.paciente_user, cpf='888.888.888-88', gender='F')
+
+    def test_snapshot_e_preenchido_automaticamente_na_criacao(self):
+        prontuario = Prontuario.objects.create(
+            psicologo=self.psicologo, paciente=self.paciente,
+            titulo='Sessão inicial', anotacao='Conteúdo clínico.',
+        )
+        self.assertEqual(prontuario.paciente_nome_snapshot, 'Fulana Souza')
+
+    def test_prontuario_sobrevive_a_exclusao_do_paciente(self):
+        prontuario = Prontuario.objects.create(
+            psicologo=self.psicologo, paciente=self.paciente,
+            titulo='Sessão inicial', anotacao='Conteúdo clínico.',
+        )
+
+        self.paciente_user.delete()
+
+        prontuario.refresh_from_db()
+        self.assertIsNone(prontuario.paciente_id)
+        self.assertEqual(prontuario.paciente_nome_snapshot, 'Fulana Souza')
+        self.assertEqual(prontuario.anotacao, 'Conteúdo clínico.')
+
+    def test_str_nao_quebra_com_paciente_removido(self):
+        prontuario = Prontuario.objects.create(
+            psicologo=self.psicologo, paciente=self.paciente,
+            titulo='Sessão inicial', anotacao='Conteúdo clínico.',
+        )
+        self.paciente_user.delete()
+        prontuario.refresh_from_db()
+
+        self.assertIn('Fulana', str(prontuario))
+
+    def test_serializer_nao_quebra_e_sinaliza_paciente_removido(self):
+        from core.serializers import ProntuarioSerializer
+
+        prontuario = Prontuario.objects.create(
+            psicologo=self.psicologo, paciente=self.paciente,
+            titulo='Sessão inicial', anotacao='Conteúdo clínico.',
+        )
+        self.paciente_user.delete()
+        prontuario.refresh_from_db()
+
+        data = ProntuarioSerializer(prontuario).data
+        self.assertTrue(data['paciente_removido'])
+        self.assertEqual(data['paciente_nome'], 'Fulana Souza')
+        self.assertIsNone(data['paciente'])
+
+    def test_prontuario_com_paciente_ativo_continua_com_nome_ao_vivo(self):
+        prontuario = Prontuario.objects.create(
+            psicologo=self.psicologo, paciente=self.paciente,
+            titulo='Sessão inicial', anotacao='Conteúdo clínico.',
+        )
+        self.paciente_user.first_name = 'Outronome'
+        self.paciente_user.save()
+
+        from core.serializers import ProntuarioSerializer
+        data = ProntuarioSerializer(prontuario).data
+        self.assertFalse(data['paciente_removido'])
+        self.assertEqual(data['paciente_nome'], 'Outronome')
+
+
 class NotificacaoResumoPorCategoriaTests(APITestCase):
     """Badges de novidade nos cards de menu: resumo e marcação por categoria."""
 

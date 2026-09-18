@@ -42,14 +42,23 @@ class PsicologoBasicSerializer(serializers.ModelSerializer):
 #####################################################################################################################################
 
 class ProntuarioSerializer(serializers.ModelSerializer):
-    paciente_nome = serializers.CharField(source='paciente.user.first_name', read_only=True)
+    paciente_nome = serializers.SerializerMethodField()
+    paciente_removido = serializers.SerializerMethodField()
     psicologo_nome = serializers.CharField(source='psicologo.user.first_name', read_only=True)
 
     class Meta:
         model = Prontuario
-        fields = ['id', 'psicologo', 'psicologo_nome', 'paciente', 'paciente_nome', 
-                  'titulo', 'anotacao', 'created_at', 'updated_at']
+        fields = ['id', 'psicologo', 'psicologo_nome', 'paciente', 'paciente_nome',
+                  'paciente_removido', 'titulo', 'anotacao', 'created_at', 'updated_at']
         read_only_fields = ['id', 'psicologo', 'created_at', 'updated_at']
+
+    def get_paciente_nome(self, obj):
+        if obj.paciente_id:
+            return obj.paciente.user.first_name
+        return obj.paciente_nome_snapshot or 'Paciente removido'
+
+    def get_paciente_removido(self, obj):
+        return obj.paciente_id is None
 
 #####################################################################################################################################
 # VÍNCULO PACIENTE-PSICÓLOGO
