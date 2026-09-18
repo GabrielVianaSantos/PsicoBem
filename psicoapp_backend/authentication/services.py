@@ -1,9 +1,12 @@
+import hashlib
 import logging
 import random
 import re
+import secrets
 import string
 import time
 import uuid
+from datetime import timedelta
 
 import jwt
 from google.auth.transport import requests as google_requests
@@ -11,8 +14,9 @@ from google.oauth2 import id_token as google_id_token
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.utils import timezone
 
-from .models import CustomUser
+from .models import CustomUser, PasswordResetCode
 
 logger = logging.getLogger(__name__)
 
@@ -108,13 +112,35 @@ def generate_unique_username(email):
     return f'user_{uuid.uuid4().hex[:12]}'
 
 
-def send_password_reset_email(user, token):
+def hash_reset_code(code):
+    """Hash determinístico (com pepper via SECRET_KEY) do código de reset."""
+    return hashlib.sha256(f'{settings.SECRET_KEY}:{code}'.encode()).hexdigest()
+
+
+def generate_password_reset_code(user):
+    """
+    Gera um código numérico de 6 dígitos para recuperação de senha e persiste
+    apenas seu hash. Invalida quaisquer códigos anteriores ainda não usados
+    do mesmo usuário, garantindo que só o código mais recente seja válido.
+    """
+    PasswordResetCode.objects.filter(user=user, usado=False).update(usado=True)
+
+    code = f'{secrets.randbelow(1_000_000):06d}'
+    PasswordResetCode.objects.create(
+        user=user,
+        code_hash=hash_reset_code(code),
+        expires_at=timezone.now() + timedelta(seconds=settings.PASSWORD_RESET_TOKEN_TTL),
+    )
+    return code
+
+
+def send_password_reset_email(user, code):
     """Envia o código de recuperação de senha por e-mail (texto simples)."""
     minutos = settings.PASSWORD_RESET_TOKEN_TTL // 60
     mensagem = (
         f"Olá, {user.first_name or user.email}!\n\n"
         f"Recebemos uma solicitação para redefinir a senha da sua conta PsicoBem.\n\n"
-        f"Seu código de recuperação é:\n\n{token}\n\n"
+        f"Seu código de recuperação é: {code}\n\n"
         f"Esse código expira em {minutos} minutos. Se você não solicitou essa "
         f"alteração, pode ignorar este e-mail com segurança."
     )

@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, update_session_auth_hash
 from django.db import IntegrityError, transaction
 from django.db.models import Q
-from .models import CustomUser, Paciente, Psicologo
+from .models import CustomUser, Paciente, PasswordResetCode, Psicologo
 from .serializers import (
     UserRegistrationSerializer,
     PacienteRegistrationSerializer,
@@ -20,7 +20,9 @@ from .serializers import (
 from .services import (
     GoogleAuthError,
     decode_purpose_token,
+    generate_password_reset_code,
     generate_unique_username,
+    hash_reset_code,
     issue_purpose_token,
     send_password_reset_email,
     send_welcome_email,
@@ -123,6 +125,9 @@ def user_update_view(request):
 class PasswordResetRequestThrottle(AnonRateThrottle):
     scope = 'password_reset'
 
+class PasswordResetConfirmThrottle(AnonRateThrottle):
+    scope = 'password_reset_confirm'
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @throttle_classes([PasswordResetRequestThrottle])
@@ -141,11 +146,8 @@ def password_reset_request_view(request):
 
     user = CustomUser.objects.filter(email=email).first()
     if user is not None and user.has_usable_password():
-        token, _ = issue_purpose_token(
-            'password_reset', {'sub': str(user.pk), 'email': user.email},
-            ttl=settings.PASSWORD_RESET_TOKEN_TTL,
-        )
-        send_password_reset_email(user, token)
+        code = generate_password_reset_code(user)
+        send_password_reset_email(user, code)
 
     return Response(
         {'message': 'Se o e-mail estiver cadastrado, você receberá um código em instantes.'},
@@ -154,14 +156,22 @@ def password_reset_request_view(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([PasswordResetConfirmThrottle])
 def password_reset_confirm_view(request):
     """
-    View para confirmar redefinição de senha usando o token enviado por e-mail.
+    View para confirmar redefinição de senha usando o código numérico
+    enviado por e-mail (ver PasswordResetCode).
     """
-    token = request.data.get('token')
+    email = (request.data.get('email') or '').strip()
+    code = (request.data.get('token') or '').strip()
     new_password = request.data.get('new_password')
 
-    if not token or not new_password:
+    generic_error = Response(
+        {'detail': 'Código inválido ou expirado.', 'code': 'password_reset_token_expired'},
+        status=status.HTTP_401_UNAUTHORIZED,
+    )
+
+    if not email or not code or not new_password:
         return Response({'detail': 'Dados incompletos.'}, status=status.HTTP_400_BAD_REQUEST)
 
     if len(new_password) < 6:
@@ -170,24 +180,21 @@ def password_reset_confirm_view(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    try:
-        claims = decode_purpose_token(token, 'password_reset')
-    except GoogleAuthError:
-        return Response(
-            {'detail': 'Código inválido ou expirado.', 'code': 'password_reset_token_expired'},
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
-
-    try:
-        user = CustomUser.objects.filter(pk=int(claims['sub']), email=claims['email']).first()
-    except (TypeError, ValueError):
-        user = None
-
+    user = CustomUser.objects.filter(email=email).first()
     if user is None:
-        return Response(
-            {'detail': 'Código inválido ou expirado.', 'code': 'password_reset_token_expired'},
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
+        return generic_error
+
+    reset_code = PasswordResetCode.objects.filter(user=user, usado=False).order_by('-created_at').first()
+    if reset_code is None or reset_code.expirado or reset_code.esgotado:
+        return generic_error
+
+    if hash_reset_code(code) != reset_code.code_hash:
+        reset_code.tentativas += 1
+        reset_code.save(update_fields=['tentativas'])
+        return generic_error
+
+    reset_code.usado = True
+    reset_code.save(update_fields=['usado'])
 
     user.set_password(new_password)
     user.save()

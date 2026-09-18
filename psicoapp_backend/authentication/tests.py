@@ -6,11 +6,13 @@ from django.conf import settings
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
-from .models import CustomUser, Paciente, Psicologo
+from .models import CustomUser, Paciente, PasswordResetCode, Psicologo
 from .services import (
     GoogleAuthError,
     decode_purpose_token,
+    generate_password_reset_code,
     generate_unique_username,
+    hash_reset_code,
     issue_purpose_token,
 )
 
@@ -642,17 +644,14 @@ class PasswordResetConfirmViewTests(TestCase):
             email='confirmar@gmail.com', username='confirmar', user_type='paciente', password='senhaAntiga1',
         )
 
-    def _gerar_token(self, **overrides):
-        payload = {'sub': str(self.user.pk), 'email': self.user.email}
+    def _payload(self, code, **overrides):
+        payload = {'email': self.user.email, 'token': code, 'new_password': 'senhaNova123'}
         payload.update(overrides)
-        token, _ = issue_purpose_token('password_reset', payload, ttl=settings.PASSWORD_RESET_TOKEN_TTL)
-        return token
+        return payload
 
-    def test_token_valido_altera_senha_e_permite_login(self):
-        token = self._gerar_token()
-        response = self.client.post('/api/auth/password/reset/confirm/', {
-            'token': token, 'new_password': 'senhaNova123',
-        }, format='json')
+    def test_codigo_valido_altera_senha_e_permite_login(self):
+        code = generate_password_reset_code(self.user)
+        response = self.client.post('/api/auth/password/reset/confirm/', self._payload(code), format='json')
         self.assertEqual(response.status_code, 200)
 
         login = self.client.post('/api/auth/login/', {
@@ -660,44 +659,72 @@ class PasswordResetConfirmViewTests(TestCase):
         }, format='json')
         self.assertEqual(login.status_code, 200)
 
+    def test_codigo_com_espacos_ao_redor_e_aceito(self):
+        # Reproduz o bug relatado: copiar o código do e-mail no celular
+        # costuma trazer espaços/quebras de linha junto — o backend deve
+        # tolerar isso mesmo que o app também trate no cliente.
+        code = generate_password_reset_code(self.user)
+        response = self.client.post('/api/auth/password/reset/confirm/', self._payload(f'  {code}\n'), format='json')
+        self.assertEqual(response.status_code, 200)
+
     def test_dados_incompletos_retorna_400(self):
-        response = self.client.post('/api/auth/password/reset/confirm/', {'token': 'x'}, format='json')
+        response = self.client.post('/api/auth/password/reset/confirm/', {
+            'email': self.user.email, 'token': 'x',
+        }, format='json')
         self.assertEqual(response.status_code, 400)
 
     def test_senha_curta_retorna_400(self):
-        token = self._gerar_token()
-        response = self.client.post('/api/auth/password/reset/confirm/', {
-            'token': token, 'new_password': '123',
-        }, format='json')
+        code = generate_password_reset_code(self.user)
+        response = self.client.post('/api/auth/password/reset/confirm/', self._payload(code, new_password='123'), format='json')
         self.assertEqual(response.status_code, 400)
         self.assertIn('new_password', response.data)
 
-    def test_token_expirado_retorna_401_com_code(self):
-        now = int(time.time())
-        claims = {
-            'typ': 'password_reset', 'iss': 'psicobem', 'sub': str(self.user.pk), 'email': self.user.email,
-            'iat': now - 1000, 'exp': now - 1, 'jti': 'x',
-        }
-        token = jwt.encode(claims, settings.SECRET_KEY, algorithm='HS256')
-        response = self.client.post('/api/auth/password/reset/confirm/', {
-            'token': token, 'new_password': 'senhaNova123',
-        }, format='json')
+    def test_codigo_expirado_retorna_401_com_code(self):
+        from datetime import timedelta
+        from django.utils import timezone
+
+        code = generate_password_reset_code(self.user)
+        reset_code = PasswordResetCode.objects.get(user=self.user, usado=False)
+        reset_code.expires_at = timezone.now() - timedelta(seconds=1)
+        reset_code.save(update_fields=['expires_at'])
+
+        response = self.client.post('/api/auth/password/reset/confirm/', self._payload(code), format='json')
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.data['code'], 'password_reset_token_expired')
 
-    def test_token_de_outro_typ_e_rejeitado(self):
-        token, _ = issue_purpose_token('link', {'sub': str(self.user.pk), 'email': self.user.email})
-        response = self.client.post('/api/auth/password/reset/confirm/', {
-            'token': token, 'new_password': 'senhaNova123',
-        }, format='json')
+    def test_codigo_errado_e_rejeitado(self):
+        generate_password_reset_code(self.user)
+        response = self.client.post('/api/auth/password/reset/confirm/', self._payload('000000'), format='json')
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.data['code'], 'password_reset_token_expired')
 
-    def test_usuario_inexistente_no_token_e_rejeitado(self):
-        token = self._gerar_token(sub='999999', email='fantasma@gmail.com')
-        response = self.client.post('/api/auth/password/reset/confirm/', {
-            'token': token, 'new_password': 'senhaNova123',
-        }, format='json')
+    def test_codigo_antigo_e_invalidado_ao_gerar_novo(self):
+        codigo_antigo = generate_password_reset_code(self.user)
+        generate_password_reset_code(self.user)
+
+        response = self.client.post('/api/auth/password/reset/confirm/', self._payload(codigo_antigo), format='json')
+        self.assertEqual(response.status_code, 401)
+
+    def test_codigo_ja_usado_nao_pode_ser_reaproveitado(self):
+        code = generate_password_reset_code(self.user)
+        primeira = self.client.post('/api/auth/password/reset/confirm/', self._payload(code), format='json')
+        self.assertEqual(primeira.status_code, 200)
+
+        segunda = self.client.post('/api/auth/password/reset/confirm/', self._payload(code, new_password='outraSenha1'), format='json')
+        self.assertEqual(segunda.status_code, 401)
+
+    def test_excesso_de_tentativas_erradas_esgota_o_codigo(self):
+        code = generate_password_reset_code(self.user)
+        for _ in range(PasswordResetCode.MAX_TENTATIVAS):
+            errada = self.client.post('/api/auth/password/reset/confirm/', self._payload('000000'), format='json')
+            self.assertEqual(errada.status_code, 401)
+
+        # Mesmo o código correto não é mais aceito após esgotar as tentativas
+        response = self.client.post('/api/auth/password/reset/confirm/', self._payload(code), format='json')
+        self.assertEqual(response.status_code, 401)
+
+    def test_usuario_inexistente_e_rejeitado(self):
+        response = self.client.post('/api/auth/password/reset/confirm/', self._payload('123456', email='fantasma@gmail.com'), format='json')
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.data['code'], 'password_reset_token_expired')
 

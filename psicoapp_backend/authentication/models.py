@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 class CustomUser(AbstractUser):
     """
@@ -74,3 +75,37 @@ class Psicologo(models.Model):
     
     def __str__(self):
         return f"Dr(a). {self.user.first_name} {self.user.last_name} - CRP: {self.crp}"
+
+
+class PasswordResetCode(models.Model):
+    """
+    Código numérico de recuperação de senha.
+
+    Substitui o antigo token JWT (gigantesco, difícil de copiar do e-mail no
+    celular) por um código curto de 6 dígitos. Guardamos apenas o hash do
+    código — nunca o valor em texto puro — e limitamos tentativas de
+    validação para não abrir uma via de força-bruta sobre um espaço de
+    apenas 1 milhão de combinações.
+    """
+    MAX_TENTATIVAS = 5
+
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='password_reset_codes')
+    code_hash = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    tentativas = models.PositiveSmallIntegerField(default=0)
+    usado = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [models.Index(fields=['user', 'usado'])]
+
+    def __str__(self):
+        return f"Código de reset para {self.user.email} (usado={self.usado})"
+
+    @property
+    def expirado(self):
+        return timezone.now() > self.expires_at
+
+    @property
+    def esgotado(self):
+        return self.tentativas >= self.MAX_TENTATIVAS

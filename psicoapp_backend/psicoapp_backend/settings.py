@@ -179,6 +179,9 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
     'DEFAULT_THROTTLE_RATES': {
         'password_reset': '5/hour',
+        # Limita tentativas de adivinhar o código de 6 dígitos por IP; o
+        # PasswordResetCode.MAX_TENTATIVAS também limita por código.
+        'password_reset_confirm': '20/hour',
     },
 }
 
@@ -210,7 +213,7 @@ else:
     # console em vez de tentar enviar de verdade.
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-# TTL do token de recuperação de senha (reaproveita issue_purpose_token)
+# TTL do código de recuperação de senha (PasswordResetCode)
 PASSWORD_RESET_TOKEN_TTL = int(os.getenv("PASSWORD_RESET_TOKEN_TTL", "900"))
 
 # CORS settings
