@@ -176,26 +176,27 @@ export default function Notificacoes() {
             <Text style={styles.title}>Notificações</Text>
             <Text style={styles.subtitle}>Atualizações do seu cuidado</Text>
           </View>
-          <View style={styles.actionsCol}>
-            <TouchableOpacity
-              style={[styles.actionBtn, (!temNaoLidas || markingAll) && styles.actionBtnDisabled]}
-              onPress={marcarTodasComoLidas}
-              disabled={!temNaoLidas || markingAll}
-            >
-              <Text style={styles.actionText}>
-                {markingAll ? 'Lendo...' : 'Ler todas'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtnSecundario, (notificacoes.length === 0 || clearing) && styles.actionBtnSecundarioDisabled]}
-              onPress={limparNotificacoes}
-              disabled={notificacoes.length === 0 || clearing}
-            >
-              <Text style={styles.actionTextSecundario}>
-                {clearing ? 'Limpando...' : 'Limpar'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+        </View>
+
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnFlex, (!temNaoLidas || markingAll) && styles.actionBtnDisabled]}
+            onPress={marcarTodasComoLidas}
+            disabled={!temNaoLidas || markingAll}
+          >
+            <Text style={styles.actionText}>
+              {markingAll ? 'Lendo...' : 'Ler todas'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtnSecundario, styles.actionBtnFlex, (notificacoes.length === 0 || clearing) && styles.actionBtnSecundarioDisabled]}
+            onPress={limparNotificacoes}
+            disabled={notificacoes.length === 0 || clearing}
+          >
+            <Text style={styles.actionTextSecundario}>
+              {clearing ? 'Limpando...' : 'Limpar'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {loading ? (
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 18,
-    paddingBottom: 14,
+    paddingBottom: 8,
   },
   backBtn: {
     width: 40,
@@ -256,9 +257,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#7A7A7A',
   },
-  actionsCol: {
-    gap: 8,
-    alignItems: 'stretch',
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+  },
+  actionBtnFlex: {
+    flex: 1,
   },
   actionBtn: {
     paddingHorizontal: 12,

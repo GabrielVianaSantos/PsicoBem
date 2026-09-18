@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import Botao from "../components/common/Button";
 import Topo from "./components/topo";
 import {
@@ -11,7 +11,7 @@ import {
     Linking
 } from "react-native";
 import { CustomAlert as Alert } from "../components/common/CustomAlert";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import { sessaoService } from "../services/sessaoService";
 import { useAuth } from "../hooks/useAuth";
 
@@ -26,29 +26,39 @@ export default function DetalhesSessao() {
     const [compartilhandoIcs, setCompartilhandoIcs] = useState(false);
     const [erroAbrirSalaDireto, setErroAbrirSalaDireto] = useState(false);
 
-    useEffect(() => {
-        carregarSessao();
-    }, [sessaoId]);
-
-    const carregarSessao = async () => {
+    const carregarSessao = async ({ silencioso = false } = {}) => {
         try {
-            setLoading(true);
+            if (!silencioso) setLoading(true);
             const result = await sessaoService.getSessao(sessaoId);
-            
+
             if (result.success) {
                 setSessao(result.data);
-            } else {
+            } else if (!silencioso) {
                 Alert.alert('Erro', result.message);
                 navigation.goBack();
             }
         } catch (error) {
             console.error('Erro ao carregar sessão:', error);
-            Alert.alert('Erro', 'Não foi possível carregar os detalhes da sessão');
-            navigation.goBack();
+            if (!silencioso) {
+                Alert.alert('Erro', 'Não foi possível carregar os detalhes da sessão');
+                navigation.goBack();
+            }
         } finally {
-            setLoading(false);
+            if (!silencioso) setLoading(false);
         }
     };
+
+    // Refaz a busca ao focar a tela e periodicamente enquanto ela estiver
+    // aberta: pode_entrar_sala/sala_encerrada dependem do horário atual, não
+    // só do que foi buscado quando a tela abriu — sem isso, quem deixa a
+    // tela aberta atravessando o horário da sessão via mensagem desatualizada.
+    useFocusEffect(
+        useCallback(() => {
+            carregarSessao();
+            const intervalo = setInterval(() => carregarSessao({ silencioso: true }), 30000);
+            return () => clearInterval(intervalo);
+        }, [sessaoId])
+    );
 
     // Tela de preparo (respiração guiada) só faz sentido para o paciente —
     // o psicólogo é o anfitrião e deve entrar direto, sem esse passo extra
@@ -227,12 +237,21 @@ export default function DetalhesSessao() {
                 {/* Status */}
                 <View style={estilos.section}>
                     <View style={estilos.statusRow}>
-                        <View style={[estilos.badge, { backgroundColor: getStatusColor(sessao.status) }]}>
-                            <Text style={estilos.badgeText}>{sessao.status_display}</Text>
+                        <View style={estilos.statusColuna}>
+                            <Text style={estilos.statusLabel}>Status da sessão</Text>
+                            <View style={[estilos.badge, { backgroundColor: getStatusColor(sessao.status) }]}>
+                                <Text style={estilos.badgeText}>{sessao.status_display}</Text>
+                            </View>
                         </View>
-                        <View style={[estilos.badge, { backgroundColor: getStatusPagamentoColor(sessao.status_pagamento) }]}>
-                            <Text style={estilos.badgeText}>{sessao.status_pagamento_display}</Text>
-                        </View>
+                        {/* Cancelada/faltou: cobrança não se aplica — a tag de pagamento some. */}
+                        {!['cancelada', 'faltou'].includes(sessao.status) && (
+                            <View style={estilos.statusColuna}>
+                                <Text style={estilos.statusLabel}>Pagamento</Text>
+                                <View style={[estilos.badge, { backgroundColor: getStatusPagamentoColor(sessao.status_pagamento) }]}>
+                                    <Text style={estilos.badgeText}>{sessao.status_pagamento_display}</Text>
+                                </View>
+                            </View>
+                        )}
                     </View>
                 </View>
 
@@ -475,7 +494,18 @@ const estilos = StyleSheet.create({
 
     statusRow: {
         flexDirection: 'row',
-        gap: 10,
+        gap: 16,
+    },
+
+    statusColuna: {
+        alignItems: 'flex-start',
+    },
+
+    statusLabel: {
+        color: '#999',
+        fontFamily: 'Raleway',
+        fontSize: 11,
+        marginBottom: 4,
     },
 
     badge: {
