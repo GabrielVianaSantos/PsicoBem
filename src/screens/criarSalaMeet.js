@@ -8,11 +8,16 @@ import Topo from "./components/topo";
 // formato que o Meet usa ao criar uma reunião instantânea em /new.
 const REGEX_SALA_MEET = /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}(\?.*)?$/i;
 
-// UA de navegador comum: reduz a chance do Google bloquear o login por
-// heurística de "navegador embutido" (não elimina o bloqueio por completo —
-// por isso o botão "Abrir no navegador" abaixo sempre fica disponível).
+// UA de DESKTOP (não mobile) de propósito: a versão mobile do
+// meet.google.com tenta abrir o app nativo do Meet via um redirecionamento
+// intent:// (Firebase Dynamic Link) que o WebView não sabe processar e
+// trava. A versão desktop nunca tenta esse handoff para app nativo — evita
+// o problema na raiz, em vez de tentar bloquear o redirecionamento depois
+// que ele já começou. Reduz também a chance do Google bloquear o login por
+// heurística de "navegador embutido" (não elimina por completo — por isso
+// o botão "Abrir no navegador" abaixo sempre fica disponível).
 const USER_AGENT =
-    'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36';
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 export default function CriarSalaMeet() {
     const navigation = useNavigation();
