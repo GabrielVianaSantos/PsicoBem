@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from "react";
-import { View, StyleSheet, Text, Image, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
+import React, { useState } from "react";
+import { View, StyleSheet, Text, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Linking } from "react-native";
 import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { Ionicons } from "@expo/vector-icons";
 import { CheckBox } from '@rneui/themed';
@@ -8,7 +8,7 @@ import Botao from "../components/common/Button";
 import Select from "./components/select";
 import CustomScrollView from "./components/customScrollView";
 import TextInputCustom from "../components/common/TextInputField";
-import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useAuth } from "../hooks/useAuth";
 
 export default function CompletarCadastroGoogle() {
@@ -30,16 +30,6 @@ export default function CompletarCadastroGoogle() {
     const [linkSalaVideo, setLinkSalaVideo] = useState('');
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
-
-    // Recebe de volta o link capturado automaticamente em CriarSalaMeet.
-    useFocusEffect(
-        useCallback(() => {
-            if (route.params?.linkMeetCapturado) {
-                setLinkSalaVideo(route.params.linkMeetCapturado);
-                navigation.setParams({ linkMeetCapturado: undefined });
-            }
-        }, [route.params?.linkMeetCapturado])
-    );
 
     // Mesmas máscaras de cadastroPacientes.js / cadastroPsicologos.js
     const formatCPF = (value) => {
@@ -348,7 +338,7 @@ export default function CompletarCadastroGoogle() {
                                     />
                                     <TouchableOpacity
                                         style={estilos.criarSalaBtn}
-                                        onPress={() => navigation.navigate('CriarSalaMeet', { origem: 'CompletarCadastroGoogle' })}
+                                        onPress={() => Linking.openURL('https://meet.google.com/new')}
                                     >
                                         <Text style={estilos.criarSalaTexto}>Criar minha sala agora</Text>
                                     </TouchableOpacity>

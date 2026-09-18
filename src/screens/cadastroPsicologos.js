@@ -1,9 +1,9 @@
-import React, { useState, useCallback } from "react";
-import { View, StyleSheet, Text, KeyboardAvoidingView, ScrollView, Platform, TouchableOpacity } from "react-native";
+import React, { useState } from "react";
+import { View, StyleSheet, Text, KeyboardAvoidingView, ScrollView, Platform, TouchableOpacity, Linking } from "react-native";
 import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import Topo from "./components/topo";
 import Botao from "../components/common/Button";
-import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import CustomScrollView from "./components/customScrollView";
 import TextInputCustom from "../components/common/TextInputField";
 import { useAuth } from "../hooks/useAuth";
@@ -21,18 +21,7 @@ export default function CadastroPsicologos () {
     const [loading, setLoading] = useState(false);
 
     const navigation = useNavigation();
-    const route = useRoute();
     const { registerPsicologo } = useAuth();
-
-    // Recebe de volta o link capturado automaticamente em CriarSalaMeet.
-    useFocusEffect(
-        useCallback(() => {
-            if (route.params?.linkMeetCapturado) {
-                setLinkSalaVideo(route.params.linkMeetCapturado);
-                navigation.setParams({ linkMeetCapturado: undefined });
-            }
-        }, [route.params?.linkMeetCapturado])
-    );
 
     // Validation functions
     const validateEmail = (email) => {
@@ -236,7 +225,7 @@ export default function CadastroPsicologos () {
                         />
                     <TouchableOpacity
                         style={estilos.criarSalaBtn}
-                        onPress={() => navigation.navigate('CriarSalaMeet', { origem: 'CadastroPsicologos' })}
+                        onPress={() => Linking.openURL('https://meet.google.com/new')}
                     >
                         <Text style={estilos.criarSalaTexto}>Criar minha sala agora</Text>
                     </TouchableOpacity>

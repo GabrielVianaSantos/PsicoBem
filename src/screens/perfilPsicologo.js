@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Linking } from "react-native";
 import { CustomAlert as Alert } from "../components/common/CustomAlert";
 import { useNavigation, useFocusEffect, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -45,18 +45,8 @@ export default function PerfilPsicologo() {
 
     useFocusEffect(
         useCallback(() => {
-            (async () => {
-                // Sincroniza com o servidor primeiro; só depois aplica um
-                // link recém-capturado em CriarSalaMeet — nessa ordem,
-                // porque o valor do servidor ainda não inclui o link até
-                // o usuário salvar, e não pode sobrescrever a captura.
-                await sincronizarPerfil();
-                if (route.params?.linkMeetCapturado) {
-                    setLinkSalaVideo(route.params.linkMeetCapturado);
-                    navigation.setParams({ linkMeetCapturado: undefined });
-                }
-            })();
-        }, [sincronizarPerfil, route.params?.linkMeetCapturado])
+            sincronizarPerfil();
+        }, [sincronizarPerfil])
     );
 
     // Deep link do card "Minha Sala Virtual" (issue 05): leva o scroll até o
@@ -209,7 +199,7 @@ export default function PerfilPsicologo() {
                                     />
                                     <TouchableOpacity
                                         style={estilos.criarSalaBtn}
-                                        onPress={() => navigation.navigate('CriarSalaMeet', { origem: 'PerfilPsicologo' })}
+                                        onPress={() => Linking.openURL('https://meet.google.com/new')}
                                     >
                                         <Text style={estilos.criarSalaTexto}>Criar minha sala agora</Text>
                                     </TouchableOpacity>

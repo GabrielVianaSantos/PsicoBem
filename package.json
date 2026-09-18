@@ -51,7 +51,6 @@
     "react-native-screens": "~4.11.1",
     "react-native-svg": "15.11.2",
     "react-native-web": "^0.20.0",
-    "react-native-webview": "13.13.5",
     "reactotron-react-native": "^5.1.15",
     "reactotron-redux": "^3.2.0",
     "reactotron-redux-saga": "^4.2.3",
