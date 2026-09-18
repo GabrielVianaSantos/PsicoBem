@@ -14,8 +14,9 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { pacienteService } from '../services/pacienteService';
 import { notificationService, dispatchNotification } from '../services/notificationService';
-import { navigationRef } from '../routes';
+import { navigationRef } from '../navigationRef';
 import { useAuth } from '../hooks/useAuth';
+import { CustomAlert as Alert } from '../components/common/CustomAlert';
 import Topo from './components/topo';
 
 const TIPO_ICONE = {
@@ -42,6 +43,7 @@ export default function Notificacoes() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
+  const [clearing, setClearing] = useState(false);
   // Proteção anti-duplo toque na navegação
   const navigatingRef = useRef(false);
 
@@ -113,6 +115,30 @@ export default function Notificacoes() {
     setMarkingAll(false);
   };
 
+  const limparNotificacoes = () => {
+    Alert.alert(
+      'Limpar notificações',
+      'Isso remove todo o histórico de notificações. Essa ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Limpar',
+          style: 'destructive',
+          onPress: async () => {
+            setClearing(true);
+            const res = await pacienteService.limparNotificacoes();
+            if (res.success) {
+              setNotificacoes([]);
+            } else {
+              Alert.alert('Erro', res.message || 'Não foi possível limpar as notificações.');
+            }
+            setClearing(false);
+          },
+        },
+      ]
+    );
+  };
+
   const renderItem = ({ item }) => {
     const icone = TIPO_ICONE[item.tipo] || 'notifications-outline';
 
@@ -150,15 +176,26 @@ export default function Notificacoes() {
             <Text style={styles.title}>Notificações</Text>
             <Text style={styles.subtitle}>Atualizações do seu cuidado</Text>
           </View>
-          <TouchableOpacity
-            style={[styles.actionBtn, (!temNaoLidas || markingAll) && styles.actionBtnDisabled]}
-            onPress={marcarTodasComoLidas}
-            disabled={!temNaoLidas || markingAll}
-          >
-            <Text style={styles.actionText}>
-              {markingAll ? 'Lendo...' : 'Ler todas'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.actionsCol}>
+            <TouchableOpacity
+              style={[styles.actionBtn, (!temNaoLidas || markingAll) && styles.actionBtnDisabled]}
+              onPress={marcarTodasComoLidas}
+              disabled={!temNaoLidas || markingAll}
+            >
+              <Text style={styles.actionText}>
+                {markingAll ? 'Lendo...' : 'Ler todas'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionBtnSecundario, (notificacoes.length === 0 || clearing) && styles.actionBtnSecundarioDisabled]}
+              onPress={limparNotificacoes}
+              disabled={notificacoes.length === 0 || clearing}
+            >
+              <Text style={styles.actionTextSecundario}>
+                {clearing ? 'Limpando...' : 'Limpar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {loading ? (
@@ -219,6 +256,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#7A7A7A',
   },
+  actionsCol: {
+    gap: 8,
+    alignItems: 'stretch',
+  },
   actionBtn: {
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -232,6 +273,24 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontFamily: 'RalewayBold',
     fontSize: 12,
+    textAlign: 'center',
+  },
+  actionBtnSecundario: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#EF5350',
+  },
+  actionBtnSecundarioDisabled: {
+    borderColor: '#F3C6C4',
+  },
+  actionTextSecundario: {
+    color: '#EF5350',
+    fontFamily: 'RalewayBold',
+    fontSize: 12,
+    textAlign: 'center',
   },
   loader: {
     marginTop: 40,

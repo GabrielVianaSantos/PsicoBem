@@ -347,7 +347,10 @@ const estilos = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 20,
-        padding: 10,
+        paddingVertical: 12,
+        borderWidth: 1.5,
+        borderColor: '#11B5A4',
+        borderRadius: 8,
     },
     btnSenhaText: {
         color: '#11B5A4',

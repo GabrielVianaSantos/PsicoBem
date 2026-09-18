@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import { View, ActivityIndicator } from "react-native";
-import { NavigationContainer, createNavigationContainerRef } from "@react-navigation/native";
+import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator, CardStyleInterpolators } from "@react-navigation/stack";
 
 import { useAuth } from "./hooks/useAuth";
+import { navigationRef } from "./navigationRef";
 
 // Telas de Autenticação / Iniciais
 import Inicio from "./screens/inicio";
@@ -43,7 +44,6 @@ import Notificacoes from "./screens/notificacoes";
 import { notificationService } from "./services/notificationService";
 
 const AppStack = createStackNavigator();
-export const navigationRef = createNavigationContainerRef();
 
 const commonOptions = {
   headerShown: false,

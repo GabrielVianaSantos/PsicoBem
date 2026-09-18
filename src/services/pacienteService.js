@@ -170,6 +170,16 @@ export const pacienteService = {
     }
   },
 
+  async limparNotificacoes() {
+    try {
+      const response = await api.delete('/notificacoes/limpar-todas/');
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Erro limparNotificacoes:', error);
+      return { success: false, message: this._extractError(error) };
+    }
+  },
+
   // ==================== UTILIDADES ====================
 
   _extractError(error) {

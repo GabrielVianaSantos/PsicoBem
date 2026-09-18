@@ -350,6 +350,12 @@ export default function DetalhesSessao() {
                                     </View>
                                 )}
                             </View>
+                        ) : sessao.sala_encerrada ? (
+                            <View style={estilos.salaAvisoBox}>
+                                <Text style={estilos.salaAvisoTexto}>
+                                    A sala desta sessão foi encerrada.
+                                </Text>
+                            </View>
                         ) : (
                             <View style={estilos.salaAvisoBox}>
                                 <Text style={estilos.salaAvisoTexto}>
@@ -370,7 +376,7 @@ export default function DetalhesSessao() {
                                 texto={compartilhandoIcs ? 'Gerando arquivo...' : 'Adicionar à minha agenda'}
                                 onPress={adicionarNaAgenda}
                                 iconName="calendar-outline"
-                                backgroundColor="#8D6E63"
+                                backgroundColor="#0B7A6E"
                                 disabled={compartilhandoIcs}
                             />
                             <Text style={estilos.icsAvisoTexto}>
@@ -393,12 +399,11 @@ export default function DetalhesSessao() {
                         </View>
                     )}
 
-                    {sessao.pode_realizar && (
+                    {userType === 'psicologo' && sessao.pode_realizar && (
                         <View style={estilos.buttonContainer}>
                             <Botao
                                 texto="Marcar como Realizada"
                                 onPress={realizarSessao}
-                                backgroundColor="#42A5F5"
                             />
                         </View>
                     )}
@@ -408,14 +413,14 @@ export default function DetalhesSessao() {
                             <Botao
                                 texto="Marcar como Não Realizada"
                                 onPress={marcarNaoRealizada}
-                                backgroundColor="#8D6E63"
+                                backgroundColor="#0B7A6E"
                             />
                         </View>
                     )}
 
-                    {sessao.status === 'realizada' && sessao.status_pagamento === 'pendente' && (
+                    {userType === 'psicologo' && sessao.status === 'realizada' && sessao.status_pagamento === 'pendente' && (
                         <View style={estilos.buttonContainer}>
-                            <Botao 
+                            <Botao
                                 texto="Confirmar Pagamento"
                                 onPress={confirmarPagamento}
                             />
