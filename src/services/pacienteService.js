@@ -22,7 +22,11 @@ export const pacienteService = {
       const response = await api.get('/vinculos/meu-psicologo/');
       return { success: true, data: response.data };
     } catch (error) {
-      console.error('Erro getMeuPsicologo:', error);
+      // 404 aqui é esperado: paciente ainda sem vínculo ativo (ex.: recém
+      // cadastrado), não uma falha real — não poluir o console com isso.
+      if (error.response?.status !== 404) {
+        console.error('Erro getMeuPsicologo:', error);
+      }
       return { success: false, message: this._extractError(error) };
     }
   },
