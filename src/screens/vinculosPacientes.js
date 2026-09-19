@@ -14,6 +14,10 @@ const STATUS_CONFIG = {
   inativo:    { label: 'Inativo',    cor: '#F3E5F5', textoCor: '#6A1B9A' },
   suspenso:   { label: 'Suspenso',   cor: '#FFF8E1', textoCor: '#F57F17' },
   finalizado: { label: 'Finalizado', cor: '#FFEBEE', textoCor: '#B71C1C' },
+  // SPEC_VINCULO_CONVITE_E_SOLICITACAO.md — solicitações por CRP.
+  pendente:   { label: 'Pendente',   cor: '#E3F2FD', textoCor: '#1565C0' },
+  recusado:   { label: 'Recusado',   cor: '#FFEBEE', textoCor: '#B71C1C' },
+  expirado:   { label: 'Expirado',   cor: '#F3E5F5', textoCor: '#6A1B9A' },
 };
 
 const NOVOS_STATUS = ['ativo', 'inativo', 'suspenso', 'finalizado'];
@@ -28,19 +32,66 @@ export default function VinculosPacientes() {
   const [filtro, setFiltro] = useState('ativos');
   const [pesquisa, setPesquisa] = useState('');
   const [alterandoId, setAlterandoId] = useState(null);
+  const [totalPendentes, setTotalPendentes] = useState(0);
 
   const carregar = async () => {
     setLoading(true);
-    const res = filtro === 'ativos'
-      ? await vinculoService.getVinculosAtivos()
-      : await vinculoService.getVinculos();
-    if (res.success) setVinculos(res.data);
+    const res = filtro === 'solicitacoes'
+      ? await vinculoService.getSolicitacoesPendentes()
+      : filtro === 'ativos'
+        ? await vinculoService.getVinculosAtivos()
+        : await vinculoService.getVinculos();
+    if (res.success) {
+      setVinculos(res.data);
+      if (filtro === 'solicitacoes') setTotalPendentes(res.data.length);
+    }
     setLoading(false);
     setRefreshing(false);
   };
 
-  useFocusEffect(useCallback(() => { carregar(); }, [filtro]));
+  // Badge de contagem: precisa estar disponível mesmo quando o filtro
+  // selecionado não é "Solicitações".
+  const carregarContagemPendentes = useCallback(async () => {
+    const res = await vinculoService.getSolicitacoesPendentes();
+    if (res.success) setTotalPendentes(res.data.length);
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    carregar();
+    if (filtro !== 'solicitacoes') carregarContagemPendentes();
+  }, [filtro]));
   const onRefresh = () => { setRefreshing(true); carregar(); };
+
+  const decidirSolicitacao = (vinculo, acao) => {
+    const nome = vinculo.paciente?.nome_completo || 'este paciente';
+    const aceitar = acao === 'aceitar';
+    Alert.alert(
+      aceitar ? 'Aceitar solicitação' : 'Recusar solicitação',
+      aceitar
+        ? `Aceitar o pedido de vínculo de ${nome}? Ele passará a ser seu paciente ativo.`
+        : `Recusar o pedido de vínculo de ${nome}? Ele verá apenas uma mensagem neutra, sem saber que foi uma recusa.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: aceitar ? 'Aceitar' : 'Recusar',
+          style: aceitar ? 'default' : 'destructive',
+          onPress: async () => {
+            setAlterandoId(vinculo.id);
+            const res = aceitar
+              ? await vinculoService.aceitarSolicitacao(vinculo.id)
+              : await vinculoService.recusarSolicitacao(vinculo.id);
+            setAlterandoId(null);
+            if (res.success) {
+              Alert.alert(aceitar ? '✅ Solicitação aceita!' : 'Solicitação recusada.');
+              carregar();
+            } else {
+              Alert.alert('Erro', res.message);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const alterarStatus = async (vinculo, novoStatus) => {
     Alert.alert(
@@ -78,8 +129,16 @@ export default function VinculosPacientes() {
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#11B5A4" />}
       >
-        <Text style={styles.titulo}>Meus Pacientes</Text>
-        <Text style={styles.subtitulo}>Pacientes vinculados ao seu perfil.</Text>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.titulo}>Meus Pacientes</Text>
+            <Text style={styles.subtitulo}>Pacientes vinculados ao seu perfil.</Text>
+          </View>
+          <TouchableOpacity style={styles.btnConvidar} onPress={() => navigation.navigate('ConvidarPaciente')}>
+            <Ionicons name="qr-code-outline" size={16} color="#fff" />
+            <Text style={styles.btnConvidarText}>Convidar</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Filtro */}
         <View style={styles.filtroRow}>
@@ -94,6 +153,17 @@ export default function VinculosPacientes() {
             onPress={() => setFiltro('todos')}
           >
             <Text style={[styles.filtroText, filtro === 'todos' && styles.filtroTextAtivo]}>Todos</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filtroChip, filtro === 'solicitacoes' && styles.filtroChipAtivo]}
+            onPress={() => setFiltro('solicitacoes')}
+          >
+            <Text style={[styles.filtroText, filtro === 'solicitacoes' && styles.filtroTextAtivo]}>Solicitações</Text>
+            {totalPendentes > 0 && (
+              <View style={styles.filtroBadge}>
+                <Text style={styles.filtroBadgeText}>{totalPendentes > 9 ? '9+' : totalPendentes}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -113,12 +183,14 @@ export default function VinculosPacientes() {
           <ActivityIndicator size="large" color="#11B5A4" style={{ marginTop: 30 }} />
         ) : vinculosFiltrados.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={50} color="#ccc" />
-            <Text style={styles.emptyTitle}>Nenhum paciente</Text>
+            <Ionicons name={filtro === 'solicitacoes' ? 'mail-open-outline' : 'people-outline'} size={50} color="#ccc" />
+            <Text style={styles.emptyTitle}>{filtro === 'solicitacoes' ? 'Nenhuma solicitação' : 'Nenhum paciente'}</Text>
             <Text style={styles.emptyDesc}>
-              {filtro === 'ativos'
-                ? 'Nenhum paciente ativo no momento.'
-                : 'Nenhum vínculo encontrado.'}
+              {filtro === 'solicitacoes'
+                ? 'Nenhuma solicitação de vínculo aguardando resposta.'
+                : filtro === 'ativos'
+                  ? 'Nenhum paciente ativo no momento.'
+                  : 'Nenhum vínculo encontrado.'}
             </Text>
           </View>
         ) : (
@@ -126,6 +198,57 @@ export default function VinculosPacientes() {
             const cfg = STATUS_CONFIG[v.status] || STATUS_CONFIG.ativo;
             const paciente = v.paciente || {};
             const inicial = paciente.nome_completo?.[0]?.toUpperCase() || 'P';
+
+            if (filtro === 'solicitacoes') {
+              return (
+                <View key={i} style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarLetra}>{inicial}</Text>
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={styles.nome}>{paciente.nome_completo || 'Paciente'}</Text>
+                      <Text style={styles.email}>
+                        Solicitado em {v.data_solicitacao ? new Date(v.data_solicitacao).toLocaleDateString('pt-BR') : '—'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.infoItem}>
+                      <Ionicons name="hourglass-outline" size={14} color="#1565C0" />
+                      <Text style={styles.infoText}>
+                        {v.dias_restantes_solicitacao != null
+                          ? `Expira em ${v.dias_restantes_solicitacao} dia(s)`
+                          : 'Prazo de expiração indisponível'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.acoesRow}>
+                    {alterandoId === v.id ? (
+                      <ActivityIndicator size="small" color="#11B5A4" style={{ flex: 1 }} />
+                    ) : (
+                      <>
+                        <TouchableOpacity
+                          style={[styles.btnStatus, { backgroundColor: '#FFEBEE', flex: 1, marginRight: 8 }]}
+                          onPress={() => decidirSolicitacao(v, 'recusar')}
+                        >
+                          <Text style={[styles.btnStatusText, { color: '#B71C1C', textAlign: 'center' }]}>Recusar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.btnStatus, { backgroundColor: '#E8F5E9', flex: 1 }]}
+                          onPress={() => decidirSolicitacao(v, 'aceitar')}
+                        >
+                          <Text style={[styles.btnStatusText, { color: '#1B5E20', textAlign: 'center' }]}>Aceitar</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+                </View>
+              );
+            }
+
             return (
               <View key={i} style={[styles.card, String(pacienteId) === String(paciente.id) && styles.cardDestacado]}>
                 {/* Header do paciente */}
@@ -204,14 +327,26 @@ const styles = StyleSheet.create({
   titulo: { fontFamily: 'RalewayBold', color: '#11B5A4', fontSize: 24 },
   subtitulo: { color: '#888', fontSize: 14, marginTop: 4, marginBottom: 18, lineHeight: 20 },
 
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  btnConvidar: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#11B5A4', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20,
+  },
+  btnConvidarText: { color: '#fff', fontFamily: 'RalewayBold', fontSize: 13 },
+
   filtroRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   filtroChip: {
     paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f0f0f0', flexDirection: 'row', alignItems: 'center',
   },
   filtroChipAtivo: { backgroundColor: '#11B5A4' },
   filtroText: { color: '#666', fontFamily: 'RalewayBold', fontSize: 14 },
   filtroTextAtivo: { color: '#fff' },
+  filtroBadge: {
+    marginLeft: 6, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4,
+    backgroundColor: '#EF5350', justifyContent: 'center', alignItems: 'center',
+  },
+  filtroBadgeText: { color: '#fff', fontSize: 10, fontFamily: 'RalewayBold' },
 
   searchBox: {
     flexDirection: 'row', alignItems: 'center', borderWidth: 1.5,

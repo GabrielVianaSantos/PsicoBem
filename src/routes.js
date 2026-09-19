@@ -30,10 +30,12 @@ import Prontuarios from "./screens/prontuarios";
 import SementesCuidado from "./screens/sementesCuidado";
 import GuiasApoio from "./screens/guiasApoio";
 import VinculosPacientes from "./screens/vinculosPacientes";   // ← NOVA
+import ConvidarPaciente from "./screens/convidarPaciente";     // ← NOVA (vínculo por convite)
 
 // ─── TELAS DO PACIENTE ──────────────────────────────────────
 import HomePaciente from "./screens/homePaciente";
 import ConexaoTerapeutica from "./screens/conexaoTerapeutica";
+import ConfirmarVinculo from "./screens/confirmarVinculo";     // ← NOVA (vínculo por convite)
 import RegistrosOdisseia from "./screens/RegistrosOdisseia";
 import PerfilPaciente from "./screens/PerfilPaciente";
 import MinhasSessoes from "./screens/minhasSessoes";           // ← NOVA
@@ -108,6 +110,7 @@ export default function Routes() {
             <AppStack.Screen name="RegistrosOdisseia" component={RegistrosOdisseia} />
             <AppStack.Screen name="Navigation" component={Navigation} />
             <AppStack.Screen name="VinculosPacientes" component={VinculosPacientes} />
+            <AppStack.Screen name="ConvidarPaciente" component={ConvidarPaciente} />
             <AppStack.Screen name="Notificacoes" component={Notificacoes} />
             {/* PerfilPaciente acessível pelo psicólogo via GuiasApoio/VinculosPacientes */}
             <AppStack.Screen name="PerfilPaciente" component={PerfilPaciente} />
@@ -117,6 +120,7 @@ export default function Routes() {
           <>
             <AppStack.Screen name="HomePaciente" component={HomePaciente} />
             <AppStack.Screen name="ConexaoTerapeutica" component={ConexaoTerapeutica} />
+            <AppStack.Screen name="ConfirmarVinculo" component={ConfirmarVinculo} />
             <AppStack.Screen name="RegistrosOdisseia" component={RegistrosOdisseia} />
             <AppStack.Screen name="PerfilPaciente" component={PerfilPaciente} />
             {/* DetalhesSessao: disponível ao paciente via MinhasSessoes e notificações de sessão */}

@@ -52,6 +52,7 @@ export default function HomePaciente() {
   const primeiroNome = user?.first_name || 'Paciente';
   const inicial = primeiroNome[0]?.toUpperCase() || 'P';
   const temPsicologo = !!dashboard?.psicologo_vinculado;
+  const solicitacaoPendente = dashboard?.solicitacao_pendente;
   const proximaSessao = dashboard?.proxima_sessao;
   const ultimoRegistro = dashboard?.ultimo_registro_odisseia;
   const naoLidas = dashboard?.notificacoes_nao_lidas || 0;
@@ -112,6 +113,16 @@ export default function HomePaciente() {
                     <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
                   </View>
                 </TouchableOpacity>
+              ) : solicitacaoPendente ? (
+                <View style={styles.cardPendente}>
+                  <Ionicons name="hourglass-outline" size={28} color="#1565C0" />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={styles.pendenteTitle}>Aguardando resposta do profissional</Text>
+                    <Text style={styles.pendenteSub}>
+                      {solicitacaoPendente.psicologo_nome} · expira em {solicitacaoPendente.dias_restantes} dia(s)
+                    </Text>
+                  </View>
+                </View>
               ) : (
                 <TouchableOpacity style={styles.cardConectar} onPress={() => navigation.navigate('ConexaoTerapeutica')}>
                   <Ionicons name="link-outline" size={28} color="#11B5A4" />
@@ -262,6 +273,13 @@ const styles = StyleSheet.create({
   },
   conectarTitle: { fontFamily: 'RalewayBold', color: '#333', fontSize: 15 },
   conectarSub: { color: '#999', fontSize: 12, marginTop: 2 },
+
+  cardPendente: {
+    marginHorizontal: 20, marginTop: 16, borderRadius: 16, padding: 18,
+    backgroundColor: '#E3F2FD', flexDirection: 'row', alignItems: 'center',
+  },
+  pendenteTitle: { fontFamily: 'RalewayBold', color: '#0D47A1', fontSize: 15 },
+  pendenteSub: { color: '#1565C0', fontSize: 12, marginTop: 2 },
 
   // Seção
   sectionHeader: {

@@ -60,6 +60,12 @@ class Psicologo(models.Model):
     """
     Modelo específico para dados dos Psicólogos
     """
+    VERIFICACAO_FONTE_CHOICES = (
+        ('manual', 'Manual'),
+        ('cnp', 'Consulta ao CNP'),
+        ('provedor', 'Provedor pago'),
+    )
+
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='psicologo_profile')
     crp = models.CharField(max_length=15, unique=True)  # Format: XX/XXXXX+
     specialization = models.CharField(max_length=200, blank=True, null=True)
@@ -72,9 +78,42 @@ class Psicologo(models.Model):
         max_length=300, blank=True, null=True,
         verbose_name='Link da Sala de Vídeo (Google Meet)'
     )
-    
+
+    # Convite permanente (SPEC_VINCULO_CONVITE_E_SOLICITACAO.md, seção 3.4).
+    # Gerados automaticamente em save() para todo psicólogo novo; nullable
+    # só porque o backfill dos pré-existentes acontece em migração de dados
+    # separada, não no ADD COLUMN.
+    slug = models.SlugField(
+        max_length=160, unique=True, null=True, blank=True, db_index=True,
+        verbose_name='Slug (convite permanente)',
+    )
+    codigo_convite = models.CharField(
+        max_length=9, unique=True, null=True, blank=True, db_index=True,
+        verbose_name='Código de Convite Permanente',
+    )
+
+    # Costuras da verificação de CRP (SPEC_VERIFICACAO_CRP.md) — nesta fase
+    # apenas os campos existem. Nenhum selo é exibido no app; o cadastro não
+    # consulta nem bloqueia com base neles.
+    verificado = models.BooleanField(default=False)
+    verificado_em = models.DateTimeField(null=True, blank=True)
+    verificacao_fonte = models.CharField(
+        max_length=20, choices=VERIFICACAO_FONTE_CHOICES, null=True, blank=True,
+    )
+
     def __str__(self):
         return f"Dr(a). {self.user.first_name} {self.user.last_name} - CRP: {self.crp}"
+
+    def save(self, *args, **kwargs):
+        if not self.slug or not self.codigo_convite:
+            from .services import gerar_codigo_curto_unico, gerar_slug_psicologo_unico
+            if not self.slug:
+                self.slug = gerar_slug_psicologo_unico(self.user.first_name, self.user.last_name)
+            if not self.codigo_convite:
+                self.codigo_convite = gerar_codigo_curto_unico(
+                    Psicologo, 'codigo_convite', self.user.first_name
+                )
+        super().save(*args, **kwargs)
 
 
 class PasswordResetCode(models.Model):

@@ -22,8 +22,19 @@ class VinculoPacientePsicologo(models.Model):
         ('inativo', 'Inativo'),
         ('suspenso', 'Suspenso'),
         ('finalizado', 'Finalizado'),
+        # SPEC_VINCULO_CONVITE_E_SOLICITACAO.md, seção 3.1 — solicitação por
+        # CRP, que agora exige aceite do psicólogo em vez de nascer ativa.
+        ('pendente', 'Pendente'),
+        ('recusado', 'Recusado'),
+        ('expirado', 'Expirado'),
     ]
-    
+
+    ORIGEM_CHOICES = [
+        ('convite_link', 'Convite (link permanente)'),
+        ('convite_codigo', 'Convite (código de uso único)'),
+        ('crp', 'CRP'),
+    ]
+
     # Relacionamentos
     paciente = models.ForeignKey(
         Paciente,
@@ -67,6 +78,23 @@ class VinculoPacientePsicologo(models.Model):
         verbose_name='Motivo do Vínculo',
         help_text='Ex: Busca via CRP, Indicação, etc.'
     )
+    # Marcação estruturada de origem (motivo_vinculo permanece como texto
+    # livre). Default 'crp' cobre o backfill dos registros existentes — até
+    # esta feature, todo vínculo nascia via CRP.
+    origem = models.CharField(
+        max_length=20,
+        choices=ORIGEM_CHOICES,
+        default='crp',
+        verbose_name='Origem',
+    )
+    # Base do cálculo de expiração de 5 dias das solicitações por CRP
+    # (seção 3.9). Null para vínculos que nunca foram uma solicitação
+    # pendente (convite, ou registros anteriores a esta feature).
+    data_solicitacao = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Data da Solicitação',
+    )
     observacoes = models.TextField(
         blank=True,
         null=True,
@@ -96,11 +124,16 @@ class VinculoPacientePsicologo(models.Model):
         verbose_name_plural = 'Vínculos Paciente-Psicólogo'
         ordering = ['-data_vinculo']
         constraints = [
-            # Um paciente só pode ter um vínculo ativo por vez com cada psicólogo
+            # Um paciente só pode ter um vínculo ativo por vez, ponto — não
+            # apenas um por par paciente+psicólogo. O constraint anterior
+            # (por par) permitia que uma troca de profissional deixasse
+            # dois vínculos ativos ao mesmo tempo (o psicólogo anterior
+            # nunca era inativado). Ver SPEC_VINCULO_CONVITE_E_SOLICITACAO.md,
+            # seção 3.2.
             models.UniqueConstraint(
-                fields=['paciente', 'psicologo'],
+                fields=['paciente'],
                 condition=Q(status='ativo'),
-                name='unique_vinculo_ativo_paciente_psicologo'
+                name='unique_vinculo_ativo_por_paciente'
             )
         ]
         indexes = [
@@ -161,9 +194,81 @@ class VinculoPacientePsicologo(models.Model):
             'ativo': '#4CAF50',
             'inativo': '#FFC107',
             'suspenso': '#FF9800',
-            'finalizado': '#9E9E9E'
+            'finalizado': '#9E9E9E',
+            'pendente': '#2196F3',
+            'recusado': '#F44336',
+            'expirado': '#9E9E9E',
         }
         return colors.get(self.status, '#9E9E9E')
+
+
+class ConviteVinculo(models.Model):
+    """
+    Convite de uso único emitido pelo psicólogo (SPEC_VINCULO_CONVITE_E_SOLICITACAO.md,
+    seção 3.5). Diferente do convite permanente (`Psicologo.slug`/`codigo_convite`),
+    expira em 7 dias e só pode ser resgatado uma vez.
+    """
+    psicologo = models.ForeignKey(
+        Psicologo,
+        on_delete=models.CASCADE,
+        related_name='convites_vinculo',
+        verbose_name='Psicólogo',
+    )
+    codigo = models.CharField(max_length=9, unique=True, db_index=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    expira_em = models.DateTimeField()
+    usado_em = models.DateTimeField(null=True, blank=True)
+    usado_por = models.ForeignKey(
+        Paciente,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='convites_resgatados',
+        verbose_name='Usado por',
+    )
+    revogado = models.BooleanField(default=False)
+    apelido = models.CharField(
+        max_length=100, blank=True, null=True,
+        verbose_name='Apelido',
+        help_text='Anotação do psicólogo para localizar o convite na lista (ex.: "João, indicação da Dra. Marta").',
+    )
+
+    class Meta:
+        verbose_name = 'Convite de Vínculo'
+        verbose_name_plural = 'Convites de Vínculo'
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['psicologo', 'revogado', 'usado_em']),
+        ]
+
+    def __str__(self):
+        return f"Convite {self.codigo} de {self.psicologo.user.first_name} ({self.estado})"
+
+    def save(self, *args, **kwargs):
+        if not self.expira_em:
+            self.expira_em = timezone.now() + timedelta(days=7)
+        if not self.codigo:
+            from authentication.services import gerar_codigo_curto_unico
+            self.codigo = gerar_codigo_curto_unico(
+                ConviteVinculo, 'codigo', self.psicologo.user.first_name
+            )
+        super().save(*args, **kwargs)
+
+    @property
+    def valido(self):
+        return not self.revogado and self.usado_em is None and self.expira_em > timezone.now()
+
+    @property
+    def estado(self):
+        """Estado derivado exibido na lista de convites do psicólogo."""
+        if self.revogado:
+            return 'revogado'
+        if self.usado_em is not None:
+            return 'usado'
+        if self.expira_em <= timezone.now():
+            return 'expirado'
+        return 'ativo'
+
 
 class NotificacaoSistema(models.Model):
     """

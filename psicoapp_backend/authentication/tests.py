@@ -579,6 +579,58 @@ class PacienteDashboardDataHoraTimezoneTests(TestCase):
         self.assertNotIn('14:00', response.data['proxima_sessao']['data_hora_formatada'])
 
 
+class PacienteDashboardSolicitacaoPendenteTests(TestCase):
+    """Issue 11: card 'Aguardando resposta do profissional' na HomePaciente."""
+
+    def setUp(self):
+        from core.models import VinculoPacientePsicologo
+        self.VinculoPacientePsicologo = VinculoPacientePsicologo
+
+        self.psicologo_user = CustomUser.objects.create_user(
+            email='dash-pend-psi@gmail.com', username='dashpendpsi', user_type='psicologo', password='x',
+            first_name='Marta',
+        )
+        self.psicologo = Psicologo.objects.create(user=self.psicologo_user, crp='70/11111')
+
+        self.paciente_user = CustomUser.objects.create_user(
+            email='dash-pend-pac@gmail.com', username='dashpendpac', user_type='paciente', password='x',
+        )
+        self.paciente = Paciente.objects.create(user=self.paciente_user, cpf='700.700.700-70', gender='F')
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.paciente_user)
+
+    def test_dashboard_mostra_solicitacao_pendente(self):
+        from django.utils import timezone
+
+        self.VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='pendente',
+            origem='crp', data_solicitacao=timezone.now(),
+        )
+        response = self.client.get('/api/auth/paciente/dashboard/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.data['solicitacao_pendente'])
+        self.assertEqual(response.data['solicitacao_pendente']['psicologo_nome'], 'Marta')
+        self.assertLessEqual(response.data['solicitacao_pendente']['dias_restantes'], 5)
+
+    def test_dashboard_sem_solicitacao_retorna_null(self):
+        response = self.client.get('/api/auth/paciente/dashboard/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data['solicitacao_pendente'])
+
+    def test_dashboard_nao_mostra_solicitacao_vencida(self):
+        from datetime import timedelta
+        from django.utils import timezone
+
+        self.VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='pendente',
+            origem='crp', data_solicitacao=timezone.now() - timedelta(days=6),
+        )
+        response = self.client.get('/api/auth/paciente/dashboard/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data['solicitacao_pendente'])
+
+
 class DeleteAccountViewTests(TestCase):
     """
     SPEC_EXCLUSAO_CONTA.md: exclusão definitiva da própria conta, com
@@ -1253,3 +1305,188 @@ class LinkSalaVideoPerfilTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.psicologo.refresh_from_db()
         self.assertEqual(self.psicologo.link_sala_video, 'https://meet.google.com/sem-esquema-xyz')
+
+
+class SlugECodigoConviteTests(TestCase):
+    """
+    Issue 03 (SPEC_VINCULO_CONVITE_E_SOLICITACAO.md, seção 3.4): todo
+    psicólogo — novo ou pré-existente — precisa de `slug` e `codigo_convite`
+    únicos, gerados automaticamente.
+    """
+
+    def _criar_psicologo(self, *, email, username, first_name, last_name, crp):
+        user = CustomUser.objects.create_user(
+            username=username, email=email, password='senha-segura',
+            user_type='psicologo', first_name=first_name, last_name=last_name,
+        )
+        return Psicologo.objects.create(user=user, crp=crp)
+
+    def test_cadastro_gera_slug_e_codigo_convite(self):
+        psicologo = self._criar_psicologo(
+            email='slug1@example.com', username='slug1',
+            first_name='Ana', last_name='Silva', crp='20/11111',
+        )
+        self.assertTrue(psicologo.slug)
+        self.assertTrue(psicologo.codigo_convite)
+        self.assertRegex(psicologo.codigo_convite, r'^[A-Z0-9]{3}-[A-Z0-9]{4}$')
+
+    def test_colisao_de_nome_gera_slugs_distintos(self):
+        psi1 = self._criar_psicologo(
+            email='ana1@example.com', username='ana1',
+            first_name='Ana', last_name='Silva', crp='20/22222',
+        )
+        psi2 = self._criar_psicologo(
+            email='ana2@example.com', username='ana2',
+            first_name='Ana', last_name='Silva', crp='20/33333',
+        )
+        self.assertEqual(psi1.slug, 'ana-silva')
+        self.assertEqual(psi2.slug, 'ana-silva-2')
+        self.assertNotEqual(psi1.slug, psi2.slug)
+
+    def test_codigo_convite_e_unico_e_sem_caracteres_ambiguos(self):
+        codigos = set()
+        for i in range(15):
+            psicologo = self._criar_psicologo(
+                email=f'unico{i}@example.com', username=f'unico{i}',
+                first_name='Igor', last_name='Oliveira', crp=f'20/4{i:04d}',
+            )
+            self.assertNotIn(psicologo.codigo_convite, codigos)
+            codigos.add(psicologo.codigo_convite)
+            caracteres = psicologo.codigo_convite.replace('-', '')
+            for ambiguo in '0O1IL':
+                self.assertNotIn(ambiguo, caracteres)
+
+    def test_normalizacao_de_codigo_aceita_variacoes(self):
+        from authentication.services import normalizar_codigo_curto
+
+        self.assertEqual(normalizar_codigo_curto('ana-4k7q'), 'ANA-4K7Q')
+        self.assertEqual(normalizar_codigo_curto('ANA4K7Q'), 'ANA-4K7Q')
+        self.assertEqual(normalizar_codigo_curto('ANA-4K7Q'), 'ANA-4K7Q')
+        self.assertEqual(normalizar_codigo_curto('  ana 4k7q '), 'ANA-4K7Q')
+
+    def test_backfill_preenche_psicologos_pre_existentes(self):
+        """
+        Simula um psicólogo criado antes desta feature (sem slug/código) e
+        confirma que a função de backfill da migração 0007 o preenche.
+        """
+        import importlib
+
+        user = CustomUser.objects.create_user(
+            username='legado', email='legado@example.com', password='senha-segura',
+            user_type='psicologo', first_name='Legado', last_name='Antigo',
+        )
+        psicologo = Psicologo.objects.create(user=user, crp='20/99999')
+        # Limpa os campos gerados automaticamente no save(), simulando o
+        # estado de antes desta feature.
+        Psicologo.objects.filter(pk=psicologo.pk).update(slug=None, codigo_convite=None)
+
+        migration_module = importlib.import_module(
+            'authentication.migrations.0007_backfill_slug_e_codigo_convite'
+        )
+        from django.apps import apps as django_apps
+        migration_module.backfill_slug_e_codigo_convite(django_apps, None)
+
+        psicologo.refresh_from_db()
+        self.assertTrue(psicologo.slug)
+        self.assertTrue(psicologo.codigo_convite)
+
+
+class ConectaPsicologoViaCRPTests(TestCase):
+    """
+    Issue 06 (SPEC_VINCULO_CONVITE_E_SOLICITACAO.md, seção 3.8): CRP passa
+    a criar uma solicitação `pendente`, nunca um vínculo já `ativo`.
+    """
+
+    def setUp(self):
+        from core.models import VinculoPacientePsicologo
+
+        self.VinculoPacientePsicologo = VinculoPacientePsicologo
+        self.client = APIClient()
+
+        self.psicologo_user = CustomUser.objects.create_user(
+            username='crp-psi', email='crp-psi@example.com',
+            password='senha-segura', user_type='psicologo', first_name='Ivo',
+        )
+        self.psicologo = Psicologo.objects.create(user=self.psicologo_user, crp='60/11111')
+
+        self.paciente_user = CustomUser.objects.create_user(
+            username='crp-pac', email='crp-pac@example.com',
+            password='senha-segura', user_type='paciente', first_name='Julia',
+        )
+        self.paciente = Paciente.objects.create(user=self.paciente_user, cpf='121.212.121-21', gender='F')
+
+        self.url = '/api/auth/paciente/conecta-psicologo/'
+
+    def test_crp_cria_solicitacao_pendente_sem_ativar_e_sem_tocar_fk_legado(self):
+        self.client.force_authenticate(self.paciente_user)
+        response = self.client.post(self.url, {'crp': '60/11111'}, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['status'], 'pendente')
+
+        vinculo = self.VinculoPacientePsicologo.objects.get(pk=response.data['vinculo_id'])
+        self.assertEqual(vinculo.status, 'pendente')
+        self.assertEqual(vinculo.origem, 'crp')
+        self.assertIsNotNone(vinculo.data_solicitacao)
+
+        self.paciente.refresh_from_db()
+        self.assertIsNone(self.paciente.psicologo_id)
+
+    def test_solicitacao_pendente_repetida_e_idempotente(self):
+        self.client.force_authenticate(self.paciente_user)
+        primeira = self.client.post(self.url, {'crp': '60/11111'}, format='json')
+        segunda = self.client.post(self.url, {'crp': '60/11111'}, format='json')
+
+        self.assertEqual(segunda.status_code, 200)
+        self.assertEqual(segunda.data['vinculo_id'], primeira.data['vinculo_id'])
+        self.assertEqual(
+            self.VinculoPacientePsicologo.objects.filter(
+                paciente=self.paciente, psicologo=self.psicologo, status='pendente'
+            ).count(),
+            1,
+        )
+
+    def test_notifica_psicologo_sobre_nova_solicitacao(self):
+        from core.models import NotificacaoSistema
+
+        self.client.force_authenticate(self.paciente_user)
+        self.client.post(self.url, {'crp': '60/11111'}, format='json')
+
+        self.assertTrue(
+            NotificacaoSistema.objects.filter(
+                psicologo=self.psicologo, dados_extras__event='nova_solicitacao_vinculo',
+            ).exists()
+        )
+
+    def test_recusa_recente_bloqueia_nova_solicitacao_com_mensagem_neutra(self):
+        from core.services import MENSAGEM_SOLICITACAO_INDISPONIVEL
+
+        self.VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='recusado',
+        )
+
+        self.client.force_authenticate(self.paciente_user)
+        response = self.client.post(self.url, {'crp': '60/11111'}, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['detail'], MENSAGEM_SOLICITACAO_INDISPONIVEL)
+        self.assertFalse(
+            self.VinculoPacientePsicologo.objects.filter(
+                paciente=self.paciente, psicologo=self.psicologo, status='pendente'
+            ).exists()
+        )
+
+    def test_recusa_antiga_ha_mais_de_30_dias_nao_bloqueia(self):
+        from django.utils import timezone
+        from datetime import timedelta
+
+        antigo = self.VinculoPacientePsicologo.objects.create(
+            paciente=self.paciente, psicologo=self.psicologo, status='recusado',
+        )
+        self.VinculoPacientePsicologo.objects.filter(pk=antigo.pk).update(
+            updated_at=timezone.now() - timedelta(days=31)
+        )
+
+        self.client.force_authenticate(self.paciente_user)
+        response = self.client.post(self.url, {'crp': '60/11111'}, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['status'], 'pendente')

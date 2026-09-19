@@ -1,7 +1,25 @@
+from datetime import date, timedelta
+
 from django.db import transaction
 from django.utils import timezone
 
-from .models import NotificacaoSistema, VinculoPacientePsicologo
+from .models import NotificacaoSistema, Prontuario, VinculoPacientePsicologo
+
+# Mensagem neutra de recusa/expiração de solicitação (SPEC_VINCULO_CONVITE_E_SOLICITACAO.md,
+# seção 3.9) — o paciente nunca deve conseguir distinguir "recusou" de
+# "expirou" nem de "indisponível por outro motivo". Usada palavra por
+# palavra (sem variação) nos três pontos que a disparam: recusa explícita,
+# expiração automática e bloqueio de re-solicitação após recusa recente.
+MENSAGEM_SOLICITACAO_INDISPONIVEL = 'Profissional indisponível para tratamento'
+
+# Janela de validade de uma solicitação pendente por CRP antes de expirar
+# automaticamente (seção 3.9).
+PRAZO_EXPIRACAO_SOLICITACAO = timedelta(days=5)
+
+# Status de Sessao considerados "ainda vai acontecer" — os mesmos usados em
+# outros pontos do app (ex.: Sessao.pode_entrar_na_sala). 'realizada',
+# 'cancelada' e 'faltou' já são desfechos e nunca são tocados aqui.
+_SESSAO_STATUS_FUTUROS = ['agendada', 'confirmada', 'remarcada']
 
 
 def _target_kwargs(target):
@@ -139,3 +157,165 @@ class NotificationDomainService:
                 entity_id=registro.pk,
             ),
         )
+
+
+def resumo_perda_vinculo(vinculo):
+    """
+    Quantifica o que será perdido se `vinculo` for encerrado pelo paciente
+    (sessões futuras canceladas + prontuários apagados) — usado tanto na
+    confirmação do encerramento avulso quanto no aviso de troca por convite
+    (SPEC_VINCULO_CONVITE_E_SOLICITACAO.md, seções 3.7 e 3.10).
+    """
+    from sessoes.models import Sessao
+
+    agora = timezone.now()
+    sessoes_futuras = Sessao.objects.filter(
+        paciente=vinculo.paciente,
+        psicologo=vinculo.psicologo,
+        data_hora__gt=agora,
+        status__in=_SESSAO_STATUS_FUTUROS,
+    ).count()
+    prontuarios = Prontuario.objects.filter(
+        paciente=vinculo.paciente, psicologo=vinculo.psicologo,
+    ).count()
+
+    return {
+        'psicologo_nome': f'{vinculo.psicologo.user.first_name} {vinculo.psicologo.user.last_name}'.strip(),
+        'sessoes_futuras': sessoes_futuras,
+        'prontuarios': prontuarios,
+    }
+
+
+def encerrar_vinculo_por_paciente(vinculo, *, novo_psicologo=None):
+    """
+    Serviço único de encerramento de vínculo iniciado pelo paciente
+    (SPEC_VINCULO_CONVITE_E_SOLICITACAO.md, seção 3.10). Chamado nos três
+    pontos de entrada que produzem o mesmo efeito: encerramento avulso,
+    troca por convite aceito, e aceite de solicitação quando o paciente já
+    adquiriu outro vínculo ativo nesse meio-tempo. Não duplicar esta lógica
+    nas views que chamam este serviço.
+
+    Regra que não pode regredir: só é chamado a partir de ações iniciadas
+    pelo paciente. `alterar-status` do psicólogo — inclusive para
+    'finalizado' — nunca chama este serviço.
+
+    Tudo-ou-nada: qualquer falha em qualquer etapa desfaz o encerramento
+    inteiro (status do vínculo, sessões e prontuários incluídos).
+    """
+    from sessoes.models import Sessao
+
+    with transaction.atomic():
+        paciente = vinculo.paciente
+        psicologo_anterior = vinculo.psicologo
+
+        vinculo.status = 'finalizado'
+        vinculo.data_fim_tratamento = date.today()
+        vinculo.save()
+
+        paciente.psicologo = novo_psicologo
+        paciente.save(update_fields=['psicologo'])
+
+        agora = timezone.now()
+        sessoes_futuras = Sessao.objects.filter(
+            paciente=paciente,
+            psicologo=psicologo_anterior,
+            data_hora__gt=agora,
+            status__in=_SESSAO_STATUS_FUTUROS,
+        )
+        sessoes_canceladas = 0
+        for sessao in sessoes_futuras:
+            sessao.status = 'cancelada'
+            # Mesma regra do cancelamento manual: sessão cancelada não
+            # segue com pagamento "pendente" em aberto.
+            if sessao.status_pagamento != 'pago':
+                sessao.status_pagamento = 'cancelado'
+            sessao.cancelado_por = 'paciente'
+            # A política de cancelamento tardio não se aplica aqui — não é
+            # o cancelamento de uma sessão avulsa, é o encerramento do
+            # vínculo inteiro.
+            sessao.cancelamento_tardio = False
+            sessao.motivo_cancelamento = 'Encerramento do vínculo com o profissional.'
+            sessao.save()
+            sessoes_canceladas += 1
+
+        prontuarios_qs = Prontuario.objects.filter(paciente=paciente, psicologo=psicologo_anterior)
+        prontuarios_apagados = prontuarios_qs.count()
+        prontuarios_qs.delete()
+
+        # A notificação não diferencia "encerrou" de "trocou de
+        # profissional" — o paciente não deve satisfação a ninguém sobre
+        # para onde foi.
+        NotificationDomainService.emit(
+            target=psicologo_anterior.user,
+            tipo='sistema',
+            titulo='Paciente encerrou o tratamento',
+            mensagem=f'{paciente.user.first_name} optou por encerrar o tratamento com você.',
+            link_relacionado='/pacientes',
+            dados_extras=NotificationDomainService._routing_payload(
+                screen='VinculosPacientes',
+                event='vinculo_encerrado_pelo_paciente',
+                entity_type='vinculo',
+                entity_id=vinculo.id,
+            ),
+        )
+
+    return {
+        'sessoes_canceladas': sessoes_canceladas,
+        'prontuarios_apagados': prontuarios_apagados,
+    }
+
+
+def notificar_solicitacao_indisponivel(vinculo):
+    NotificationDomainService.emit(
+        target=vinculo.paciente.user,
+        tipo='sistema',
+        titulo='Atualização sobre sua solicitação',
+        mensagem=MENSAGEM_SOLICITACAO_INDISPONIVEL,
+        link_relacionado='/conectar',
+        dados_extras=NotificationDomainService._routing_payload(
+            screen='ConexaoTerapeutica',
+            event='solicitacao_vinculo_indisponivel',
+            entity_type='vinculo',
+            entity_id=vinculo.id,
+        ),
+    )
+
+
+def expirar_se_vencido(vinculo):
+    """
+    Verificação defensiva (SPEC_VINCULO_CONVITE_E_SOLICITACAO.md, seção
+    3.9): se `vinculo` está pendente há mais de 5 dias, expira agora mesmo
+    — para que uma solicitação vencida nunca seja tratada como pendente só
+    porque a task periódica ainda não rodou. Idempotente: chamar de novo
+    sobre um vínculo já expirado não faz nada. Retorna True se expirou
+    agora nesta chamada.
+    """
+    if vinculo.status != 'pendente' or vinculo.data_solicitacao is None:
+        return False
+    if timezone.now() - vinculo.data_solicitacao < PRAZO_EXPIRACAO_SOLICITACAO:
+        return False
+
+    vinculo.status = 'expirado'
+    vinculo.save(update_fields=['status', 'updated_at'])
+    notificar_solicitacao_indisponivel(vinculo)
+    return True
+
+
+def expirar_solicitacoes_vencidas(queryset=None):
+    """
+    Versão em lote de `expirar_se_vencido`, usada pela task periódica e
+    pela listagem de solicitações pendentes do psicólogo. `queryset`
+    restringe o escopo (ex.: só as solicitações de um psicólogo); por
+    padrão varre todas. Retorna quantas solicitações foram expiradas.
+    """
+    corte = timezone.now() - PRAZO_EXPIRACAO_SOLICITACAO
+    base = queryset if queryset is not None else VinculoPacientePsicologo.objects.all()
+    vencidas = base.filter(status='pendente', data_solicitacao__lt=corte).select_related('paciente__user')
+
+    count = 0
+    for vinculo in vencidas:
+        vinculo.status = 'expirado'
+        vinculo.save(update_fields=['status', 'updated_at'])
+        notificar_solicitacao_indisponivel(vinculo)
+        count += 1
+    return count

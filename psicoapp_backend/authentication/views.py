@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from rest_framework import status, generics
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -8,6 +10,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, update_session_auth_hash
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.utils import timezone
 from .models import CustomUser, Paciente, PasswordResetCode, Psicologo
 from .serializers import (
     UserRegistrationSerializer,
@@ -204,8 +207,11 @@ def password_reset_confirm_view(request):
 @permission_classes([IsAuthenticated])
 def conecta_psicologo_view(request):
     """
-    Vincula o paciente a um psicólogo via CRP.
-    Cria (ou reativa) o VinculoPacientePsicologo.
+    Solicita vínculo com um psicólogo via CRP (SPEC_VINCULO_CONVITE_E_SOLICITACAO.md,
+    seção 3.8). CRP é dado público — identifica o profissional, não
+    autoriza o vínculo — por isso cria uma solicitação `pendente`
+    aguardando aceite, em vez de um vínculo já `ativo`. `paciente.psicologo`
+    só é atualizado quando (e se) a solicitação for de fato aceita.
     """
     crp = request.data.get('crp')
     if not crp:
@@ -221,53 +227,65 @@ def conecta_psicologo_view(request):
     except AttributeError:
         return Response({'detail': 'Apenas pacientes podem se conectar a um psicólogo.'}, status=status.HTTP_403_FORBIDDEN)
 
-    # Atualizar campo legado no Paciente (compatibilidade)
-    paciente.psicologo = psicologo
-    paciente.save()
-
-    # Criar ou reativar VinculoPacientePsicologo
     from core.models import VinculoPacientePsicologo
-    vinculo, created = VinculoPacientePsicologo.objects.get_or_create(
+    from core.services import MENSAGEM_SOLICITACAO_INDISPONIVEL
+
+    pendente_existente = VinculoPacientePsicologo.objects.filter(
+        paciente=paciente, psicologo=psicologo, status='pendente',
+    ).first()
+    if pendente_existente is not None:
+        return Response({
+            'message': 'Você já tem uma solicitação pendente para este profissional.',
+            'status': 'pendente',
+            'vinculo_id': pendente_existente.id,
+        }, status=status.HTTP_200_OK)
+
+    recusa_recente = VinculoPacientePsicologo.objects.filter(
+        paciente=paciente, psicologo=psicologo, status='recusado',
+        updated_at__gte=timezone.now() - timedelta(days=30),
+    ).exists()
+    if recusa_recente:
+        return Response({
+            'detail': MENSAGEM_SOLICITACAO_INDISPONIVEL,
+            'code': 'indisponivel',
+        }, status=status.HTTP_200_OK)
+
+    vinculo = VinculoPacientePsicologo.objects.create(
         paciente=paciente,
         psicologo=psicologo,
-        defaults={
-            'status': 'ativo',
-            'motivo_vinculo': 'Busca via CRP',
-        }
+        status='pendente',
+        origem='crp',
+        data_solicitacao=timezone.now(),
+        motivo_vinculo='Busca via CRP',
     )
 
-    if not created and vinculo.status != 'ativo':
-        vinculo.status = 'ativo'
-        vinculo.data_fim_tratamento = None
-        vinculo.save()
-
-    # Issue 02: Notificar psicólogo sobre novo vínculo com pacienteId canônico
     from core.services import NotificationDomainService
     NotificationDomainService.emit(
         target=psicologo.user,
         tipo='sistema',
-        titulo='Novo Paciente Conectado 🤝',
-        mensagem=f'{request.user.first_name} se conectou ao seu perfil via CRP.',
-        link_relacionado='/pacientes',
+        titulo='Nova Solicitação de Vínculo 📋',
+        mensagem=f'{request.user.first_name} solicitou vínculo via CRP.',
+        link_relacionado='/pacientes/solicitacoes',
         dados_extras=NotificationDomainService._routing_payload(
             screen='VinculosPacientes',
-            params={'pacienteId': paciente.pk},
-            event='novo_vinculo',
-            entity_type='paciente',
-            entity_id=paciente.pk,
+            params={'aba': 'solicitacoes'},
+            event='nova_solicitacao_vinculo',
+            entity_type='vinculo',
+            entity_id=vinculo.id,
         ),
     )
 
     return Response({
-        'message': 'Conexão realizada com sucesso!',
+        'message': 'Solicitação enviada! Aguarde a aprovação do profissional.',
+        'status': 'pendente',
         'psicologo': {
             'nome': f"{psicologo.user.first_name} {psicologo.user.last_name}".strip(),
             'crp': psicologo.crp,
             'specialization': psicologo.specialization,
         },
         'vinculo_id': vinculo.id,
-        'criado': created,
-    }, status=status.HTTP_200_OK)
+        'criado': True,
+    }, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET'])
@@ -338,11 +356,33 @@ def paciente_dashboard_view(request):
     # Notificações não lidas
     nao_lidas = NotificacaoSistema.objects.filter(paciente=paciente, lida=False).count()
 
+    # Solicitação de vínculo por CRP pendente (issue 11) — card "Aguardando
+    # resposta do profissional" na HomePaciente. Verificação defensiva de
+    # expiração antes de responder.
+    from core.services import PRAZO_EXPIRACAO_SOLICITACAO, expirar_se_vencido
+
+    solicitacao_pendente_data = None
+    solicitacao = VinculoPacientePsicologo.objects.filter(
+        paciente=paciente, status='pendente'
+    ).select_related('psicologo__user').order_by('-data_solicitacao').first()
+
+    if solicitacao:
+        expirar_se_vencido(solicitacao)
+        if solicitacao.status == 'pendente':
+            prazo_final = solicitacao.data_solicitacao + PRAZO_EXPIRACAO_SOLICITACAO
+            dias_restantes = max((prazo_final - tz.now()).days, 0)
+            solicitacao_pendente_data = {
+                'vinculo_id': solicitacao.id,
+                'psicologo_nome': f"{solicitacao.psicologo.user.first_name} {solicitacao.psicologo.user.last_name}".strip(),
+                'dias_restantes': dias_restantes,
+            }
+
     return Response({
         'psicologo_vinculado': psicologo_data,
         'proxima_sessao': proxima_data,
         'ultimo_registro_odisseia': ultimo_registro_data,
         'notificacoes_nao_lidas': nao_lidas,
+        'solicitacao_pendente': solicitacao_pendente_data,
     })
 
 @api_view(['POST'])

@@ -1,11 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Alert,
+  ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { CustomAlert as Alert } from '../components/common/CustomAlert';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { pacienteService } from '../services/pacienteService';
+import { vinculoService } from '../services/vinculoService';
 import Topo from './components/topo';
 
 export default function MeuPsicologo() {
@@ -15,6 +17,7 @@ export default function MeuPsicologo() {
   const [dados, setDados] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [encerrando, setEncerrando] = useState(false);
 
   const carregar = async () => {
     setLoading(true);
@@ -26,6 +29,39 @@ export default function MeuPsicologo() {
 
   useFocusEffect(useCallback(() => { carregar(); }, []));
   const onRefresh = () => { setRefreshing(true); carregar(); };
+
+  const confirmarEncerramento = async () => {
+    setEncerrando(true);
+    const res = await vinculoService.encerrarVinculo(dados.vinculo_id, { confirmar: true });
+    setEncerrando(false);
+    if (res.success) {
+      Alert.alert('Vínculo encerrado', 'Você encerrou o vínculo com este profissional.', [
+        { text: 'OK', onPress: () => navigation.navigate('HomePaciente') }
+      ]);
+    } else {
+      Alert.alert('Erro', res.message || 'Não foi possível encerrar o vínculo.');
+    }
+  };
+
+  const handleEncerrarVinculo = async () => {
+    // Busca o resumo do que será perdido antes de qualquer confirmação —
+    // o backend responde 400 com `resumo` quando `confirmar` não é enviado.
+    const preview = await vinculoService.encerrarVinculo(dados.vinculo_id);
+    if (!preview.confirmacaoNecessaria) {
+      Alert.alert('Erro', preview.message || 'Não foi possível encerrar o vínculo.');
+      return;
+    }
+
+    const { sessoes_futuras, prontuarios } = preview.resumo;
+    Alert.alert(
+      'Encerrar vínculo',
+      `Isso vai cancelar ${sessoes_futuras} sessão(ões) futura(s) e apagar ${prontuarios} prontuário(s) deste acompanhamento. Essa ação não pode ser desfeita.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Encerrar', style: 'destructive', onPress: confirmarEncerramento },
+      ]
+    );
+  };
 
   const psicologo = dados?.psicologo;
   const inicial = psicologo?.nome_completo?.[0]?.toUpperCase() || 'P';
@@ -111,6 +147,21 @@ export default function MeuPsicologo() {
               <Ionicons name="swap-horizontal-outline" size={20} color="#11B5A4" />
               <Text style={styles.btnSecundarioText}>Conectar outro profissional</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.btnDestrutivo}
+              onPress={handleEncerrarVinculo}
+              disabled={encerrando}
+            >
+              {encerrando ? (
+                <ActivityIndicator size="small" color="#EF5350" />
+              ) : (
+                <>
+                  <Ionicons name="close-circle-outline" size={20} color="#EF5350" />
+                  <Text style={styles.btnDestrutivoText}>Encerrar vínculo</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </>
         )}
       </ScrollView>
@@ -195,4 +246,10 @@ const styles = StyleSheet.create({
     marginBottom: 16, gap: 8,
   },
   btnSecundarioText: { color: '#11B5A4', fontFamily: 'RalewayBold', fontSize: 15 },
+  btnDestrutivo: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#EF5350', borderRadius: 25, paddingVertical: 14,
+    gap: 8,
+  },
+  btnDestrutivoText: { color: '#EF5350', fontFamily: 'RalewayBold', fontSize: 15 },
 });

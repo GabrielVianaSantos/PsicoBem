@@ -4,6 +4,20 @@ from datetime import timedelta
 from core.models import VinculoPacientePsicologo
 from core.services import NotificationDomainService
 
+
+@shared_task(name="core.tasks.expirar_solicitacoes_vinculo")
+def expirar_solicitacoes_vinculo():
+    """
+    Solicitações de vínculo por CRP pendentes há mais de 5 dias viram
+    `expirado` (SPEC_VINCULO_CONVITE_E_SOLICITACAO.md, seção 3.9). Reusa
+    `core.services.expirar_solicitacoes_vencidas`, que também roda de forma
+    defensiva na leitura — esta task é o caminho "normal", não o único.
+    """
+    from core.services import expirar_solicitacoes_vencidas
+
+    count = expirar_solicitacoes_vencidas()
+    return f"{count} solicitação(ões) de vínculo expirada(s)."
+
 @shared_task(name="core.tasks.notificar_pacientes_inativos")
 def notificar_pacientes_inativos():
     """

@@ -42,10 +42,10 @@ const ROUTES_BY_PROFILE = {
     'HomeBarNavigation', 'Home', 'Sessoes', 'AgendarSessao', 'DetalhesSessao',
     'TipoSessao', 'PerfilPsicologo', 'Prontuarios', 'SementesCuidado',
     'GuiasApoio', 'RegistrosOdisseia', 'Navigation',
-    'VinculosPacientes', 'Notificacoes', 'PerfilPaciente',
+    'VinculosPacientes', 'ConvidarPaciente', 'Notificacoes', 'PerfilPaciente',
   ]),
   paciente: new Set([
-    'HomePaciente', 'ConexaoTerapeutica', 'RegistrosOdisseia', 'PerfilPaciente',
+    'HomePaciente', 'ConexaoTerapeutica', 'ConfirmarVinculo', 'RegistrosOdisseia', 'PerfilPaciente',
     'DetalhesSessao', 'MinhasSessoes', 'MeuPsicologo',
     'SementesPaciente', 'Notificacoes',
   ]),

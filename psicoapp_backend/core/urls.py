@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     ProntuarioViewSet,
-    VinculoViewSet, NotificacaoViewSet,
+    VinculoViewSet, NotificacaoViewSet, ConviteViewSet,
 )
 
 # Criar router para ViewSets
@@ -10,6 +10,7 @@ router = DefaultRouter()
 router.register(r'prontuarios', ProntuarioViewSet, basename='prontuarios')
 router.register(r'vinculos', VinculoViewSet, basename='vinculos')
 router.register(r'notificacoes', NotificacaoViewSet, basename='notificacoes')
+router.register(r'convites', ConviteViewSet, basename='convites')
 
 # URLs da API
 urlpatterns = [

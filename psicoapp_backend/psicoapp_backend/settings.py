@@ -182,6 +182,11 @@ REST_FRAMEWORK = {
         # Limita tentativas de adivinhar o código de 6 dígitos por IP; o
         # PasswordResetCode.MAX_TENTATIVAS também limita por código.
         'password_reset_confirm': '20/hour',
+        # SPEC_VINCULO_CONVITE_E_SOLICITACAO.md, seção 5: o espaço de
+        # códigos de convite é pequeno o suficiente para varredura por
+        # força bruta — limita por usuário autenticado e por IP.
+        'convite_resolver_user': '30/hour',
+        'convite_resolver_ip': '60/hour',
     },
 }
 
@@ -215,6 +220,12 @@ else:
 
 # TTL do código de recuperação de senha (PasswordResetCode)
 PASSWORD_RESET_TOKEN_TTL = int(os.getenv("PASSWORD_RESET_TOKEN_TTL", "900"))
+
+# Host da landing page de convite (`/c/<slug>`), servida pelo reverse-proxy
+# da VPS (SPEC_VINCULO_CONVITE_E_SOLICITACAO.md, seção 3.12 — issue 12,
+# ainda não implementada). O código curto funciona independentemente desta
+# URL resolver para algo hoje.
+CONVITE_BASE_URL = os.getenv("CONVITE_BASE_URL", "https://psicobem.app").rstrip("/")
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = env_list(
@@ -260,6 +271,10 @@ CELERY_BEAT_SCHEDULE = {
     "reconcile-push-receipts": {
         "task": "notificacoes_push.tasks.reconcile_push_receipts",
         "schedule": 900.0,  # a cada 15 minutos
+    },
+    "expirar_solicitacoes_vinculo_periodico": {
+        "task": "core.tasks.expirar_solicitacoes_vinculo",
+        "schedule": crontab(minute=0),  # a cada hora — a leitura já tem checagem defensiva própria
     },
 }
 
