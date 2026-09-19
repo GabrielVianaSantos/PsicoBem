@@ -1,10 +1,7 @@
-from datetime import timedelta, timezone as dt_timezone
-
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
-from django.http import HttpResponse
 from django.utils import timezone
 from sessoes.models import Sessao, TipoSessao
 from sessoes.serializers import (
@@ -16,18 +13,6 @@ from sessoes.serializers import (
 from core.models import VinculoPacientePsicologo
 from core.serializers import PacienteBasicSerializer
 from core.views import IsPsicologoOwner, IsPacienteOrPsicologoOwner
-
-
-def _ics_escape(texto):
-    """Escapa texto conforme RFC 5545 (TEXT value)."""
-    if not texto:
-        return ''
-    return (
-        texto.replace('\\', '\\\\')
-        .replace(';', '\\;')
-        .replace(',', '\\,')
-        .replace('\n', '\\n')
-    )
 
 
 class TipoSessaoViewSet(viewsets.ModelViewSet):
@@ -388,64 +373,6 @@ class SessaoViewSet(viewsets.ModelViewSet):
 
         serializer = EstatisticasSessaoSerializer(stats)
         return Response(serializer.data)
-
-    @action(detail=True, methods=['get'], url_path='agenda.ics')
-    def agenda_ics(self, request, pk=None):
-        """
-        Arquivo .ics da sessão (Issue 07, opcional). Restrito aos
-        participantes pela mesma queryset de get_object() (issue 02).
-        Datas em UTC com sufixo Z — evita declarar VTIMEZONE.
-        """
-        sessao = self.get_object()
-
-        duracao = (
-            sessao.tipo_sessao.duracao_minutos
-            if sessao.tipo_sessao and sessao.tipo_sessao.duracao_minutos
-            else 60
-        )
-        inicio_utc = sessao.data_hora.astimezone(dt_timezone.utc)
-        fim_utc = inicio_utc + timedelta(minutes=duracao)
-        agora_utc = timezone.now().astimezone(dt_timezone.utc)
-
-        fmt = '%Y%m%dT%H%M%SZ'
-        uid = f"sessao-{sessao.pk}@psicobem.app"
-        # Sem campo dedicado de versão: updated_at (auto_now) já cresce a
-        # cada alteração da sessão, então seu timestamp serve como SEQUENCE
-        # estritamente crescente sem exigir migration nova.
-        sequence = int(sessao.updated_at.timestamp())
-
-        linhas = [
-            'BEGIN:VCALENDAR',
-            'VERSION:2.0',
-            'PRODID:-//PsicoBem//Agenda//PT',
-            'CALSCALE:GREGORIAN',
-            'BEGIN:VEVENT',
-            f'UID:{uid}',
-            f'DTSTAMP:{agora_utc.strftime(fmt)}',
-            f'DTSTART:{inicio_utc.strftime(fmt)}',
-            f'DTEND:{fim_utc.strftime(fmt)}',
-            f'SEQUENCE:{sequence}',
-            # Título neutro, mesma regra da issue 06: não identifica
-            # participante nem natureza clínica.
-            'SUMMARY:Sessão PsicoBem',
-        ]
-        if sessao.sala_url:
-            linhas.append(f'DESCRIPTION:{_ics_escape(sessao.sala_url)}')
-            linhas.append(f'LOCATION:{_ics_escape(sessao.sala_url)}')
-        linhas += [
-            'BEGIN:VALARM',
-            'ACTION:DISPLAY',
-            'DESCRIPTION:Lembrete de sessão',
-            'TRIGGER:-PT15M',
-            'END:VALARM',
-            'END:VEVENT',
-            'END:VCALENDAR',
-        ]
-        conteudo = '\r\n'.join(linhas) + '\r\n'
-
-        response = HttpResponse(conteudo, content_type='text/calendar; charset=utf-8')
-        response['Content-Disposition'] = f'attachment; filename="sessao-{sessao.pk}.ics"'
-        return response
 
     @action(detail=False, methods=['get'], url_path='pacientes-vinculados')
     def pacientes_vinculados(self, request):

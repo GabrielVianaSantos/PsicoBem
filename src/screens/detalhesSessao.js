@@ -25,7 +25,6 @@ export default function DetalhesSessao() {
 
     const [sessao, setSessao] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [compartilhandoIcs, setCompartilhandoIcs] = useState(false);
     const [erroAbrirSalaDireto, setErroAbrirSalaDireto] = useState(false);
     const [mostrarModalCancelar, setMostrarModalCancelar] = useState(false);
     const [motivoCancelamento, setMotivoCancelamento] = useState('');
@@ -91,18 +90,6 @@ export default function DetalhesSessao() {
 
     const irConfigurarLink = () => {
         navigation.navigate('PerfilPsicologo', { focarCampo: 'linkSalaVideo' });
-    };
-
-    const adicionarNaAgenda = async () => {
-        setCompartilhandoIcs(true);
-        try {
-            const result = await sessaoService.compartilharAgendaIcs(sessaoId);
-            if (!result.success) {
-                Alert.alert('Erro', result.message);
-            }
-        } finally {
-            setCompartilhandoIcs(false);
-        }
     };
 
     const confirmarPagamento = () => {
@@ -433,24 +420,6 @@ export default function DetalhesSessao() {
                     </View>
                 )}
 
-                {/* Adicionar à agenda via .ics (opcional, complementar à sincronização automática) */}
-                {['agendada', 'confirmada', 'remarcada'].includes(sessao.status) && (
-                    <View style={estilos.actionsContainer}>
-                        <View style={estilos.buttonContainer}>
-                            <Botao
-                                texto={compartilhandoIcs ? 'Gerando arquivo...' : 'Adicionar à minha agenda'}
-                                onPress={adicionarNaAgenda}
-                                iconName="calendar-outline"
-                                backgroundColor="#0B7A6E"
-                                disabled={compartilhandoIcs}
-                            />
-                            <Text style={estilos.icsAvisoTexto}>
-                                Gera uma cópia estática. Se a sessão for remarcada, adicione novamente.
-                            </Text>
-                        </View>
-                    </View>
-                )}
-
                 {/* Ações */}
                 <View style={estilos.actionsContainer}>
                     {sessao.pode_cancelar && (
@@ -726,14 +695,6 @@ const estilos = StyleSheet.create({
         fontFamily: 'Raleway',
         fontSize: 13,
         lineHeight: 18,
-    },
-
-    icsAvisoTexto: {
-        color: '#999',
-        fontFamily: 'Raleway',
-        fontSize: 11,
-        marginTop: 6,
-        textAlign: 'center',
     },
 
     salaLinkTexto: {

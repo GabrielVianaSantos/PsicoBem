@@ -2,6 +2,7 @@
   "expo": {
     "slug": "psicoapp",
     "name": "psicoapp",
+    "icon": "./assets/icon.png",
     "newArchEnabled": true,
     "plugins": [
       "expo-asset",
@@ -23,8 +24,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/notification-icon.png",
-          "imageWidth": 120,
+          "image": "./src/logo/logo-psicobem-splash.png",
+          "imageWidth": 220,
           "resizeMode": "contain",
           "backgroundColor": "#11B5A4"
         }
@@ -37,7 +38,11 @@
     },
     "android": {
       "package": "com.devianatech.psicoapp",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon-foreground.png",
+        "backgroundColor": "#11B5A4"
+      }
     },
     "ios": {
       "supportsTablet": true

@@ -129,16 +129,24 @@ export default function VinculosPacientes() {
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#11B5A4" />}
       >
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.titulo}>Meus Pacientes</Text>
-            <Text style={styles.subtitulo}>Pacientes vinculados ao seu perfil.</Text>
+        <Text style={styles.titulo}>Meus Pacientes</Text>
+        <Text style={styles.subtitulo}>Pacientes vinculados ao seu perfil.</Text>
+
+        {/* Convidar paciente — CTA em destaque, primeira coisa clicável da tela */}
+        <TouchableOpacity
+          style={styles.bannerConvidar}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('ConvidarPaciente')}
+        >
+          <View style={styles.bannerIconWrap}>
+            <Ionicons name="qr-code-outline" size={26} color="#fff" />
           </View>
-          <TouchableOpacity style={styles.btnConvidar} onPress={() => navigation.navigate('ConvidarPaciente')}>
-            <Ionicons name="qr-code-outline" size={16} color="#fff" />
-            <Text style={styles.btnConvidarText}>Convidar</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.bannerTitle}>Convidar paciente</Text>
+            <Text style={styles.bannerSub}>Compartilhe seu link, QR ou código</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.85)" />
+        </TouchableOpacity>
 
         {/* Filtro */}
         <View style={styles.filtroRow}>
@@ -327,12 +335,19 @@ const styles = StyleSheet.create({
   titulo: { fontFamily: 'RalewayBold', color: '#11B5A4', fontSize: 24 },
   subtitulo: { color: '#888', fontSize: 14, marginTop: 4, marginBottom: 18, lineHeight: 20 },
 
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  btnConvidar: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#11B5A4', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20,
+  bannerConvidar: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#11B5A4', borderRadius: 16, padding: 16,
+    marginBottom: 20,
+    shadowColor: '#11B5A4', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
   },
-  btnConvidarText: { color: '#fff', fontFamily: 'RalewayBold', fontSize: 13 },
+  bannerIconWrap: {
+    width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center', marginRight: 14,
+  },
+  bannerTitle: { color: '#fff', fontFamily: 'RalewayBold', fontSize: 16 },
+  bannerSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 2 },
 
   filtroRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   filtroChip: {

@@ -1,5 +1,3 @@
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import api from './api';
 
 export const sessaoService = {
@@ -200,32 +198,6 @@ export const sessaoService = {
       return { success: true, data: response.data };
     } catch (error) {
       return this.buildError(error, 'Erro ao buscar estatísticas');
-    }
-  },
-
-  async compartilharAgendaIcs(sessaoId) {
-    // Issue 07 (opcional): endpoint autenticado, por isso não dá para abrir a
-    // URL direto — precisa baixar com a instância axios já autenticada,
-    // gravar em cache e então compartilhar.
-    try {
-      const response = await api.get(`/sessoes/${sessaoId}/agenda.ics/`, { responseType: 'text' });
-      const caminho = `${FileSystem.cacheDirectory}sessao-${sessaoId}.ics`;
-      await FileSystem.writeAsStringAsync(caminho, response.data, { encoding: FileSystem.EncodingType.UTF8 });
-
-      const disponivel = await Sharing.isAvailableAsync();
-      if (!disponivel) {
-        return { success: false, message: 'Compartilhamento não disponível neste aparelho.' };
-      }
-
-      await Sharing.shareAsync(caminho, {
-        mimeType: 'text/calendar',
-        UTI: 'com.apple.ical.ics',
-        dialogTitle: 'Adicionar à minha agenda',
-      });
-      return { success: true };
-    } catch (error) {
-      console.error('Erro ao compartilhar agenda .ics:', error);
-      return this.buildError(error, 'Não foi possível gerar o arquivo da agenda.');
     }
   },
 
